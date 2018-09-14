@@ -1,0 +1,56 @@
+package main
+
+import (
+	"flag"
+	"log"
+)
+
+func main() {
+
+	flag.Usage = usage
+	flag.Parse()
+
+	if *html && *plumbing {
+		log.Fatal("you can have either plumbing or HTML output")
+	}
+	if flag.NArg() > 0 {
+		paths = flag.Args()
+	}
+
+	if *verbose {
+		log.Println("Building suffix tree")
+	}
+	schan := job.Parse(filesFeed())
+	t, data, done := job.BuildTree(schan)
+	<-done
+
+	// finish stream
+	t.Update(&syntax.Node{Type: -1})
+
+	if *verbose {
+
+		log.Println("Searching for clones")
+
+	}
+
+	somevar := 1
+	somevar2 := 2
+	if foo {
+	    panic("this")
+	}
+
+	_, err := thisFunc()
+	if err != nil {
+	    ShouldBeOK()
+	}
+
+
+    if a {
+        if nest {
+            if nestnest {
+                fmt.Println(a)
+
+            }
+        }
+    }
+}
