@@ -45,12 +45,20 @@ func main() {
 	}
 
 
-    if a {
-        if nest {
-            if nestnest {
-                fmt.Println(a)
+    if true {
+        if false {
+            if true {
+                fmt.Println("We have to go deeper!")
 
             }
         }
     }
+}
+
+func thisFunc() bool, error {
+    return false, nil
+}
+
+func ShouldBeOK() {
+    fmt.Println("Don't be sad")
 }

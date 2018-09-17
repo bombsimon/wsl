@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	roomMarker = "}"
+	whitespaceIndicator = "}"
 )
 
 // Result represnets the result of one linted row which was not accepted by the
@@ -24,7 +24,8 @@ type Result struct {
 // each file found in passed directory/directories.
 func ProcessDirectory(dir string, recursive bool) []Result {
 	// Always ignore .git directory.
-	if dir == ".git" {
+	_, f := filepath.Split(dir)
+	if f == ".git" {
 		return []Result{}
 	}
 
@@ -96,15 +97,15 @@ func ProcessLines(lines []string, filename string) []Result {
 			continue
 		}
 
-		if previousRowTrimmed == roomMarker {
-			if currentRow != "" && currentRowTrimmed != roomMarker {
-				result = append(result, Result{filename, lineNo, fmt.Sprintf("must be a blank line after '%s'", roomMarker)})
+		if previousRowTrimmed == whitespaceIndicator {
+			if currentRow != "" && currentRowTrimmed != whitespaceIndicator {
+				result = append(result, Result{filename, lineNo, fmt.Sprintf("must be a blank line after '%s'", whitespaceIndicator)})
 			}
 		}
 
 		if previousRowTrimmed == "" {
-			if currentRowTrimmed == roomMarker {
-				result = append(result, Result{filename, lineNo, fmt.Sprintf("blank line not allowed before '%s'", roomMarker)})
+			if currentRowTrimmed == whitespaceIndicator {
+				result = append(result, Result{filename, lineNo, fmt.Sprintf("blank line not allowed before '%s'", whitespaceIndicator)})
 			}
 		}
 

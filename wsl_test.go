@@ -115,3 +115,60 @@ func TestBlankLineBeforeIf(t *testing.T) {
 	r = ProcessLines(l, "nofile")
 	assert.Equal(len(r), 0, "No errors when cuddling err check")
 }
+
+func TestFirstLineBlank(t *testing.T) {
+	var (
+		l      []string
+		r      []Result
+		assert = assert.New(t)
+	)
+
+	l = []string{
+		"",
+		"package main",
+		"",
+		"func main() {",
+		"	fmt.Println(\"Hello world\")",
+		"}",
+	}
+
+	r = ProcessLines(l, "nofile")
+	assert.Equal(len(r), 1, "An error was found")
+	assert.Equal(r[0].LineNo, 1, "Error found at first line")
+}
+
+func TestFileProcessing(t *testing.T) {
+	var (
+		r      []Result
+		assert = assert.New(t)
+	)
+
+	r = ProcessFile("testfiles/01")
+	assert.Equal(len(r), 8, "An error was found")
+	assert.Equal(r[0].LineNo, 9, "Error was found on line 4")
+
+	r = ProcessFile("testfiles/02")
+	assert.Equal(len(r), 0, "No errors in file")
+}
+
+func TestDirectoryProcessing(t *testing.T) {
+	var (
+		r      []Result
+		assert = assert.New(t)
+		files  = map[string]struct{}{}
+	)
+
+	r = ProcessDirectory("testfiles", false)
+	for _, e := range r {
+		files[e.FileName] = struct{}{}
+	}
+
+	assert.Equal(len(files), 2, "Two files (with error) found")
+
+	r = ProcessDirectory("testfiles", true)
+	for _, e := range r {
+		files[e.FileName] = struct{}{}
+	}
+
+	assert.Equal(len(files), 3, "Three files (with error) found when using recursive mode")
+}
