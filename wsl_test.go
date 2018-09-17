@@ -114,6 +114,18 @@ func TestBlankLineBeforeIf(t *testing.T) {
 
 	r = ProcessLines(l, "nofile")
 	assert.Equal(len(r), 0, "No errors when cuddling err check")
+
+	l = []string{
+		"switch {",
+		"case 1:",
+		"",
+		"	// I start with a blank line",
+		"	notAllowed = true",
+		"}",
+	}
+
+	r = ProcessLines(l, "nofile")
+	assert.Equal(len(r), 1, "An error was found")
 }
 
 func TestFirstLineBlank(t *testing.T) {

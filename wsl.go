@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -77,15 +78,13 @@ func ProcessLines(lines []string, filename string) []Result {
 		}
 
 		var (
-			lineNo             = i + 1
-			currentRow         = lines[i]
-			currentRowTrimmed  = strings.TrimSpace(currentRow)
-			previousRow        = lines[idx]
-			previousRowTrimmed = strings.TrimSpace(previousRow)
+			lineNo      = i + 1
+			currentRow  = strings.TrimSpace(lines[i])
+			previousRow = strings.TrimSpace(lines[idx])
 		)
 
 		if i == 0 {
-			if currentRowTrimmed == "" {
+			if currentRow == "" {
 				result = append(result, Result{filename, lineNo, "first line should never be blank"})
 			}
 
@@ -93,31 +92,42 @@ func ProcessLines(lines []string, filename string) []Result {
 		}
 
 		// Don't lint comments.
-		if strings.HasPrefix(currentRowTrimmed, "//") {
+		if strings.HasPrefix(currentRow, "//") {
 			continue
 		}
 
-		if previousRowTrimmed == whitespaceIndicator {
-			if currentRow != "" && currentRowTrimmed != whitespaceIndicator {
-				result = append(result, Result{filename, lineNo, fmt.Sprintf("must be a blank line after '%s'", whitespaceIndicator)})
+		if previousRow == whitespaceIndicator {
+			if currentRow != "" &&
+				currentRow != ")" &&
+				currentRow != whitespaceIndicator &&
+				!strings.HasPrefix(currentRow, "case") {
+				// Closing bracket (}) followed by zero or more parentheses and maybe a comma.
+				// Should see '})' and '},' as valid lines without newline after '}'.
+				matched, _ := regexp.MatchString(`}\)*,?$`, currentRow)
+				if !matched {
+					result = append(result, Result{filename, lineNo, fmt.Sprintf("must be a blank line after '%s'", whitespaceIndicator)})
+				}
 			}
 		}
 
-		if previousRowTrimmed == "" {
-			if currentRowTrimmed == whitespaceIndicator {
+		if previousRow == "" {
+			if currentRow == whitespaceIndicator {
 				result = append(result, Result{filename, lineNo, fmt.Sprintf("blank line not allowed before '%s'", whitespaceIndicator)})
 			}
 		}
 
 		// Don't allow the start of a block to be an empty line.
-		if strings.HasSuffix(previousRowTrimmed, "{") {
-			if currentRowTrimmed == "" {
+		if strings.HasSuffix(previousRow, "{") || strings.HasPrefix(previousRow, "case") {
+			if currentRow == "" {
 				result = append(result, Result{filename, lineNo, "blank line not allowed in beginning of a block"})
 			}
 		}
 
-		if strings.HasPrefix(currentRowTrimmed, "if") {
-			if !hasIfPrefix(currentRowTrimmed, "err", "ok", "!ok") && !strings.HasSuffix(previousRowTrimmed, "{") && !emptyOrComment(previousRowTrimmed) {
+		if strings.HasPrefix(currentRow, "if") {
+			if !hasIfPrefix(currentRow, "err", "ok", "!ok") &&
+				!strings.HasSuffix(previousRow, "{") &&
+				!strings.HasPrefix(previousRow, "case") &&
+				!emptyOrComment(previousRow) {
 				result = append(result, Result{filename, lineNo, "if statement should have a blank line before they start, unless for error checking or nested"})
 			}
 		}
