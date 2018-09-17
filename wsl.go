@@ -26,6 +26,7 @@ type Result struct {
 func ProcessDirectory(dir string, recursive bool) []Result {
 	// Always ignore .git directory.
 	_, f := filepath.Split(dir)
+
 	if f == ".git" {
 		return []Result{}
 	}
@@ -68,7 +69,10 @@ func ProcessFile(file string) []Result {
 // ProcessLines will process a string slice line by line to determine if
 // there's enough room in the code to make it readable.
 func ProcessLines(lines []string, filename string) []Result {
-	var result []Result
+	var (
+		result    []Result
+		inComment bool
+	)
 
 	for i := range lines {
 		idx := i
@@ -83,6 +87,25 @@ func ProcessLines(lines []string, filename string) []Result {
 			previousRow = strings.TrimSpace(lines[idx])
 		)
 
+		// Check if we're at the start of a block comment.
+		if strings.HasPrefix(currentRow, "/*") {
+			inComment = true
+		}
+
+		// Check if we're at the end of a block comment.
+		if strings.HasPrefix(currentRow, "*/") {
+			inComment = false
+		}
+
+		// Allow whatever crappy style in comments.
+		if inComment {
+			continue
+		}
+
+		if strings.HasPrefix(currentRow, "//") {
+			continue
+		}
+
 		if i == 0 {
 			if currentRow == "" {
 				result = append(result, Result{filename, lineNo, "first line should never be blank"})
@@ -91,19 +114,12 @@ func ProcessLines(lines []string, filename string) []Result {
 			continue
 		}
 
-		// Don't lint comments.
-		if strings.HasPrefix(currentRow, "//") {
-			continue
-		}
-
 		if previousRow == whitespaceIndicator {
-			if currentRow != "" &&
-				currentRow != ")" &&
-				currentRow != whitespaceIndicator &&
-				!strings.HasPrefix(currentRow, "case") {
+			if currentRow != "" && currentRow != ")" && currentRow != whitespaceIndicator && !strings.HasPrefix(currentRow, "case") {
 				// Closing bracket (}) followed by zero or more parentheses and maybe a comma.
 				// Should see '})' and '},' as valid lines without newline after '}'.
 				matched, _ := regexp.MatchString(`}\)*,?$`, currentRow)
+
 				if !matched {
 					result = append(result, Result{filename, lineNo, fmt.Sprintf("must be a blank line after '%s'", whitespaceIndicator)})
 				}
@@ -124,10 +140,7 @@ func ProcessLines(lines []string, filename string) []Result {
 		}
 
 		if strings.HasPrefix(currentRow, "if") {
-			if !hasIfPrefix(currentRow, "err", "ok", "!ok") &&
-				!strings.HasSuffix(previousRow, "{") &&
-				!strings.HasPrefix(previousRow, "case") &&
-				!emptyOrComment(previousRow) {
+			if !hasIfPrefix(currentRow, "err", "ok", "!ok") && !strings.HasSuffix(previousRow, "{") && !strings.HasPrefix(previousRow, "case") && !emptyOrComment(previousRow) {
 				result = append(result, Result{filename, lineNo, "if statement should have a blank line before they start, unless for error checking or nested"})
 			}
 		}
