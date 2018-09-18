@@ -23,28 +23,14 @@ By default, the linter will lint current directory **non** recursive. To specify
 Example:
 ```
 wsl --recursive $GOPATH/src/github.com/bombsimon/wsl/*/0*
-
-testfiles/01:
-  Line 9: blank line not allowed in beginning of a block
-
-testfiles/01:
-  Line 16: must be a blank line after '}'
-
-testfiles/01:
-  Line 16: if statement should have a blank line before they start, unless for error checking or nested
-
-testfiles/01:
-  Line 23: must be a blank line after '}'
-
-testfiles/01:
-  Line 31: blank line not allowed in beginning of a block
-
-testfiles/01:
-  Line 34: blank line not allowed before '}'
-
-testfiles/01:
-  Line 38: if statement should have a blank line before they start, unless for error checking or nested
-
-testfiles/01:
-  Line 53: blank line not allowed before '}'
+testfiles/01:9: blank line not allowed in beginning of a block
+testfiles/01:16: must be a blank line after '}'
+testfiles/01:16: if statement should have a blank line before they start, unless for error checking or nested
+testfiles/01:23: must be a blank line after '}'
+testfiles/01:31: blank line not allowed in beginning of a block
+testfiles/01:34: blank line not allowed before '}'
+testfiles/01:38: if statement should have a blank line before they start, unless for error checking or nested
+testfiles/01:53: blank line not allowed before '}'
+testfiles/03.go:9: must be a blank line after '}'
+exit status 1
 ```
