@@ -34,7 +34,7 @@ func main() {
 	}
 
 	for _, x := range r {
-		fmt.Printf("%s:\n  Line %d: %s\n\n", x.FileName, x.LineNo, x.Reason)
+		fmt.Printf("%s:%d: %s\n", x.FileName, x.LineNo, x.Reason)
 	}
 
 	if len(r) > 0 {
