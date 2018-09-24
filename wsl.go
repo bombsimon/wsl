@@ -1,10 +1,8 @@
-package wsl
+package main
 
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -21,35 +19,13 @@ type Result struct {
 	Reason   string
 }
 
-// ProcessDirectory will read a directory (recursive if desired) and process
-// each file found in passed directory/directories.
-func ProcessDirectory(dir string, recursive bool) []Result {
-	// Always ignore .git directory.
-	_, f := filepath.Split(dir)
-
-	if f == ".git" {
-		return []Result{}
-	}
-
+// ProcessFiles takes a string slice with file names (full paths) and lints
+// them.
+func ProcessFiles(files []string) []Result {
 	var result []Result
 
-	files, err := ioutil.ReadDir(dir)
-	if err != nil {
-		panic(err)
-	}
-
 	for _, file := range files {
-		fileOrDir := filepath.Join(dir, file.Name())
-
-		if s, err := os.Stat(fileOrDir); err == nil && s.IsDir() {
-			if recursive {
-				result = append(result, ProcessDirectory(fileOrDir, recursive)...)
-			}
-
-			continue
-		}
-
-		result = append(result, ProcessFile(fileOrDir)...)
+		result = append(result, ProcessFile(file)...)
 	}
 
 	return result
@@ -63,6 +39,7 @@ func ProcessFile(file string) []Result {
 	}
 
 	lines := strings.Split(string(content), "\n")
+
 	return ProcessLines(lines, file)
 }
 
