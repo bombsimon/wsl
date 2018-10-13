@@ -6,6 +6,37 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestIgnoreComments(t *testing.T) {
+	var (
+		l      []string
+		r      []Result
+		assert = assert.New(t)
+	)
+
+	l = []string{
+		"/*",
+		"Multi line comments ignore errors",
+		"if true {",
+		"",
+		"",
+		"	fmt.Println(\"Well hello blankies\")",
+		"",
+		"}",
+		"*/",
+		"",
+		"// Also single lines are ignore",
+		"// foo := false",
+		"// if true {",
+		"//",
+		"//	foo = true",
+		"//",
+		"//}",
+	}
+
+	r = ProcessLines(l, "nofile")
+	assert.Equal(0, len(r), "No errors for comments")
+}
+
 func TestNoEmptyStart(t *testing.T) {
 	var (
 		l      []string
@@ -21,8 +52,8 @@ func TestNoEmptyStart(t *testing.T) {
 	}
 
 	r = ProcessLines(l, "nofile")
-	assert.Equal(len(r), 1, "An error was found")
-	assert.Equal(r[0].LineNo, 2, "Error found at second line")
+	assert.Equal(1, len(r), "An error was found")
+	assert.Equal(2, r[0].LineNo, "Error found at second line")
 
 	l = []string{
 		"var notFirstLine = 0",
@@ -34,8 +65,8 @@ func TestNoEmptyStart(t *testing.T) {
 	}
 
 	r = ProcessLines(l, "nofile")
-	assert.Equal(len(r), 1, "An error was found")
-	assert.Equal(r[0].LineNo, 4, "Error found at fourth line")
+	assert.Equal(1, len(r), "An error was found")
+	assert.Equal(4, r[0].LineNo, "Error found at fourth line")
 }
 
 func TestBlankLineAfterBracket(t *testing.T) {
@@ -55,8 +86,8 @@ func TestBlankLineAfterBracket(t *testing.T) {
 	}
 
 	r = ProcessLines(l, "nofile")
-	assert.Equal(len(r), 1, "An error was found")
-	assert.Equal(r[0].LineNo, 6, "Error found at fifth line")
+	assert.Equal(1, len(r), "An error was found")
+	assert.Equal(6, r[0].LineNo, "Error found at fifth line")
 
 	l = []string{
 		"if true {",
@@ -69,7 +100,7 @@ func TestBlankLineAfterBracket(t *testing.T) {
 	}
 
 	r = ProcessLines(l, "nofile")
-	assert.Equal(len(r), 0, "No errors when nestling if statements")
+	assert.Equal(0, len(r), "No errors when nestling if statements")
 
 	l = []string{
 		"if true {",
@@ -83,8 +114,8 @@ func TestBlankLineAfterBracket(t *testing.T) {
 	}
 
 	r = ProcessLines(l, "nofile")
-	assert.Equal(len(r), 1, "An error was found")
-	assert.Equal(r[0].LineNo, 6, "Error found at sixth line")
+	assert.Equal(1, len(r), "An error was found")
+	assert.Equal(6, r[0].LineNo, "Error found at sixth line")
 }
 
 func TestBlankLineBeforeIf(t *testing.T) {
@@ -95,17 +126,6 @@ func TestBlankLineBeforeIf(t *testing.T) {
 	)
 
 	l = []string{
-		"var a = true",
-		"if a {",
-		"	// I'm cuddling!",
-		"}",
-	}
-
-	r = ProcessLines(l, "nofile")
-	assert.Equal(len(r), 1, "An error was found")
-	assert.Equal(r[0].LineNo, 2, "Error found at second line")
-
-	l = []string{
 		"_, err := strconv.Atoi(\"1\")",
 		"if err != nil {",
 		"	// ok to cuddle err checks",
@@ -113,7 +133,83 @@ func TestBlankLineBeforeIf(t *testing.T) {
 	}
 
 	r = ProcessLines(l, "nofile")
-	assert.Equal(len(r), 0, "No errors when cuddling err check")
+	assert.Equal(0, len(r), "No errors when cuddling the most common err check")
+
+	l = []string{
+		"var a = true",
+		"if a {",
+		"	// I'm cuddling!",
+		"}",
+	}
+
+	r = ProcessLines(l, "nofile")
+	assert.Equal(0, len(r), "No error when using one assign value")
+
+	l = []string{
+		"foo, bar, baz := SomeFunc()",
+		"if !baz {",
+		"	var a = true",
+		"}",
+	}
+
+	l = []string{
+		"result := DoIt()",
+		"if err != nil {",
+		"	// Error?!",
+		"}",
+	}
+
+	r = ProcessLines(l, "nofile")
+	assert.Equal(1, len(r), "An error was found")
+	assert.Equal(2, r[0].LineNo, "Error found at second line")
+
+	l = []string{
+		"var a = true",
+		"if a {",
+		"	// I'm cuddling!",
+		"}",
+	}
+
+	r = ProcessLines(l, "nofile")
+	assert.Equal(0, len(r), "No error when using one of any assign value")
+
+	l = []string{
+		"foo := true",
+		"bar := false",
+		"",
+		"biz := Some()",
+		"if !biz {",
+		"	var a = true",
+		"}",
+	}
+
+	r = ProcessLines(l, "nofile")
+	assert.Equal(0, len(r), "No errors using room before last assignment")
+
+	l = []string{
+		"foo := true",
+		"bar := false",
+		"biz := Some()",
+		"",
+		"if !biz {",
+		"	var a = true",
+		"}",
+	}
+
+	r = ProcessLines(l, "nofile")
+	assert.Equal(0, len(r), "No errors using room before if statement")
+
+	l = []string{
+		"foo := true",
+		"bar := false",
+		"biz := Some()",
+		"if !biz {",
+		"	var a = true",
+		"}",
+	}
+
+	r = ProcessLines(l, "nofile")
+	assert.Equal(1, len(r), "An error was found")
 
 	l = []string{
 		"switch {",
@@ -125,7 +221,7 @@ func TestBlankLineBeforeIf(t *testing.T) {
 	}
 
 	r = ProcessLines(l, "nofile")
-	assert.Equal(len(r), 1, "An error was found")
+	assert.Equal(1, len(r), "An error was found")
 }
 
 func TestFirstLineBlank(t *testing.T) {
@@ -145,8 +241,8 @@ func TestFirstLineBlank(t *testing.T) {
 	}
 
 	r = ProcessLines(l, "nofile")
-	assert.Equal(len(r), 1, "An error was found")
-	assert.Equal(r[0].LineNo, 1, "Error found at first line")
+	assert.Equal(1, len(r), "An error was found")
+	assert.Equal(1, r[0].LineNo, "Error found at first line")
 }
 
 func TestFileProcessing(t *testing.T) {
@@ -155,10 +251,10 @@ func TestFileProcessing(t *testing.T) {
 		assert = assert.New(t)
 	)
 
-	r = ProcessFile("testfiles/01.go")
-	assert.Equal(len(r), 8, "An error was found")
-	assert.Equal(r[0].LineNo, 9, "Error was found on line 4")
+	r = ProcessFiles([]string{"testfiles/01.go"})
+	assert.Equal(8, len(r), "An error was found")
+	assert.Equal(9, r[0].LineNo, "Error was found on line 4")
 
 	r = ProcessFile("testfiles/02.go")
-	assert.Equal(len(r), 0, "No errors in file")
+	assert.Equal(0, len(r), "No errors in file")
 }
