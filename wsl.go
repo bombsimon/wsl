@@ -64,14 +64,15 @@ func ProcessLines(lines []string, filename string) []Result {
 			previousRow = strings.TrimSpace(lines[idx])
 		)
 
-		// Check if we're at the start of a block comment.
-		if strings.HasPrefix(currentRow, "/*") {
-			inComment = true
-		}
-
 		// Check if we're at the end of a block comment.
 		if strings.HasPrefix(currentRow, "*/") {
 			inComment = false
+			continue
+		}
+
+		// Check if we're at the start of a block comment.
+		if strings.HasPrefix(currentRow, "/*") {
+			inComment = true
 		}
 
 		// Allow whatever crappy style in comments.
@@ -116,9 +117,22 @@ func ProcessLines(lines []string, filename string) []Result {
 			}
 		}
 
-		if strings.HasPrefix(currentRow, "if") {
-			if !hasIfPrefix(currentRow, "err", "ok", "!ok") && !strings.HasSuffix(previousRow, "{") && !strings.HasPrefix(previousRow, "case") && !emptyOrComment(previousRow) {
-				result = append(result, Result{filename, lineNo, "if statement should have a blank line before they start, unless for error checking or nested"})
+		if strings.HasPrefix(currentRow, "if") && !emptyOrComment(previousRow) {
+			// We can (should) cuddle if previous line was if or case
+			if !strings.HasSuffix(previousRow, "{") && !strings.HasPrefix(previousRow, "case") {
+				assigned := getAssigned(previousRow)
+
+				if !inList(currentRow, assigned) {
+					result = append(result, Result{filename, lineNo, "if statement should have a blank line before they start, unless they use variables assigned on the line before"})
+				} else {
+					if lineNo >= 3 {
+						twoUp := strings.TrimSpace(lines[i-2])
+
+						if strings.Contains(twoUp, "=") {
+							result = append(result, Result{filename, lineNo - 2, "if statements can check variables assigned on the line above only if the assignment row follows a line without assignment"})
+						}
+					}
+				}
 			}
 		}
 	}
@@ -126,16 +140,41 @@ func ProcessLines(lines []string, filename string) []Result {
 	return result
 }
 
-func emptyOrComment(s string) bool {
-	return s == "" || strings.HasPrefix(s, "//")
-}
+func inList(s string, list []string) bool {
+	currentRowWords := strings.Split(s, " ")
 
-func hasIfPrefix(s string, ss ...string) bool {
-	for _, prefix := range ss {
-		if strings.HasPrefix(s, fmt.Sprintf("if %s", prefix)) {
-			return true
+	// Iterate all words on this row (if !foo || bar > 0)
+	for _, w := range currentRowWords {
+		// Compare towards list with assigned on previous line (baz, bar)
+		for _, l := range list {
+			// if !foo  == baz || !foo == !baz
+			// if bar == bar || bar == !bar
+			if w == l || w == "!"+l {
+				return true
+			}
 		}
 	}
 
 	return false
+}
+
+func getAssigned(s string) []string {
+	var assigned []string
+
+	parts := strings.Split(s, " ")
+
+	for _, part := range parts {
+		// If the token is an assignment, no more variables to store.
+		if part == "=" || part == ":=" {
+			break
+		}
+
+		assigned = append(assigned, part)
+	}
+
+	return assigned
+}
+
+func emptyOrComment(s string) bool {
+	return s == "" || strings.HasPrefix(s, "//")
 }
