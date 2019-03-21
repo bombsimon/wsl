@@ -4,40 +4,45 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestIgnoreComments(t *testing.T) {
-	var (
-		l      []string
-		r      []Result
-		assert = assert.New(t)
-	)
+	code := []byte(`package main
 
-	l = []string{
-		"/*",
-		"Multi line comments ignore errors",
-		"if true {",
-		"",
-		"",
-		"	fmt.Println(\"Well hello blankies\")",
-		"",
-		"}",
-		"*/",
-		"",
-		"// Also single lines are ignore",
-		"// foo := false",
-		"// if true {",
-		"//",
-		"//	foo = true",
-		"//",
-		"//}",
-	}
+/*
+Multi line comments ignore errors
+if true {
 
-	r = ProcessLines(l, "nofile")
-	assert.Equal(0, len(r), "No errors for comments")
+	fmt.Println("Well hello blankies!")
+
+}
+*/
+
+// Also signel comments are ignored
+// foo := false
+// if true {
+//
+//	foo = true
+//
+// }`)
+
+	r := ProcessFile("unit-test", code)
+	assert.Len(t, r, 0, "no errors for comments")
 }
 
 func TestNoEmptyStart(t *testing.T) {
+	code := []byte(`func a() {
+	fmt.Println("this is function a")
+}`)
+
+	r := ProcessFile("unit-test", code)
+
+	require.Len(t, r, 1, "invalid syntax, cannot be linted")
+	assert.Equal(t, r[0].Reason, "invalid syntax, file cannot be linted")
+}
+
+/*
 	var (
 		l      []string
 		r      []Result
@@ -258,3 +263,4 @@ func TestFileProcessing(t *testing.T) {
 	r = ProcessFile("testfiles/02.go")
 	assert.Equal(0, len(r), "No errors in file")
 }
+*/

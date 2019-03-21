@@ -42,7 +42,7 @@ func main() {
 		files = append(files, m.FullName())
 	}
 
-	r := ProcessFiles([]string{flag.Args()[0]})
+	r := ProcessFiles(files)
 
 	for _, x := range r {
 		fmt.Printf("%s:%d: %s\n", x.FileName, x.LineNumber, x.Reason)
