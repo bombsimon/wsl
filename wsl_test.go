@@ -378,7 +378,7 @@ func TestCuddle(t *testing.T) {
 
 				return
 			}`),
-			expectedErrorStrings: []string{"expressions can not be cuddled with decarations or returns"},
+			expectedErrorStrings: []string{"expressions can not be cuddled with declarations or returns"},
 		},
 		{
 			description: "expressions can be cuddlede with assigments",

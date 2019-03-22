@@ -176,12 +176,23 @@ func parseBlockStatements(fset *token.FileSet, comments []*ast.CommentGroup, sta
 							if v, ok := expressionType.Args[0].(*ast.Ident); ok {
 								expressionInIfStatement = v
 							}
+						} else {
+							// TODO: Not yet implemented.
+							continue
 						}
 					}
 				case *ast.UnaryExpr:
 					expressionInIfStatement = x.X.(*ast.Ident)
 				default:
 					fmt.Printf("%s:%d: not an expression?! (%T)\n", fset.File(t.Pos()).Name(), fset.Position(t.Pos()).Line, t)
+					continue
+				}
+
+				// TODO: Handled if-statements with multiple assignments and
+				// expressions. We ended up here but didn't have any defined
+				// expression in the if statement?!
+				if expressionInIfStatement == nil {
+					fmt.Printf("%s:%d: didn't catch argument(s) from if-statement (%T)\n", fset.File(t.Pos()).Name(), fset.Position(t.Pos()).Line, t)
 					continue
 				}
 
@@ -228,7 +239,7 @@ func parseBlockStatements(fset *token.FileSet, comments []*ast.CommentGroup, sta
 				result = append(result, Result{
 					FileName:   fset.Position(t.Pos()).Filename,
 					LineNumber: fset.Position(t.Pos()).Line,
-					Reason:     "expressions can not be cuddled with decarations or returns",
+					Reason:     "expressions can not be cuddled with declarations or returns",
 				})
 			}
 		case *ast.RangeStmt:
