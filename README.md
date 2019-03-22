@@ -43,3 +43,139 @@ testfiles/03.go:9: declarations can never be cuddled
 testfiles/recursive/01.go:5: block should not start with a whitespace
 testfiles/recursive/01.go:7: block should not end with a whitespace (or comment)
 ```
+
+## Rules
+
+Note that this linter doesn't take in consideration the issues that will be
+fixed with `gofmt` so ensure that the code is properly formatted.
+
+### Never use empty lines
+
+Even though this linter was built to **promote** the usage of empty lines, there
+are a few places where they should never be used.
+
+Never use empty lines in the start or end of a block.
+
+**Don't**
+
+```go
+if someBooleanValue {
+
+    fmt.Println("I like starting newlines")
+}
+
+if someOtherBooleanValue {
+    fmt.Println("also trailing")
+
+}
+
+switch {
+
+case 1:
+    fmt.Println("switch is also a block")
+}
+
+switch {
+case 1:
+
+    fmt.Println("not in a case")
+case 2:
+    fmt.Println("or at the end")
+
+}
+
+func neverNewlineAfterReturn() {
+    return true
+
+}
+
+func notEvenWithComments() {
+    return false
+    // I just forgot to say this...
+}
+```
+
+**Do**
+
+```go
+if someBooleanValue {
+    fmt.Println("this is tight and nice")
+}
+
+switch {
+case 1:
+    fmt.Println("no blank lines here")
+case 2:
+    // Comments are fine here!
+    fmt.Println("or here")
+}
+
+func returnCuddleded() {
+    return true
+}
+```
+
+### Use empty lines
+
+There's an easy way to improve logic and readabilty by enforcing whitespaces at
+the right places. Usually this is around blocks and after declarations.
+
+**Don't**
+
+```go
+var x = 1
+var y = 2
+
+someVar := false
+if err != nil {
+    return
+}
+
+if false {
+    fmt.Println("is false")
+}
+if true {
+    fmt.Println("is true")
+}
+
+switch {
+case 1:
+    return
+}
+foo := bar
+```
+
+**Do**
+
+```go
+var (
+    x = 1
+    y = 2
+)
+
+someVar := false
+
+if err != nil {
+    return
+}
+
+err := errors.New("not nil")
+if err != nil {
+    fmt.Println("ok to cuddle with assigments used in if")
+}
+
+if false {
+    fmt.Println("is false")
+}
+
+if true {
+    fmt.Println("is true")
+}
+
+switch {
+case 1:
+    return
+}
+
+foo := bar
+```
