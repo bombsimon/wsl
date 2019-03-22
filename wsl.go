@@ -90,9 +90,6 @@ func parseBlockStatements(fset *token.FileSet, comments []*ast.CommentGroup, sta
 			switch bodyT := bodyV.Interface().(type) {
 			case *ast.BlockStmt:
 				result = append(result, parseBlock(fset, comments, bodyT)...)
-			case *ast.CaseClause:
-				// TODO: Must handle starting and traingling whitespace
-				result = append(result, parseBlockStatements(fset, comments, bodyT.Body)...)
 			case []ast.Stmt:
 				// The Body field for an *ast.CaseClause is of type []ast.Stmt.
 				// We must check leading and trailing whitespaces and then pass
@@ -178,7 +175,8 @@ func parseBlockStatements(fset *token.FileSet, comments []*ast.CommentGroup, sta
 				case *ast.UnaryExpr:
 					expressionInIfStatement = x.X.(*ast.Ident)
 				default:
-					panic(fmt.Sprintf("Not an expression at %d?! %T\n", x, fset.Position(t.Pos()).Line))
+					fmt.Printf("%s:%d: not an expression?! (%T)\n", fset.File(t.Pos()).Name(), fset.Position(t.Pos()).Line, t)
+					continue
 				}
 
 				if previousAssigmentIdentifier.Name == expressionInIfStatement.Name {
@@ -228,11 +226,11 @@ func parseBlockStatements(fset *token.FileSet, comments []*ast.CommentGroup, sta
 				})
 			}
 		case *ast.RangeStmt:
-		// TODO: Handle for range...
+			// TODO: Handle for range...
 		case *ast.BranchStmt:
 			// TODO: What is this?
 		case *ast.CaseClause:
-			// Already handeled
+			// TODO: Already handeled?
 		default:
 			fmt.Printf("%s:%d: stmt type not implemented (%T)\n", fset.File(t.Pos()).Name(), fset.Position(t.Pos()).Line, t)
 		}
@@ -295,7 +293,7 @@ func findLeadingAndTrailingWhitespaces(fset *token.FileSet, stmt, nextStatement 
 			result = append(result, Result{
 				FileName:   fset.Position(lastStatement.Pos()).Filename,
 				LineNumber: fset.Position(lastStatement.Pos()).Line + 1,
-				Reason:     "block should not end with a whitespace",
+				Reason:     "block should not end with a whitespace (or comment)",
 			})
 		}
 	case *ast.CaseClause:
@@ -313,7 +311,7 @@ func findLeadingAndTrailingWhitespaces(fset *token.FileSet, stmt, nextStatement 
 					result = append(result, Result{
 						FileName:   fset.Position(lastStatement.Pos()).Filename,
 						LineNumber: fset.Position(lastStatement.Pos()).Line + 1,
-						Reason:     "case block should not end with a whitespace",
+						Reason:     "case block should not end with a whitespace (or comment)",
 					})
 				}
 			}

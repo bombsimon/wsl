@@ -1,266 +1,407 @@
 package main
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestIgnoreComments(t *testing.T) {
-	code := []byte(`package main
+func TestInvalidFile(t *testing.T) {
+	cases := []struct {
+		description          string
+		code                 []byte
+		expectedErrorStrings []string
+	}{
+		{
+			description: "a file must start with package declaration",
+			code: []byte(`func a() {
+				fmt.Println("this is function a")
+			}`),
+			expectedErrorStrings: []string{"invalid syntax, file cannot be linted"},
+		},
+	}
 
-/*
-Multi line comments ignore errors
-if true {
+	for _, tc := range cases {
+		t.Run(tc.description, func(t *testing.T) {
+			r := ProcessFile("unit-test", tc.code)
 
-	fmt.Println("Well hello blankies!")
+			require.Len(t, r, len(tc.expectedErrorStrings), "correct amount of errors found")
 
+			for i := range tc.expectedErrorStrings {
+				assert.Contains(t, r[i].Reason, tc.expectedErrorStrings[i], "expected error found")
+			}
+		})
+	}
 }
-*/
 
-// Also signel comments are ignored
-// foo := false
-// if true {
-//
-//	foo = true
-//
-// }`)
+func TestIgnoreComments(t *testing.T) {
+	cases := []struct {
+		description          string
+		code                 []byte
+		expectedErrorStrings []string
+	}{
+		{
+			description: "comments are ignored, ignore this crappy code",
+			code: []byte(`package main
 
-	r := ProcessFile("unit-test", code)
-	assert.Len(t, r, 0, "no errors for comments")
+			/*
+			Multi line comments ignore errors
+			if true {
+
+				fmt.Println("Well hello blankies!")
+
+			}
+			*/
+
+			// Also signel comments are ignored
+			// foo := false
+			// if true {
+			//
+			//	foo = true
+			//
+			// }`),
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.description, func(t *testing.T) {
+			r := ProcessFile("unit-test", tc.code)
+
+			require.Len(t, r, len(tc.expectedErrorStrings), "correct amount of errors found")
+
+			for i := range tc.expectedErrorStrings {
+				assert.Contains(t, r[i].Reason, tc.expectedErrorStrings[i], "expected error found")
+			}
+		})
+	}
 }
 
 func TestNoEmptyStart(t *testing.T) {
-	code := []byte(`func a() {
-	fmt.Println("this is function a")
-}`)
+	cases := []struct {
+		description          string
+		code                 []byte
+		expectedErrorStrings []string
+	}{
+		{
+			description: "if statements cannot start or end with newlines",
+			code: []byte(`package main
+			func main() {
+				if true {
 
-	r := ProcessFile("unit-test", code)
+					fmt.Println("this violates the rules")
 
-	require.Len(t, r, 1, "invalid syntax, cannot be linted")
-	assert.Equal(t, r[0].Reason, "invalid syntax, file cannot be linted")
-}
+				}
+			}`),
+			expectedErrorStrings: []string{"block should not start with a whitespace", "block should not end with a whitespace (or comment)"},
+		},
+		{
+			description: "whitespaces parsed correct even with comments (whitespace found)",
+			code: []byte(`package main
+			func main() {
+				if true {
+					// leading comment, still too much whitespace
 
-/*
-	var (
-		l      []string
-		r      []Result
-		assert = assert.New(t)
-	)
+					fmt.Println("this violates the rules")
 
-	l = []string{
-		"func a() {",
-		"",
-		"	var a = true",
-		"}",
+					// trailing comment, still too much whitespace
+				}
+			}`),
+			expectedErrorStrings: []string{"block should not start with a whitespace", "block should not end with a whitespace (or comment)"},
+		},
+		{
+			description: "whitespaces parsed correct even with comments (whitespace NOT found)",
+			code: []byte(`package main
+
+			func main() {
+				if true {
+					// leading comment, still too much whitespace
+					// more comments
+					fmt.Println("this violates the rules")
+				}
+			}`),
+		},
+		{
+			description: "whitespaces parsed correctly in case blocks",
+			code: []byte(`package main
+			func main() {
+				switch true {
+				case 1:
+
+					fmt.Println("this is too much...")
+
+				case 2:
+					fmt.Println("this is too much...")
+
+				}
+			}`),
+			expectedErrorStrings: []string{
+				"block should not end with a whitespace (or comment)",
+				"case block should not start with a whitespace",
+				"case block should not end with a whitespace",
+			},
+		},
+		{
+			description: "whitespaces parsed correctly in case blocks with comments (whitespace NOT found)",
+			code: []byte(`package main
+			func main() {
+				switch true {
+				case 1:
+					// Some leading comment here
+					fmt.Println("this is too much...")
+				case 2:
+					fmt.Println("this is too much...")
+				}
+			}`),
+		},
 	}
 
-	r = ProcessLines(l, "nofile")
-	assert.Equal(1, len(r), "An error was found")
-	assert.Equal(2, r[0].LineNo, "Error found at second line")
+	for _, tc := range cases {
+		t.Run(tc.description, func(t *testing.T) {
+			r := ProcessFile("unit-test", tc.code)
 
-	l = []string{
-		"var notFirstLine = 0",
-		"",
-		"if true {",
-		"",
-		"	// true is true",
-		"}",
+			require.Len(t, r, len(tc.expectedErrorStrings), "correct amount of errors found")
+
+			for i := range tc.expectedErrorStrings {
+				assert.Contains(t, r[i].Reason, tc.expectedErrorStrings[i], "expected error found")
+			}
+		})
 	}
-
-	r = ProcessLines(l, "nofile")
-	assert.Equal(1, len(r), "An error was found")
-	assert.Equal(4, r[0].LineNo, "Error found at fourth line")
 }
 
 func TestBlankLineAfterBracket(t *testing.T) {
-	var (
-		l      []string
-		r      []Result
-		assert = assert.New(t)
-	)
+	cases := []struct {
+		description          string
+		code                 []byte
+		expectedErrorStrings []string
+	}{
+		{
+			description: "declarations may never be cuddled",
+			code: []byte(`package main
 
-	l = []string{
-		"var b = true",
-		"",
-		"if b {",
-		"	// b is true here",
-		"}",
-		"var a = false",
+			func main() {
+				var b = true
+
+				if b {
+					// b is true here
+				}
+				var a = false
+			}`),
+			expectedErrorStrings: []string{"declarations can never be cuddled"},
+		},
+		{
+			description: "nested if statements should not be seen as cuddled",
+			code: []byte(`package main
+
+			func main() {
+				if true {
+					if false {
+						if true && false {
+							// Whelp?!
+						}
+					}
+				}
+			}`),
+		},
 	}
 
-	r = ProcessLines(l, "nofile")
-	assert.Equal(1, len(r), "An error was found")
-	assert.Equal(6, r[0].LineNo, "Error found at fifth line")
+	for _, tc := range cases {
+		t.Run(tc.description, func(t *testing.T) {
+			r := ProcessFile("unit-test", tc.code)
 
-	l = []string{
-		"if true {",
-		"	if false {",
-		"		if true && false {",
-		"			// Whelp",
-		"		}",
-		"	}",
-		"}",
+			require.Len(t, r, len(tc.expectedErrorStrings), "correct amount of errors found")
+
+			for i := range tc.expectedErrorStrings {
+				assert.Contains(t, r[i].Reason, tc.expectedErrorStrings[i], fmt.Sprintf("expected error found at index %d", i))
+			}
+		})
 	}
-
-	r = ProcessLines(l, "nofile")
-	assert.Equal(0, len(r), "No errors when nestling if statements")
-
-	l = []string{
-		"if true {",
-		"	if false {",
-		"		if true && false {",
-		"			// Whelp",
-		"		}",
-		"		thisIsToTight = true",
-		"	}",
-		"}",
-	}
-
-	r = ProcessLines(l, "nofile")
-	assert.Equal(1, len(r), "An error was found")
-	assert.Equal(6, r[0].LineNo, "Error found at sixth line")
 }
 
 func TestBlankLineBeforeIf(t *testing.T) {
-	var (
-		l      []string
-		r      []Result
-		assert = assert.New(t)
-	)
+	cases := []struct {
+		description          string
+		code                 []byte
+		expectedErrorStrings []string
+	}{
+		{
+			description: "ok to cuddled if statements directly after assigments multiple values",
+			code: []byte(`package main
 
-	l = []string{
-		"_, err := strconv.Atoi(\"1\")",
-		"if err != nil {",
-		"	// ok to cuddle err checks",
-		"}",
+			func main() {
+				v, err := strconv.Atoi("1")
+				if err != nil {
+					fmt.Println(v)
+				}
+			}`),
+		},
+		{
+			description: "ok to cuddled if statements directly after assigments single value",
+			code: []byte(`package main
+
+			func main() {
+				a := true
+				if a {
+					fmt.Println("I'm OK")
+				}
+			}`),
+		},
+		{
+			description: "ok to cuddled if statements directly after assigments single value, negations",
+			code: []byte(`package main
+
+			func main() {
+				a, b := true, false
+				if !a {
+					fmt.Println("I'm OK")
+				}
+			}`),
+		},
+		{
+			description: "cannot cuddled if assigments not used",
+			code: []byte(`package main
+
+			func main() {
+				err := ProduceError()
+
+				a, b := true, false
+				if err != nil {
+					fmt.Println("I'm OK")
+				}
+			}`),
+			expectedErrorStrings: []string{"if statements can only be cuddled with assigments used in the if statement itself"},
+		},
+		{
+			description: "cannot cuddled with other things than assigments",
+			code: []byte(`package main
+
+			func main() {
+				if true {
+					fmt.Println("I'm OK")
+				}
+				if false {
+					fmt.Println("I'm OK")
+				}
+			}`),
+			expectedErrorStrings: []string{"if statements can only be cuddled with assigments"},
+		},
 	}
 
-	r = ProcessLines(l, "nofile")
-	assert.Equal(0, len(r), "No errors when cuddling the most common err check")
+	/*
+		TODO: Checks that allows this:
+		foo := true
+		bar := false
 
-	l = []string{
-		"var a = true",
-		"if a {",
-		"	// I'm cuddling!",
-		"}",
+		biz := true || false
+		if biz {
+		}
+
+		AND
+
+		foo := true
+		bar := false
+		biz := true || false
+
+		if biz {
+		}
+
+		BUT NOT THIS
+
+		foo := true
+		bar := false
+		biz := true || false
+		if biz {
+		}
+	*/
+
+	for _, tc := range cases {
+		t.Run(tc.description, func(t *testing.T) {
+			r := ProcessFile("unit-test", tc.code)
+
+			require.Len(t, r, len(tc.expectedErrorStrings), "correct amount of errors found")
+
+			for i := range tc.expectedErrorStrings {
+				assert.Contains(t, r[i].Reason, tc.expectedErrorStrings[i], "expected error found")
+			}
+		})
 	}
-
-	r = ProcessLines(l, "nofile")
-	assert.Equal(0, len(r), "No error when using one assign value")
-
-	l = []string{
-		"foo, bar, baz := SomeFunc()",
-		"if !baz {",
-		"	var a = true",
-		"}",
-	}
-
-	l = []string{
-		"result := DoIt()",
-		"if err != nil {",
-		"	// Error?!",
-		"}",
-	}
-
-	r = ProcessLines(l, "nofile")
-	assert.Equal(1, len(r), "An error was found")
-	assert.Equal(2, r[0].LineNo, "Error found at second line")
-
-	l = []string{
-		"var a = true",
-		"if a {",
-		"	// I'm cuddling!",
-		"}",
-	}
-
-	r = ProcessLines(l, "nofile")
-	assert.Equal(0, len(r), "No error when using one of any assign value")
-
-	l = []string{
-		"foo := true",
-		"bar := false",
-		"",
-		"biz := Some()",
-		"if !biz {",
-		"	var a = true",
-		"}",
-	}
-
-	r = ProcessLines(l, "nofile")
-	assert.Equal(0, len(r), "No errors using room before last assignment")
-
-	l = []string{
-		"foo := true",
-		"bar := false",
-		"biz := Some()",
-		"",
-		"if !biz {",
-		"	var a = true",
-		"}",
-	}
-
-	r = ProcessLines(l, "nofile")
-	assert.Equal(0, len(r), "No errors using room before if statement")
-
-	l = []string{
-		"foo := true",
-		"bar := false",
-		"biz := Some()",
-		"if !biz {",
-		"	var a = true",
-		"}",
-	}
-
-	r = ProcessLines(l, "nofile")
-	assert.Equal(1, len(r), "An error was found")
-
-	l = []string{
-		"switch {",
-		"case 1:",
-		"",
-		"	// I start with a blank line",
-		"	notAllowed = true",
-		"}",
-	}
-
-	r = ProcessLines(l, "nofile")
-	assert.Equal(1, len(r), "An error was found")
 }
 
-func TestFirstLineBlank(t *testing.T) {
-	var (
-		l      []string
-		r      []Result
-		assert = assert.New(t)
-	)
+func TestCuddle(t *testing.T) {
+	cases := []struct {
+		description          string
+		code                 []byte
+		expectedErrorStrings []string
+	}{
+		{
+			description: "return can never be cuddleded",
+			code: []byte(`package main
 
-	l = []string{
-		"",
-		"package main",
-		"",
-		"func main() {",
-		"	fmt.Println(\"Hello world\")",
-		"}",
+			func main() {
+				var foo = true
+				return
+			}`),
+			expectedErrorStrings: []string{"return statements can never be cuddled"},
+		},
+		{
+			description: "assigments can only be cuddled with assignments (negative)",
+			code: []byte(`package main
+
+			func main() {
+				if true {
+					fmt.Println("this is bad...")
+				}
+				foo := true
+			}`),
+			expectedErrorStrings: []string{"assigments can only be cuddled with other assigments"},
+		},
+		{
+			description: "assigments can only be cuddled with assignments",
+			code: []byte(`package main
+
+			func main() {
+				bar := false
+				foo := true
+				biz := true
+
+				return
+			}`),
+		},
+		{
+			description: "expressions cannot be cuddled with declarations",
+			code: []byte(`package main
+
+			func main() {
+				var a bool
+				fmt.Println(a)
+
+				return
+			}`),
+			expectedErrorStrings: []string{"expressions can not be cuddled with decarations or returns"},
+		},
+		{
+			description: "expressions can be cuddlede with assigments",
+			code: []byte(`package main
+
+			func main() {
+				a := true
+				fmt.Println(a)
+
+				return
+			}`),
+		},
 	}
 
-	r = ProcessLines(l, "nofile")
-	assert.Equal(1, len(r), "An error was found")
-	assert.Equal(1, r[0].LineNo, "Error found at first line")
+	for _, tc := range cases {
+		t.Run(tc.description, func(t *testing.T) {
+			r := ProcessFile("unit-test", tc.code)
+
+			require.Len(t, r, len(tc.expectedErrorStrings), "correct amount of errors found")
+
+			for i := range tc.expectedErrorStrings {
+				assert.Contains(t, r[i].Reason, tc.expectedErrorStrings[i], "expected error found")
+			}
+		})
+	}
 }
-
-func TestFileProcessing(t *testing.T) {
-	var (
-		r      []Result
-		assert = assert.New(t)
-	)
-
-	r = ProcessFiles([]string{"testfiles/01.go"})
-	assert.Equal(8, len(r), "An error was found")
-	assert.Equal(9, r[0].LineNo, "Error was found on line 4")
-
-	r = ProcessFile("testfiles/02.go")
-	assert.Equal(0, len(r), "No errors in file")
-}
-*/
