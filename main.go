@@ -4,45 +4,70 @@ import (
 	"flag"
 	"fmt"
 	"os"
-
-	"github.com/bombsimon/ff"
+	"path/filepath"
+	"strings"
 )
 
 func main() {
 	var (
-		recursive bool
+		args       []string
+		help       bool
+		notest     bool
+		cwd, _     = os.Getwd()
+		files      = []string{}
+		finalFiles = []string{}
 	)
 
-	flag.BoolVar(&recursive, "recursive", false, "parse file recursive")
-	flag.BoolVar(&recursive, "r", false, "parse file recursive")
+	flag.BoolVar(&help, "h", false, "Show this help text")
+	flag.BoolVar(&help, "help", false, "")
+	flag.BoolVar(&notest, "n", false, "Don't lint test files")
+	flag.BoolVar(&notest, "no-test", false, "")
 
 	flag.Parse()
 
-	var (
-		files []string
-		err   error
-		match []ff.Match
-	)
+	if help {
+		showHelp()
 
-	switch flag.NArg() {
-	case 0:
-		match, err = ff.FilesFromPattern(".", "*.go", "", recursive)
-	case 1:
-		match, err = ff.FilesFromPattern(".", flag.Args()[0], "", recursive)
-	default:
-		match, err = ff.FilesFromPattern(flag.Args()[0], flag.Args()[1], "", recursive)
+		return
 	}
 
-	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+	args = flag.Args()
+	if len(args) == 0 {
+		args = []string{"./..."}
 	}
 
-	for _, m := range match {
-		files = append(files, m.FullName())
+	for _, f := range args {
+		if strings.HasSuffix(f, "/...") {
+			dir, _ := filepath.Split(f)
+
+			files = append(files, expandGoWildcard(dir)...)
+
+			continue
+		}
+
+		if _, err := os.Stat(f); err == nil {
+			files = append(files, f)
+		}
 	}
 
-	r := ProcessFiles(files)
+	// Use relative path to print shorter names, sort out test files if chosen.
+	for _, f := range files {
+		if notest {
+			if strings.HasSuffix(f, "_test.go") {
+				continue
+			}
+		}
+
+		if relativePath, err := filepath.Rel(cwd, f); err == nil {
+			finalFiles = append(finalFiles, relativePath)
+
+			continue
+		}
+
+		finalFiles = append(finalFiles, f)
+	}
+
+	r := ProcessFiles(finalFiles)
 
 	for _, x := range r {
 		fmt.Printf("%s:%d: %s\n", x.FileName, x.LineNumber, x.Reason)
@@ -52,5 +77,33 @@ func main() {
 		os.Exit(2)
 	}
 
-	os.Exit(0)
+	return
+}
+
+func expandGoWildcard(root string) []string {
+	foundFiles := []string{}
+
+	_ = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		// Only append go files
+		if !strings.HasSuffix(info.Name(), ".go") {
+			return nil
+		}
+
+		foundFiles = append(foundFiles, path)
+
+		return nil
+	})
+
+	return foundFiles
+}
+
+func showHelp() {
+	helpText := `Usage: wsl <file> [files...]
+
+Also supports package syntax but will use it in relative path, i.e. ./pkg/...
+
+Flags:`
+
+	fmt.Println(helpText)
+	flag.PrintDefaults()
 }

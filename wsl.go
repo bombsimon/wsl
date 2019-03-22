@@ -170,7 +170,13 @@ func parseBlockStatements(fset *token.FileSet, comments []*ast.CommentGroup, sta
 						expressionInIfStatement = expressionType
 					case *ast.CallExpr:
 						// TODO: Recursive check args to function X and/or Y
-						continue
+						// In the meantime, handle one X expression (Lfs) and
+						// ignore Y expression (Rhs)
+						if len(expressionType.Args) == 1 {
+							if v, ok := expressionType.Args[0].(*ast.Ident); ok {
+								expressionInIfStatement = v
+							}
+						}
 					}
 				case *ast.UnaryExpr:
 					expressionInIfStatement = x.X.(*ast.Ident)
