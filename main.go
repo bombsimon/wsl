@@ -45,7 +45,7 @@ func main() {
 	r := ProcessFiles(files)
 
 	for _, x := range r {
-		fmt.Printf("%s:%d: %s\n", x.FileName, x.LineNo, x.Reason)
+		fmt.Printf("%s:%d: %s\n", x.FileName, x.LineNumber, x.Reason)
 	}
 
 	if len(r) > 0 {
