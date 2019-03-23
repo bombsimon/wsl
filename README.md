@@ -16,7 +16,7 @@ places in the code.
 
 ## Usage
 
-Install by using `go get -u github.com/bombsimon/wsl`.
+Install by using `go get -u github.com/bombsimon/wsl/cmd/...`.
 
 Run with `wsl [--no-test] <file1> [files...]` or `wsl ./package/...`. The "..." wildcard is
 not used like other `go` commands but instead can only be to a relative or
