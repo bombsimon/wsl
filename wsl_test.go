@@ -1,14 +1,13 @@
 package main
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestInvalidFile(t *testing.T) {
+func TestGenericHandling(t *testing.T) {
 	cases := []struct {
 		description          string
 		code                 []byte
@@ -21,27 +20,6 @@ func TestInvalidFile(t *testing.T) {
 			}`),
 			expectedErrorStrings: []string{"invalid syntax, file cannot be linted"},
 		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.description, func(t *testing.T) {
-			r := ProcessFile("unit-test", tc.code)
-
-			require.Len(t, r, len(tc.expectedErrorStrings), "correct amount of errors found")
-
-			for i := range tc.expectedErrorStrings {
-				assert.Contains(t, r[i].Reason, tc.expectedErrorStrings[i], "expected error found")
-			}
-		})
-	}
-}
-
-func TestIgnoreComments(t *testing.T) {
-	cases := []struct {
-		description          string
-		code                 []byte
-		expectedErrorStrings []string
-	}{
 		{
 			description: "comments are ignored, ignore this crappy code",
 			code: []byte(`package main
@@ -54,14 +32,15 @@ func TestIgnoreComments(t *testing.T) {
 
 			}
 			*/
-
-			// Also signel comments are ignored
-			// foo := false
-			// if true {
-			//
-			//	foo = true
-			//
-			// }`),
+			func main() {
+				// Also signel comments are ignored
+				// foo := false
+				// if true {
+				//
+				//	foo = true
+				//
+				// }
+			}`),
 		},
 	}
 
@@ -78,7 +57,7 @@ func TestIgnoreComments(t *testing.T) {
 	}
 }
 
-func TestNoEmptyStart(t *testing.T) {
+func TestShouldRemoveEmptyLines(t *testing.T) {
 	cases := []struct {
 		description          string
 		code                 []byte
@@ -155,27 +134,6 @@ func TestNoEmptyStart(t *testing.T) {
 				}
 			}`),
 		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.description, func(t *testing.T) {
-			r := ProcessFile("unit-test", tc.code)
-
-			require.Len(t, r, len(tc.expectedErrorStrings), "correct amount of errors found")
-
-			for i := range tc.expectedErrorStrings {
-				assert.Contains(t, r[i].Reason, tc.expectedErrorStrings[i], "expected error found")
-			}
-		})
-	}
-}
-
-func TestBlankLineAfterBracket(t *testing.T) {
-	cases := []struct {
-		description          string
-		code                 []byte
-		expectedErrorStrings []string
-	}{
 		{
 			description: "declarations may never be cuddled",
 			code: []byte(`package main
@@ -213,13 +171,13 @@ func TestBlankLineAfterBracket(t *testing.T) {
 			require.Len(t, r, len(tc.expectedErrorStrings), "correct amount of errors found")
 
 			for i := range tc.expectedErrorStrings {
-				assert.Contains(t, r[i].Reason, tc.expectedErrorStrings[i], fmt.Sprintf("expected error found at index %d", i))
+				assert.Contains(t, r[i].Reason, tc.expectedErrorStrings[i], "expected error found")
 			}
 		})
 	}
 }
 
-func TestBlankLineBeforeIf(t *testing.T) {
+func TestShouldAddEmptyLines(t *testing.T) {
 	cases := []struct {
 		description          string
 		code                 []byte
@@ -318,54 +276,6 @@ func TestBlankLineBeforeIf(t *testing.T) {
 				}
 			}`),
 		},
-	}
-
-	/*
-		TODO: Checks that allows this:
-		foo := true
-		bar := false
-
-		biz := true || false
-		if biz {
-		}
-
-		AND
-
-		foo := true
-		bar := false
-		biz := true || false
-
-		if biz {
-		}
-
-		BUT NOT THIS
-
-		foo := true
-		bar := false
-		biz := true || false
-		if biz {
-		}
-	*/
-
-	for _, tc := range cases {
-		t.Run(tc.description, func(t *testing.T) {
-			r := ProcessFile("unit-test", tc.code)
-
-			require.Len(t, r, len(tc.expectedErrorStrings), "correct amount of errors found")
-
-			for i := range tc.expectedErrorStrings {
-				assert.Contains(t, r[i].Reason, tc.expectedErrorStrings[i], "expected error found")
-			}
-		})
-	}
-}
-
-func TestCuddle(t *testing.T) {
-	cases := []struct {
-		description          string
-		code                 []byte
-		expectedErrorStrings []string
-	}{
 		{
 			description: "return can never be cuddleded",
 			code: []byte(`package main
@@ -423,27 +333,6 @@ func TestCuddle(t *testing.T) {
 				return
 			}`),
 		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.description, func(t *testing.T) {
-			r := ProcessFile("unit-test", tc.code)
-
-			require.Len(t, r, len(tc.expectedErrorStrings), "correct amount of errors found")
-
-			for i := range tc.expectedErrorStrings {
-				assert.Contains(t, r[i].Reason, tc.expectedErrorStrings[i], "expected error found")
-			}
-		})
-	}
-}
-
-func TestRanges(t *testing.T) {
-	cases := []struct {
-		description          string
-		code                 []byte
-		expectedErrorStrings []string
-	}{
 		{
 			description: "ranges cannot be cuddled with assigments not used in the range",
 			code: []byte(`package main
@@ -503,11 +392,68 @@ func TestRanges(t *testing.T) {
 }
 
 func TestTODO(t *testing.T) {
+	// All tests added in this TODO section suold fail. To make the
+	// implementation easier I'm trying to add the tests and handled them one by
+	// one with TDD.
+
 	cases := []struct {
 		description          string
 		code                 []byte
 		expectedErrorStrings []string
-	}{}
+	}{
+		{
+			description: "can cuddle only one assignment",
+			code: []byte(`package main
+
+			func main() {
+				// This is allowed
+				foo := true
+				bar := false
+
+				biz := true || false
+				if biz {
+					return true
+				}
+
+				// And this is allowed
+
+				foo := true
+				bar := false
+				biz := true || false
+
+				if biz {
+					return true
+				}
+
+				// But not this
+
+				foo := true
+				bar := false
+				biz := true || false
+				if biz {
+					return false
+				}
+			}`),
+			expectedErrorStrings: []string{},
+		},
+		{
+			description: "todo",
+			code: []byte(`package main
+
+			func main() {
+				// This should not be OK since the assignment is split at
+				// multiple rows.
+				err := SomeFunc(
+					"taking multiple values",
+					"suddendly not a single line",
+				)
+				if err != nil {
+					fmt.Println("denied")
+				}
+			}`),
+			expectedErrorStrings: []string{},
+		},
+	}
 
 	for _, tc := range cases {
 		t.Run(tc.description, func(t *testing.T) {
