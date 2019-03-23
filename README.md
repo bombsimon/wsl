@@ -144,6 +144,12 @@ case 1:
     return
 }
 foo := bar
+
+listOne := GetList()
+anotherList := GetList()
+for i := range listOne {
+    fmt.Println(i)
+}
 ```
 
 **Do**
@@ -184,4 +190,11 @@ case 1:
 }
 
 foo := bar
+
+anotherList := GetList()
+
+listOne := GetList()
+for i := range listOne {
+    fmt.Println(i)
+}
 ```

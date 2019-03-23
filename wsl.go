@@ -123,11 +123,25 @@ func parseBlockStatements(fset *token.FileSet, comments []*ast.CommentGroup, sta
 			continue
 		}
 
+		// We know we're cudded, extract information about last line assignments
+		// which is the only thing we allow cuddling with.
+		assignedOnLineAbove := []string{}
+
+		if lastAssignment, ok := previousStatement.(*ast.AssignStmt); ok {
+			for _, astIdentifier := range lastAssignment.Lhs {
+				switch x := astIdentifier.(type) {
+				case *ast.Ident:
+					assignedOnLineAbove = append(assignedOnLineAbove, x.Name)
+				default:
+					fmt.Printf("%s:%d: stmt type not implemented (%T)\n", fset.File(x.Pos()).Name(), fset.Position(x.Pos()).Line, x)
+				}
+			}
+		}
+
 		switch t := stmt.(type) {
 		case *ast.IfStmt:
 			// Check if we're cuddled with something that's not an assigment.
-			lastAssignment, ok := previousStatement.(*ast.AssignStmt)
-			if !ok {
+			if len(assignedOnLineAbove) == 0 {
 				result = append(result, Result{
 					FileName:   fset.Position(t.Pos()).Filename,
 					LineNumber: fset.Position(t.Pos()).Line,
@@ -138,16 +152,6 @@ func parseBlockStatements(fset *token.FileSet, comments []*ast.CommentGroup, sta
 			}
 
 			usedInStatement := findConditionVariables(t.Cond, fset)
-			assignedOnLineAbove := []string{}
-
-			for _, astIdentifier := range lastAssignment.Lhs {
-				// TODO: Handle !ok?
-				if previousAssigmentIdentifier, ok := astIdentifier.(*ast.Ident); ok {
-					assignedOnLineAbove = append(assignedOnLineAbove, previousAssigmentIdentifier.Name)
-				}
-			}
-
-			// TODO: Check if noone assigned or noone used?
 
 			if !atLeastOneInListsMatch(usedInStatement, assignedOnLineAbove) {
 				result = append(result, Result{
@@ -190,7 +194,15 @@ func parseBlockStatements(fset *token.FileSet, comments []*ast.CommentGroup, sta
 				})
 			}
 		case *ast.RangeStmt:
-			// TODO: Handle for range...
+			rangesOverValues := findConditionVariables(t.X, fset)
+
+			if !atLeastOneInListsMatch(rangesOverValues, assignedOnLineAbove) {
+				result = append(result, Result{
+					FileName:   fset.Position(t.Pos()).Filename,
+					LineNumber: fset.Position(t.Pos()).Line,
+					Reason:     "ranges should only be cuddled with assignments used in the iteration",
+				})
+			}
 		case *ast.BranchStmt:
 			// TODO: What is this?
 		case *ast.CaseClause:
