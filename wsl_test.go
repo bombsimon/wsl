@@ -395,7 +395,6 @@ func TestTODO(t *testing.T) {
 	// All tests added in this TODO section suold fail. To make the
 	// implementation easier I'm trying to add the tests and handled them one by
 	// one with TDD.
-
 	cases := []struct {
 		description          string
 		code                 []byte
