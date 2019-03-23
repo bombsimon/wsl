@@ -127,28 +127,34 @@ the right places. Usually this is around blocks and after declarations.
 var x = 1
 var y = 2
 
+var (
+    one = 1
+    two = 2
+)
+fmt.Println(one, two)
+
 someVar := false
 if err != nil {
-    return
+    return "Didn't use someVar"
 }
 
 if false {
-    fmt.Println("is false")
+    fmt.Println("first if")
 }
 if true {
-    fmt.Println("is true")
+    fmt.Println("second if is cuddled")
 }
 
 switch {
 case 1:
     return
 }
-foo := bar
+foo := "too close to switch statement"
 
 listOne := GetList()
 anotherList := GetList()
 for i := range listOne {
-    fmt.Println(i)
+    fmt.Println(i, "cuddled with anotherList which is not iterated over")
 }
 ```
 
@@ -163,25 +169,25 @@ var (
 someVar := false
 
 if err != nil {
-    return
+    return "Not cuddled with someVar since it's not used"
 }
 
 err := errors.New("not nil")
 if err != nil {
-    fmt.Println("ok to cuddle with assigments used in if")
+    fmt.Println("ok to cuddle with assigments if used in if statement")
 }
 
 val, ok := someInterface.(string)
 if !ok {
-    return
+    return "still OK even with multiple assignments"
 }
 
 if false {
-    fmt.Println("is false")
+    fmt.Println("first if statement")
 }
 
 if true {
-    fmt.Println("is true")
+    fmt.Println("a whitespace between the next one")
 }
 
 switch {
@@ -195,6 +201,6 @@ anotherList := GetList()
 
 listOne := GetList()
 for i := range listOne {
-    fmt.Println(i)
+    fmt.Println(i, "i'm cuddled with the variable iterated over - OK!")
 }
 ```
