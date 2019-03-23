@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/bombsimon/wsl"
 )
 
 func main() {
@@ -67,7 +69,7 @@ func main() {
 		finalFiles = append(finalFiles, f)
 	}
 
-	r := ProcessFiles(finalFiles)
+	r := wsl.ProcessFiles(finalFiles)
 
 	for _, x := range r {
 		fmt.Printf("%s:%d: %s\n", x.FileName, x.LineNumber, x.Reason)

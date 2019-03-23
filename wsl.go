@@ -1,4 +1,4 @@
-package main
+package wsl
 
 import (
 	"fmt"
@@ -7,8 +7,6 @@ import (
 	"go/token"
 	"io/ioutil"
 	"reflect"
-
-	"github.com/davecgh/go-spew/spew"
 )
 
 // Result represnets the result of one linted row which was not accepted by the
@@ -16,6 +14,7 @@ import (
 type Result struct {
 	FileName   string
 	LineNumber int
+	Pos        token.Position
 	Reason     string
 }
 
@@ -40,8 +39,6 @@ func ProcessFiles(files []string) []Result {
 // a token.FileSet which holds the full ast (abstract syntax tree) for the file.
 // A list of Result is returned.
 func ProcessFile(fileName string, fileData []byte) []Result {
-	result := []Result{}
-
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, fileName, fileData, parser.ParseComments)
 	if err != nil {
@@ -53,6 +50,14 @@ func ProcessFile(fileName string, fileData []byte) []Result {
 			},
 		}
 	}
+
+	return ProcessAST(fset, file)
+}
+
+// ProcessAST will process the file (or AST of file) via the *token.FileSet and
+// *ast.File
+func ProcessAST(fset *token.FileSet, file *ast.File) []Result {
+	result := []Result{}
 
 	for _, d := range file.Decls {
 		switch v := d.(type) {
@@ -137,7 +142,6 @@ func parseBlockStatements(fset *token.FileSet, comments []*ast.CommentGroup, sta
 				case *ast.SelectorExpr:
 					// No new variables on left side.
 				default:
-					spew.Dump(x)
 					fmt.Printf("%s:%d: stmt type not implemented (%T)\n", fset.File(x.Pos()).Name(), fset.Position(x.Pos()).Line, x)
 				}
 			}
@@ -150,6 +154,7 @@ func parseBlockStatements(fset *token.FileSet, comments []*ast.CommentGroup, sta
 				result = append(result, Result{
 					FileName:   fset.Position(t.Pos()).Filename,
 					LineNumber: fset.Position(t.Pos()).Line,
+					Pos:        fset.Position(t.Pos()),
 					Reason:     "if statements can only be cuddled with assigments",
 				})
 
@@ -162,6 +167,7 @@ func parseBlockStatements(fset *token.FileSet, comments []*ast.CommentGroup, sta
 				result = append(result, Result{
 					FileName:   fset.Position(t.Pos()).Filename,
 					LineNumber: fset.Position(t.Pos()).Line,
+					Pos:        fset.Position(t.Pos()),
 					Reason:     "if statements can only be cuddled with assigments used in the if statement itself",
 				})
 
@@ -171,6 +177,7 @@ func parseBlockStatements(fset *token.FileSet, comments []*ast.CommentGroup, sta
 			result = append(result, Result{
 				FileName:   fset.Position(t.Pos()).Filename,
 				LineNumber: fset.Position(t.Pos()).Line,
+				Pos:        fset.Position(t.Pos()),
 				Reason:     "return statements should never be cuddled",
 			})
 		case *ast.AssignStmt:
@@ -181,12 +188,14 @@ func parseBlockStatements(fset *token.FileSet, comments []*ast.CommentGroup, sta
 			result = append(result, Result{
 				FileName:   fset.Position(t.Pos()).Filename,
 				LineNumber: fset.Position(t.Pos()).Line,
+				Pos:        fset.Position(t.Pos()),
 				Reason:     "assigments can only be cuddled with other assigments",
 			})
 		case *ast.DeclStmt:
 			result = append(result, Result{
 				FileName:   fset.Position(t.Pos()).Filename,
 				LineNumber: fset.Position(t.Pos()).Line,
+				Pos:        fset.Position(t.Pos()),
 				Reason:     "declarations should never be cuddled",
 			})
 		case *ast.ExprStmt:
@@ -195,6 +204,7 @@ func parseBlockStatements(fset *token.FileSet, comments []*ast.CommentGroup, sta
 				result = append(result, Result{
 					FileName:   fset.Position(t.Pos()).Filename,
 					LineNumber: fset.Position(t.Pos()).Line,
+					Pos:        fset.Position(t.Pos()),
 					Reason:     "expressions should not be cuddled with declarations or returns",
 				})
 			}
@@ -205,6 +215,7 @@ func parseBlockStatements(fset *token.FileSet, comments []*ast.CommentGroup, sta
 				result = append(result, Result{
 					FileName:   fset.Position(t.Pos()).Filename,
 					LineNumber: fset.Position(t.Pos()).Line,
+					Pos:        fset.Position(t.Pos()),
 					Reason:     "ranges should only be cuddled with assignments used in the iteration",
 				})
 			}
@@ -308,6 +319,7 @@ func findLeadingAndTrailingWhitespaces(fset *token.FileSet, stmt, nextStatement 
 			result = append(result, Result{
 				FileName:   fset.Position(firstStatement.Pos()).Filename,
 				LineNumber: fset.Position(firstStatement.Pos()).Line - 1,
+				Pos:        fset.Position(firstStatement.Pos()),
 				Reason:     "block should not start with a whitespace",
 			})
 		}
@@ -316,6 +328,7 @@ func findLeadingAndTrailingWhitespaces(fset *token.FileSet, stmt, nextStatement 
 			result = append(result, Result{
 				FileName:   fset.Position(lastStatement.Pos()).Filename,
 				LineNumber: fset.Position(lastStatement.Pos()).Line + 1,
+				Pos:        fset.Position(lastStatement.Pos()),
 				Reason:     "block should not end with a whitespace (or comment)",
 			})
 		}
@@ -324,6 +337,7 @@ func findLeadingAndTrailingWhitespaces(fset *token.FileSet, stmt, nextStatement 
 			result = append(result, Result{
 				FileName:   fset.Position(firstStatement.Pos()).Filename,
 				LineNumber: fset.Position(firstStatement.Pos()).Line - 1,
+				Pos:        fset.Position(firstStatement.Pos()),
 				Reason:     "case block should not start with a whitespace",
 			})
 		}
@@ -334,6 +348,7 @@ func findLeadingAndTrailingWhitespaces(fset *token.FileSet, stmt, nextStatement 
 					result = append(result, Result{
 						FileName:   fset.Position(lastStatement.Pos()).Filename,
 						LineNumber: fset.Position(lastStatement.Pos()).Line + 1,
+						Pos:        fset.Position(lastStatement.Pos()),
 						Reason:     "case block should not end with a whitespace (or comment)",
 					})
 				}
