@@ -7,6 +7,8 @@ import (
 	"go/token"
 	"io/ioutil"
 	"reflect"
+
+	"github.com/davecgh/go-spew/spew"
 )
 
 // Result represnets the result of one linted row which was not accepted by the
@@ -132,7 +134,10 @@ func parseBlockStatements(fset *token.FileSet, comments []*ast.CommentGroup, sta
 				switch x := astIdentifier.(type) {
 				case *ast.Ident:
 					assignedOnLineAbove = append(assignedOnLineAbove, x.Name)
+				case *ast.SelectorExpr:
+					// No new variables on left side.
 				default:
+					spew.Dump(x)
 					fmt.Printf("%s:%d: stmt type not implemented (%T)\n", fset.File(x.Pos()).Name(), fset.Position(x.Pos()).Line, x)
 				}
 			}

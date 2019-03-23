@@ -29,7 +29,7 @@ test files, use `-n` or `--no-test`.
 Example (assuming globstar is enabled):
 
 ```
-wsl $GOPATH/src/github.com/bombsimon/wsl/**/0*
+$ wsl $GOPATH/src/github.com/bombsimon/wsl/**/0*
 testfiles/01.go:10: block should not start with a whitespace
 testfiles/01.go:17: if statements can only be cuddled with assigments
 testfiles/01.go:24: assigments can only be cuddled with other assigments
@@ -42,7 +42,9 @@ testfiles/01_test.go:7: block should not end with a whitespace (or comment)
 testfiles/03.go:9: declarations should never be cuddled
 testfiles/recursive/01.go:5: block should not start with a whitespace
 testfiles/recursive/01.go:7: block should not end with a whitespace (or comment)
-exit status 2
+
+$ echo $?
+2
 ```
 
 ## Rules
