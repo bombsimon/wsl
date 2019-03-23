@@ -39,9 +39,10 @@ testfiles/01.go:41: if statements can only be cuddled with assigments used in th
 testfiles/01.go:54: block should not end with a whitespace (or comment)
 testfiles/01_test.go:5: block should not start with a whitespace
 testfiles/01_test.go:7: block should not end with a whitespace (or comment)
-testfiles/03.go:9: declarations can never be cuddled
+testfiles/03.go:9: declarations should never be cuddled
 testfiles/recursive/01.go:5: block should not start with a whitespace
 testfiles/recursive/01.go:7: block should not end with a whitespace (or comment)
+exit status 2
 ```
 
 ## Rules
@@ -162,6 +163,11 @@ if err != nil {
 err := errors.New("not nil")
 if err != nil {
     fmt.Println("ok to cuddle with assigments used in if")
+}
+
+val, ok := someInterface.(string)
+if !ok {
+    return
 }
 
 if false {

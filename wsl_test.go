@@ -188,7 +188,7 @@ func TestBlankLineAfterBracket(t *testing.T) {
 				}
 				var a = false
 			}`),
-			expectedErrorStrings: []string{"declarations can never be cuddled"},
+			expectedErrorStrings: []string{"declarations should never be cuddled"},
 		},
 		{
 			description: "nested if statements should not be seen as cuddled",
@@ -286,6 +286,38 @@ func TestBlankLineBeforeIf(t *testing.T) {
 			}`),
 			expectedErrorStrings: []string{"if statements can only be cuddled with assigments"},
 		},
+		{
+			description: "if statement with multiple assignments above and multiple conditions",
+			code: []byte(`package main
+
+			func main() {
+				c := true
+				fooBar := "string"
+				a, b := true, false
+				if a && b || !c && len(fooBar) > 2 {
+					return false
+				}
+
+				a, b, c := someFunc()
+				if z && len(y) > 0 || 3 == 4 {
+					return true
+				}
+			}`),
+			expectedErrorStrings: []string{"if statements can only be cuddled with assigments used in the if statement itself"},
+		},
+		{
+			description: "if statement with multiple assignments, at least one used",
+			code: []byte(`package main
+
+			func main() {
+				c := true
+				fooBar := "string"
+				a, b := true, false
+				if c && b || !c && len(fooBar) > 2 {
+					return false
+				}
+			}`),
+		},
 	}
 
 	/*
@@ -342,7 +374,7 @@ func TestCuddle(t *testing.T) {
 				var foo = true
 				return
 			}`),
-			expectedErrorStrings: []string{"return statements can never be cuddled"},
+			expectedErrorStrings: []string{"return statements should never be cuddled"},
 		},
 		{
 			description: "assigments can only be cuddled with assignments (negative)",
@@ -378,7 +410,7 @@ func TestCuddle(t *testing.T) {
 
 				return
 			}`),
-			expectedErrorStrings: []string{"expressions can not be cuddled with declarations or returns"},
+			expectedErrorStrings: []string{"expressions should not be cuddled with declarations or returns"},
 		},
 		{
 			description: "expressions can be cuddlede with assigments",
@@ -392,6 +424,26 @@ func TestCuddle(t *testing.T) {
 			}`),
 		},
 	}
+
+	for _, tc := range cases {
+		t.Run(tc.description, func(t *testing.T) {
+			r := ProcessFile("unit-test", tc.code)
+
+			require.Len(t, r, len(tc.expectedErrorStrings), "correct amount of errors found")
+
+			for i := range tc.expectedErrorStrings {
+				assert.Contains(t, r[i].Reason, tc.expectedErrorStrings[i], "expected error found")
+			}
+		})
+	}
+}
+
+func TestTODO(t *testing.T) {
+	cases := []struct {
+		description          string
+		code                 []byte
+		expectedErrorStrings []string
+	}{}
 
 	for _, tc := range cases {
 		t.Run(tc.description, func(t *testing.T) {

@@ -55,7 +55,7 @@ func ProcessFile(fileName string, fileData []byte) []Result {
 	for _, d := range file.Decls {
 		switch v := d.(type) {
 		case *ast.FuncDecl:
-			result = append(result, parseBlock(fset, file.Comments, v.Body)...)
+			result = append(result, parseBlockBody(fset, file.Comments, v.Body)...)
 		case *ast.GenDecl:
 			// `go fmt` will handle proper spacing for GenDecl such as imports,
 			// constants etcetera.
@@ -67,9 +67,9 @@ func ProcessFile(fileName string, fileData []byte) []Result {
 	return result
 }
 
-// parseBlock will parse any kind of block statements such as switch cases and
+// parseBlockBody will parse any kind of block statements such as switch cases and
 // if statements. A list of Result is returned.
-func parseBlock(fset *token.FileSet, comments []*ast.CommentGroup, block *ast.BlockStmt) []Result {
+func parseBlockBody(fset *token.FileSet, comments []*ast.CommentGroup, block *ast.BlockStmt) []Result {
 	result := []Result{}
 
 	result = append(result, findLeadingAndTrailingWhitespaces(fset, block, nil, comments)...)
@@ -84,12 +84,12 @@ func parseBlockStatements(fset *token.FileSet, comments []*ast.CommentGroup, sta
 	result := []Result{}
 
 	for i, stmt := range statements {
-		bodyV := reflect.Indirect(reflect.ValueOf(stmt)).FieldByName("Body")
+		statementBody := reflect.Indirect(reflect.ValueOf(stmt)).FieldByName("Body")
 
-		if bodyV.IsValid() {
-			switch bodyT := bodyV.Interface().(type) {
+		if statementBody.IsValid() {
+			switch statementBodyContent := statementBody.Interface().(type) {
 			case *ast.BlockStmt:
-				result = append(result, parseBlock(fset, comments, bodyT)...)
+				result = append(result, parseBlockBody(fset, comments, statementBodyContent)...)
 			case []ast.Stmt:
 				// The Body field for an *ast.CaseClause is of type []ast.Stmt.
 				// We must check leading and trailing whitespaces and then pass
@@ -103,9 +103,9 @@ func parseBlockStatements(fset *token.FileSet, comments []*ast.CommentGroup, sta
 				}
 
 				result = append(result, findLeadingAndTrailingWhitespaces(fset, stmt, nextStatement, comments)...)
-				result = append(result, parseBlockStatements(fset, comments, bodyT)...)
+				result = append(result, parseBlockStatements(fset, comments, statementBodyContent)...)
 			default:
-				fmt.Printf("%s:%d: body statement type not implemented (%T)\n", fset.File(stmt.Pos()).Name(), fset.Position(stmt.Pos()).Line, bodyT)
+				fmt.Printf("%s:%d: body statement type not implemented (%T)\n", fset.File(stmt.Pos()).Name(), fset.Position(stmt.Pos()).Line, statementBodyContent)
 				continue
 			}
 		}
@@ -137,72 +137,19 @@ func parseBlockStatements(fset *token.FileSet, comments []*ast.CommentGroup, sta
 				continue
 			}
 
-			switch t.Cond.(type) {
-			case *ast.UnaryExpr, *ast.BinaryExpr, *ast.Ident:
-				// Expected expressions found in if condition, handle below.
-			case *ast.SelectorExpr:
-				// TODO: Never cuddle?!
-				continue
-			default:
-				fmt.Printf("%s:%d: condition type not implemented (%T)\n", fset.File(t.Pos()).Name(), fset.Position(t.Pos()).Line, t)
-				continue
-			}
-
-			foundAssigmentOnLineAbove := false
+			usedInStatement := findConditionVariables(t.Cond, fset)
+			assignedOnLineAbove := []string{}
 
 			for _, astIdentifier := range lastAssignment.Lhs {
-				previousAssigmentIdentifier, ok := astIdentifier.(*ast.Ident)
-				if !ok {
-					// Ignore assignments which isn't idents. This will
-					// eventually end up with foundAssigmentOnLineAbove being
-					// false which is handled.
-					continue
-				}
-
-				var expressionInIfStatement *ast.Ident
-
-				switch x := t.Cond.(type) {
-				case *ast.Ident:
-					expressionInIfStatement = x
-				case *ast.BinaryExpr:
-					switch expressionType := x.X.(type) {
-					case *ast.Ident:
-						expressionInIfStatement = expressionType
-					case *ast.CallExpr:
-						// TODO: Recursive check args to function X and/or Y
-						// In the meantime, handle one X expression (Lfs) and
-						// ignore Y expression (Rhs)
-						if len(expressionType.Args) == 1 {
-							if v, ok := expressionType.Args[0].(*ast.Ident); ok {
-								expressionInIfStatement = v
-							}
-						} else {
-							// TODO: Not yet implemented.
-							continue
-						}
-					}
-				case *ast.UnaryExpr:
-					expressionInIfStatement = x.X.(*ast.Ident)
-				default:
-					fmt.Printf("%s:%d: not an expression?! (%T)\n", fset.File(t.Pos()).Name(), fset.Position(t.Pos()).Line, t)
-					continue
-				}
-
-				// TODO: Handled if-statements with multiple assignments and
-				// expressions. We ended up here but didn't have any defined
-				// expression in the if statement?!
-				if expressionInIfStatement == nil {
-					fmt.Printf("%s:%d: didn't catch argument(s) from if-statement (%T)\n", fset.File(t.Pos()).Name(), fset.Position(t.Pos()).Line, t)
-					continue
-				}
-
-				if previousAssigmentIdentifier.Name == expressionInIfStatement.Name {
-					foundAssigmentOnLineAbove = true
-					break
+				// TODO: Handle !ok?
+				if previousAssigmentIdentifier, ok := astIdentifier.(*ast.Ident); ok {
+					assignedOnLineAbove = append(assignedOnLineAbove, previousAssigmentIdentifier.Name)
 				}
 			}
 
-			if !foundAssigmentOnLineAbove {
+			// TODO: Check if noone assigned or noone used?
+
+			if !atLeastOneInListsMatch(usedInStatement, assignedOnLineAbove) {
 				result = append(result, Result{
 					FileName:   fset.Position(t.Pos()).Filename,
 					LineNumber: fset.Position(t.Pos()).Line,
@@ -215,7 +162,7 @@ func parseBlockStatements(fset *token.FileSet, comments []*ast.CommentGroup, sta
 			result = append(result, Result{
 				FileName:   fset.Position(t.Pos()).Filename,
 				LineNumber: fset.Position(t.Pos()).Line,
-				Reason:     "return statements can never be cuddled",
+				Reason:     "return statements should never be cuddled",
 			})
 		case *ast.AssignStmt:
 			if _, ok := previousStatement.(*ast.AssignStmt); ok {
@@ -231,7 +178,7 @@ func parseBlockStatements(fset *token.FileSet, comments []*ast.CommentGroup, sta
 			result = append(result, Result{
 				FileName:   fset.Position(t.Pos()).Filename,
 				LineNumber: fset.Position(t.Pos()).Line,
-				Reason:     "declarations can never be cuddled",
+				Reason:     "declarations should never be cuddled",
 			})
 		case *ast.ExprStmt:
 			switch previousStatement.(type) {
@@ -239,7 +186,7 @@ func parseBlockStatements(fset *token.FileSet, comments []*ast.CommentGroup, sta
 				result = append(result, Result{
 					FileName:   fset.Position(t.Pos()).Filename,
 					LineNumber: fset.Position(t.Pos()).Line,
-					Reason:     "expressions can not be cuddled with declarations or returns",
+					Reason:     "expressions should not be cuddled with declarations or returns",
 				})
 			}
 		case *ast.RangeStmt:
@@ -254,6 +201,48 @@ func parseBlockStatements(fset *token.FileSet, comments []*ast.CommentGroup, sta
 	}
 
 	return result
+}
+
+func findConditionVariables(cond ast.Node, fset *token.FileSet) []string {
+	switch v := cond.(type) {
+	case *ast.Ident:
+		return []string{v.Name}
+	case *ast.BinaryExpr:
+		return append(
+			findConditionVariables(v.X, fset),
+			findConditionVariables(v.Y, fset)...,
+		)
+	case *ast.UnaryExpr:
+		return findConditionVariables(v.X, fset)
+	case *ast.CallExpr:
+		args := []string{}
+
+		for _, x := range v.Args {
+			if callExprArg, ok := x.(*ast.Ident); ok {
+				args = append(args, callExprArg.Name)
+			}
+		}
+
+		return args
+	case *ast.BasicLit:
+		// Basic literal, nothing to check.
+	default:
+		fmt.Printf("%s:%d: condition type not implemented (%T)\n", fset.File(v.Pos()).Name(), fset.Position(v.Pos()).Line, v)
+	}
+
+	return []string{}
+}
+
+func atLeastOneInListsMatch(listOne, listTwo []string) bool {
+	for _, lOne := range listOne {
+		for _, lTwo := range listTwo {
+			if lOne == lTwo {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 // findLeadingAndTrailingWhitespaces will find leading and trailing whitespaces
