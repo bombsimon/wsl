@@ -438,6 +438,70 @@ func TestCuddle(t *testing.T) {
 	}
 }
 
+func TestRanges(t *testing.T) {
+	cases := []struct {
+		description          string
+		code                 []byte
+		expectedErrorStrings []string
+	}{
+		{
+			description: "ranges cannot be cuddled with assigments not used in the range",
+			code: []byte(`package main
+
+			func main() {
+				anotherList := make([]string, 5)
+
+				myList := make([]int, 10)
+				for i := range anotherList {
+					fmt.Println(i)
+				}
+			}`),
+			expectedErrorStrings: []string{"ranges should only be cuddled with assignments used in the iteration"},
+		},
+		{
+			description: "ranges can be cuddled if iteration is of assignment above",
+			code: []byte(`package main
+
+			func main() {
+				myList := make([]string, 5)
+
+				anotherList := make([]int, 10)
+				for i := range anotherList {
+					fmt.Println(i)
+				}
+			}`),
+		},
+		{
+			description: "ranges can be cuddled if multiple assignments and/or values iterated",
+			code: []byte(`package main
+
+			func main() {
+				someList, anotherList := GetTwoListsOfStrings()
+				for i := range append(someList, anotherList...) {
+					fmt.Println(i)
+				}
+
+				aThirdList := GetList()
+				for i := range append(someList, aThirdList...) {
+					fmt.Println(i)
+				}
+			}`),
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.description, func(t *testing.T) {
+			r := ProcessFile("unit-test", tc.code)
+
+			require.Len(t, r, len(tc.expectedErrorStrings), "correct amount of errors found")
+
+			for i := range tc.expectedErrorStrings {
+				assert.Contains(t, r[i].Reason, tc.expectedErrorStrings[i], "expected error found")
+			}
+		})
+	}
+}
+
 func TestTODO(t *testing.T) {
 	cases := []struct {
 		description          string
