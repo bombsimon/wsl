@@ -31,11 +31,11 @@ Example (assuming globstar is enabled):
 ```
 $ wsl $GOPATH/src/github.com/bombsimon/wsl/**/0*
 testfiles/01.go:10: block should not start with a whitespace
-testfiles/01.go:17: if statements can only be cuddled with assigments
-testfiles/01.go:24: assigments can only be cuddled with other assigments
+testfiles/01.go:17: if statements should only be cuddled with assigments
+testfiles/01.go:24: assigments should only be cuddled with other assigments
 testfiles/01.go:34: block should not start with a whitespace
 testfiles/01.go:36: block should not end with a whitespace (or comment)
-testfiles/01.go:41: if statements can only be cuddled with assigments used in the if statement itself
+testfiles/01.go:41: if statements should only be cuddled with assigments used in the if statement itself
 testfiles/01.go:54: block should not end with a whitespace (or comment)
 testfiles/01_test.go:5: block should not start with a whitespace
 testfiles/01_test.go:7: block should not end with a whitespace (or comment)

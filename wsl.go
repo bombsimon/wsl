@@ -46,7 +46,7 @@ func ProcessFile(fileName string, fileData []byte) []Result {
 			{
 				FileName:   file.Name.Name,
 				LineNumber: 0,
-				Reason:     "invalid syntax, file cannot be linted",
+				Reason:     fmt.Sprintf("invalid syntax, file cannot be linted (%s)", err.Error()),
 			},
 		}
 	}
@@ -91,11 +91,22 @@ func parseBlockStatements(fset *token.FileSet, comments []*ast.CommentGroup, sta
 	result := []Result{}
 
 	for i, stmt := range statements {
+		// Start by checking if the statement has a body (probably if-statement,
+		// a range, switch case or similar. Whenever a body is found we start by
+		// parsing it before moving on in the AST.
 		statementBody := reflect.Indirect(reflect.ValueOf(stmt)).FieldByName("Body")
+
+		// Some cases allow cuddling depending on thefirst statement in a body
+		// of a block or case. If possible extract the first staement.
+		var firstBodyStatement ast.Node
 
 		if statementBody.IsValid() {
 			switch statementBodyContent := statementBody.Interface().(type) {
 			case *ast.BlockStmt:
+				if len(statementBodyContent.List) > 0 {
+					firstBodyStatement = statementBodyContent.List[0]
+				}
+
 				result = append(result, parseBlockBody(fset, comments, statementBodyContent)...)
 			case []ast.Stmt:
 				// The Body field for an *ast.CaseClause is of type []ast.Stmt.
@@ -124,27 +135,29 @@ func parseBlockStatements(fset *token.FileSet, comments []*ast.CommentGroup, sta
 
 		previousStatement := statements[i-1]
 
-		// The last statement did not end at the line above (must be a
-		// whitespace, nothing to check)
+		// If the last statement didn't end one line above the current statement
+		// we know we're not cuddled so just move on.
 		if fset.Position(previousStatement.End()).Line != fset.Position(stmt.Pos()).Line-1 {
 			continue
 		}
 
-		// We know we're cudded, extract information about last line assignments
-		// which is the only thing we allow cuddling with.
+		// We know we're cudded, extract assigned variables on the line above
+		// which is the only thing we allow cuddling with. If the assignment is
+		// made over multiple lines we should not allow cuddling.
 		assignedOnLineAbove := []string{}
 
-		if lastAssignment, ok := previousStatement.(*ast.AssignStmt); ok {
-			for _, astIdentifier := range lastAssignment.Lhs {
-				switch x := astIdentifier.(type) {
-				case *ast.Ident:
-					assignedOnLineAbove = append(assignedOnLineAbove, x.Name)
-				case *ast.SelectorExpr:
-					// No new variables on left side.
-				default:
-					fmt.Printf("%s:%d: stmt type not implemented (%T)\n", fset.File(x.Pos()).Name(), fset.Position(x.Pos()).Line, x)
-				}
-			}
+		// Ensure previous line is not a multi line assignment and if not get
+		// all assigned variables.
+		if fset.Position(previousStatement.Pos()).Line == fset.Position(stmt.Pos()).Line-1 {
+			assignedOnLineAbove = findAssignments(previousStatement, fset)
+		}
+
+		// We could potentially have a block which require us to check the first
+		// argument before ruling out an allowed cuddle.
+		assignedFirstInBlock := []string{}
+
+		if firstBodyStatement != nil {
+			assignedFirstInBlock = findAssignments(firstBodyStatement, fset)
 		}
 
 		switch t := stmt.(type) {
@@ -155,21 +168,29 @@ func parseBlockStatements(fset *token.FileSet, comments []*ast.CommentGroup, sta
 					FileName:   fset.Position(t.Pos()).Filename,
 					LineNumber: fset.Position(t.Pos()).Line,
 					Pos:        fset.Position(t.Pos()),
-					Reason:     "if statements can only be cuddled with assigments",
+					Reason:     "if statements should only be cuddled with assigments",
 				})
 
 				continue
 			}
 
+			// Get all variables used in the condition for the if statement.
 			usedInStatement := findConditionVariables(t.Cond, fset)
 
 			if !atLeastOneInListsMatch(usedInStatement, assignedOnLineAbove) {
-				result = append(result, Result{
-					FileName:   fset.Position(t.Pos()).Filename,
-					LineNumber: fset.Position(t.Pos()).Line,
-					Pos:        fset.Position(t.Pos()),
-					Reason:     "if statements can only be cuddled with assigments used in the if statement itself",
-				})
+				// No variables in if statement was assigned in on the line
+				// above, check if what's cuddled above is used on the first
+				// line in the block.
+				if !atLeastOneInListsMatch(assignedOnLineAbove, assignedFirstInBlock) {
+					// If the variable above isn't used first in the block this
+					// is just too tight code.
+					result = append(result, Result{
+						FileName:   fset.Position(t.Pos()).Filename,
+						LineNumber: fset.Position(t.Pos()).Line,
+						Pos:        fset.Position(t.Pos()),
+						Reason:     "if statements should only be cuddled with assigments used in the if statement itself",
+					})
+				}
 
 				continue
 			}
@@ -189,7 +210,7 @@ func parseBlockStatements(fset *token.FileSet, comments []*ast.CommentGroup, sta
 				FileName:   fset.Position(t.Pos()).Filename,
 				LineNumber: fset.Position(t.Pos()).Line,
 				Pos:        fset.Position(t.Pos()),
-				Reason:     "assigments can only be cuddled with other assigments",
+				Reason:     "assigments should only be cuddled with other assigments",
 			})
 		case *ast.DeclStmt:
 			result = append(result, Result{
@@ -211,13 +232,18 @@ func parseBlockStatements(fset *token.FileSet, comments []*ast.CommentGroup, sta
 		case *ast.RangeStmt:
 			rangesOverValues := findConditionVariables(t.X, fset)
 
+			// The same rule applies for ranges as for if statements, see
+			// comments regarding variable usages on the line before or as the
+			// first line in the block for details.
 			if !atLeastOneInListsMatch(rangesOverValues, assignedOnLineAbove) {
-				result = append(result, Result{
-					FileName:   fset.Position(t.Pos()).Filename,
-					LineNumber: fset.Position(t.Pos()).Line,
-					Pos:        fset.Position(t.Pos()),
-					Reason:     "ranges should only be cuddled with assignments used in the iteration",
-				})
+				if !atLeastOneInListsMatch(assignedOnLineAbove, assignedFirstInBlock) {
+					result = append(result, Result{
+						FileName:   fset.Position(t.Pos()).Filename,
+						LineNumber: fset.Position(t.Pos()).Line,
+						Pos:        fset.Position(t.Pos()),
+						Reason:     "ranges should only be cuddled with assignments used in the iteration",
+					})
+				}
 			}
 		case *ast.BranchStmt:
 			// TODO: What is this?
@@ -229,6 +255,30 @@ func parseBlockStatements(fset *token.FileSet, comments []*ast.CommentGroup, sta
 	}
 
 	return result
+}
+
+func findAssignments(node ast.Node, fset *token.FileSet) []string {
+	assignments := []string{}
+
+	astIdentifier, ok := node.(*ast.AssignStmt)
+	if !ok {
+		return assignments
+	}
+
+	for _, identifier := range astIdentifier.Lhs {
+		switch x := identifier.(type) {
+		case *ast.Ident:
+			assignments = append(assignments, x.Name)
+		case *ast.SelectorExpr:
+			// No new variables on left side.
+		case *ast.IndexExpr:
+			assignments = findConditionVariables(x.X, fset)
+		default:
+			fmt.Printf("%s:%d: assignment type not implemented (%T)\n", fset.File(x.Pos()).Name(), fset.Position(x.Pos()).Line, x)
+		}
+	}
+
+	return assignments
 }
 
 func findConditionVariables(cond ast.Node, fset *token.FileSet) []string {
