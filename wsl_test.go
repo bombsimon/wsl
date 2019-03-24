@@ -228,7 +228,7 @@ func TestShouldAddEmptyLines(t *testing.T) {
 					fmt.Println("I'm OK")
 				}
 			}`),
-			expectedErrorStrings: []string{"if statements can only be cuddled with assigments used in the if statement itself"},
+			expectedErrorStrings: []string{"if statements should only be cuddled with assigments used in the if statement itself"},
 		},
 		{
 			description: "cannot cuddled with other things than assigments",
@@ -242,7 +242,7 @@ func TestShouldAddEmptyLines(t *testing.T) {
 					fmt.Println("I'm OK")
 				}
 			}`),
-			expectedErrorStrings: []string{"if statements can only be cuddled with assigments"},
+			expectedErrorStrings: []string{"if statements should only be cuddled with assigments"},
 		},
 		{
 			description: "if statement with multiple assignments above and multiple conditions",
@@ -261,7 +261,7 @@ func TestShouldAddEmptyLines(t *testing.T) {
 					return true
 				}
 			}`),
-			expectedErrorStrings: []string{"if statements can only be cuddled with assigments used in the if statement itself"},
+			expectedErrorStrings: []string{"if statements should only be cuddled with assigments used in the if statement itself"},
 		},
 		{
 			description: "if statement with multiple assignments, at least one used",
@@ -287,7 +287,7 @@ func TestShouldAddEmptyLines(t *testing.T) {
 			expectedErrorStrings: []string{"return statements should never be cuddled"},
 		},
 		{
-			description: "assigments can only be cuddled with assignments (negative)",
+			description: "assigments should only be cuddled with assignments (negative)",
 			code: []byte(`package main
 
 			func main() {
@@ -296,10 +296,10 @@ func TestShouldAddEmptyLines(t *testing.T) {
 				}
 				foo := true
 			}`),
-			expectedErrorStrings: []string{"assigments can only be cuddled with other assigments"},
+			expectedErrorStrings: []string{"assigments should only be cuddled with other assigments"},
 		},
 		{
-			description: "assigments can only be cuddled with assignments",
+			description: "assigments should only be cuddled with assignments",
 			code: []byte(`package main
 
 			func main() {
@@ -376,6 +376,49 @@ func TestShouldAddEmptyLines(t *testing.T) {
 				}
 			}`),
 		},
+		{
+			description: "multi line assignment should not be seen as assignment above",
+			code: []byte(`package main
+
+			func main() {
+				// This should not be OK since the assignment is split at
+				// multiple rows.
+				err := SomeFunc(
+					"taking multiple values",
+					"suddendly not a single line",
+				)
+				if err != nil {
+					fmt.Println("denied")
+				}
+			}`),
+			expectedErrorStrings: []string{"if statements should only be cuddled with assigments"},
+		},
+		{
+			description: "allow cuddle for immediate assignment in block",
+			code: []byte(`package main
+
+			func main() {
+				// This should be allowed
+				idx := i
+				if i > 0 {
+					idx = i - 1
+				}
+
+				vals := map[int]struct{}{}
+				for i := range make([]int, 5) {
+					vals[i] = struct{}{}
+				}
+
+				// This last issue fails.
+				x := []int{}
+
+				vals := map[int]struct{}{}
+				for i := range make([]int, 5) {
+					x = append(x, i)
+				}
+			}`),
+			expectedErrorStrings: []string{"ranges should only be cuddled with assignments used in the iteration"},
+		},
 	}
 
 	for _, tc := range cases {
@@ -431,23 +474,6 @@ func TestTODO(t *testing.T) {
 				biz := true || false
 				if biz {
 					return false
-				}
-			}`),
-			expectedErrorStrings: []string{},
-		},
-		{
-			description: "todo",
-			code: []byte(`package main
-
-			func main() {
-				// This should not be OK since the assignment is split at
-				// multiple rows.
-				err := SomeFunc(
-					"taking multiple values",
-					"suddendly not a single line",
-				)
-				if err != nil {
-					fmt.Println("denied")
 				}
 			}`),
 			expectedErrorStrings: []string{},
