@@ -478,6 +478,149 @@ func TestTODO(t *testing.T) {
 			}`),
 			expectedErrorStrings: []string{},
 		},
+		{
+			description: "using identifies with indicies",
+			code: []byte(`package main
+
+			func main() {
+				// This should be OK
+				runes := []rune{'+', '-'}
+				if runes[0] == '+' || runes[0] == '-' {
+					return string(runes[1:])
+				}
+
+				// And this
+				listTwo := []string{}
+				listOne := []string{"one"}
+				if listOne[0] == "two" {
+					return "not allowed"
+				}
+
+				// But not this
+				listOne := []string{"one"}
+				listTwo := []string{}
+				if listOne[0] == "two" {
+					return "not allowed"
+				}
+			}`),
+			expectedErrorStrings: []string{"", "", ""},
+		},
+		{
+			description: "defer statements can be cuddled",
+			code: []byte(`package maino
+
+			import "sync"
+
+			func main() {
+				m := sync.Mutex{}
+
+				m.Lock()
+				defer m.Unlock()
+
+				// This should (probably?) yield error
+				foo := true
+				defer func(b bool) {
+					fmt.Printf("%V", b)
+				}()
+			}`),
+			expectedErrorStrings: []string{},
+		},
+		{
+			description: "selector expressions are handled like variables",
+			code: []byte(`package main
+
+			type T struct {
+				List []string
+			}
+
+			func main() {
+				t := T{
+					List: []string{"one", "two"},
+				}
+
+				for _, x := range t.List {
+					return "this is not like a variable"
+				}
+			}`),
+			expectedErrorStrings: []string{},
+		},
+		{
+			description: "append and functions",
+			code: []byte(`package main
+
+			func main() {
+				var (
+					someList = []string{}
+				)
+
+				// This should be OK
+				foo := true
+				someFunc(foo)
+
+				// And this
+				bar := "baz"
+				someList = append(someList, bar)
+
+				// But not this
+				bar := "baz"
+				someList = append(someList, "notBar")
+
+				// And not this
+				foo := true
+				someFunc(false)
+			}`),
+			expectedErrorStrings: []string{},
+		},
+		{
+			description: "handle channels (example should succeed)",
+			code: []byte(`package main
+
+			func main() {
+				timeoutCh := time.After(timeout)
+
+				for {
+					select {
+					case <-timeoutCh:
+						return true
+					case <-time.After(10 * time.Millisecond):
+						return false
+					}
+				}
+			}`),
+			expectedErrorStrings: []string{},
+		},
+		{
+			description: "handle ForStmt (example should fail)",
+			code: []byte(`package main
+
+			func main() {
+				bool := true
+				for {
+					fmt.Println("should not be allowed")
+
+					if bool {
+						break
+					}
+				}
+			}`),
+			expectedErrorStrings: []string{},
+		},
+		{
+			description: "trigger stmt *ast.SwitchStmt?!",
+			code: []byte(`package main
+
+			func main() {
+				t := GetT()
+
+				switch t.GetField() {
+				case 1:
+					return 0
+				case 2:
+					return 1
+				}
+			}`),
+			expectedErrorStrings: []string{},
+		},
 	}
 
 	for _, tc := range cases {
