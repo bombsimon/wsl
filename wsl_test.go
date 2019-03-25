@@ -621,6 +621,18 @@ func TestTODO(t *testing.T) {
 			}`),
 			expectedErrorStrings: []string{},
 		},
+		{
+			description: "support usage if chained",
+			code: []byte(`package main
+
+			func main() {
+				r := map[string]interface{}{}
+				if err := json.NewDecoder(someReader).Decode(&r); err != nil {
+					return "this should be OK"
+				}
+			}`),
+			expectedErrorStrings: []string{""},
+		},
 	}
 
 	for _, tc := range cases {
