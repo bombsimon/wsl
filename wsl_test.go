@@ -419,30 +419,6 @@ func TestShouldAddEmptyLines(t *testing.T) {
 			}`),
 			expectedErrorStrings: []string{"ranges should only be cuddled with assignments used in the iteration"},
 		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.description, func(t *testing.T) {
-			r := ProcessFile("unit-test", tc.code)
-
-			require.Len(t, r, len(tc.expectedErrorStrings), "correct amount of errors found")
-
-			for i := range tc.expectedErrorStrings {
-				assert.Contains(t, r[i].Reason, tc.expectedErrorStrings[i], "expected error found")
-			}
-		})
-	}
-}
-
-func TestTODO(t *testing.T) {
-	// All tests added in this TODO section suold fail. To make the
-	// implementation easier I'm trying to add the tests and handled them one by
-	// one with TDD.
-	cases := []struct {
-		description          string
-		code                 []byte
-		expectedErrorStrings []string
-	}{
 		{
 			description: "can cuddle only one assignment",
 			code: []byte(`package main
@@ -476,7 +452,7 @@ func TestTODO(t *testing.T) {
 					return false
 				}
 			}`),
-			expectedErrorStrings: []string{},
+			expectedErrorStrings: []string{"only one cuddle assignment allowed before if statement"},
 		},
 		{
 			description: "using identifies with indicies",
@@ -491,19 +467,12 @@ func TestTODO(t *testing.T) {
 
 				// And this
 				listTwo := []string{}
-				listOne := []string{"one"}
-				if listOne[0] == "two" {
-					return "not allowed"
-				}
 
-				// But not this
 				listOne := []string{"one"}
-				listTwo := []string{}
 				if listOne[0] == "two" {
 					return "not allowed"
 				}
 			}`),
-			expectedErrorStrings: []string{"", "", ""},
 		},
 		{
 			description: "defer statements can be cuddled",
@@ -520,10 +489,10 @@ func TestTODO(t *testing.T) {
 				// This should (probably?) yield error
 				foo := true
 				defer func(b bool) {
-					fmt.Printf("%V", b)
+					fmt.Printf("%v", b)
 				}()
 			}`),
-			expectedErrorStrings: []string{},
+			expectedErrorStrings: []string{"defer statements should only be cuddled with expressions on same variable"},
 		},
 		{
 			description: "selector expressions are handled like variables",
@@ -534,16 +503,43 @@ func TestTODO(t *testing.T) {
 			}
 
 			func main() {
-				t := T{
-					List: []string{"one", "two"},
-				}
-
+				t := makeT()
 				for _, x := range t.List {
 					return "this is not like a variable"
+				}
+			}
+
+			func makeT() T {
+				return T{
+					List: []string{"one", "two"},
 				}
 			}`),
 			expectedErrorStrings: []string{},
 		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.description, func(t *testing.T) {
+			r := ProcessFile("unit-test", tc.code)
+
+			require.Len(t, r, len(tc.expectedErrorStrings), "correct amount of errors found")
+
+			for i := range tc.expectedErrorStrings {
+				assert.Contains(t, r[i].Reason, tc.expectedErrorStrings[i], "expected error found")
+			}
+		})
+	}
+}
+
+func TestTODO(t *testing.T) {
+	// All tests added in this TODO section suold fail. To make the
+	// implementation easier I'm trying to add the tests and handled them one by
+	// one with TDD.
+	cases := []struct {
+		description          string
+		code                 []byte
+		expectedErrorStrings []string
+	}{
 		{
 			description: "append and functions",
 			code: []byte(`package main
@@ -578,7 +574,7 @@ func TestTODO(t *testing.T) {
 			func main() {
 				timeoutCh := time.After(timeout)
 
-				for {
+				for range make([]int, 10) {
 					select {
 					case <-timeoutCh:
 						return true
