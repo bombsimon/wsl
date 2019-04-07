@@ -141,7 +141,7 @@ func parseBlockStatements(fset *token.FileSet, comments []*ast.CommentGroup, sta
 			continue
 		}
 
-		// We know we're cudded, extract assigned variables on the line above
+		// We know we're cuddled, extract assigned variables on the line above
 		// which is the only thing we allow cuddling with. If the assignment is
 		// made over multiple lines we should not allow cuddling.
 		assignedOnLineAbove := []string{}
@@ -160,6 +160,9 @@ func parseBlockStatements(fset *token.FileSet, comments []*ast.CommentGroup, sta
 			assignedFirstInBlock = findAssignments(firstBodyStatement, fset)
 		}
 
+		// Get usages on the line above, i.e. x.Foo() -> x
+		usagesOnLineAbove := findExpressionVariables(previousStatement, fset)
+
 		switch t := stmt.(type) {
 		case *ast.IfStmt:
 			// Check if we're cuddled with something that's not an assigment.
@@ -172,6 +175,22 @@ func parseBlockStatements(fset *token.FileSet, comments []*ast.CommentGroup, sta
 				})
 
 				continue
+			}
+
+			// Check if there are more than one statement before us.
+			if i >= 2 {
+				statementBeforePreviousStatement := statements[i-2]
+
+				if fset.Position(statementBeforePreviousStatement.End()).Line == fset.Position(previousStatement.Pos()).Line-1 {
+					result = append(result, Result{
+						FileName:   fset.Position(t.Pos()).Filename,
+						LineNumber: fset.Position(t.Pos()).Line,
+						Pos:        fset.Position(t.Pos()),
+						Reason:     "only one cuddle assignment allowed before if statement",
+					})
+
+					continue
+				}
 			}
 
 			// Get all variables used in the condition for the if statement.
@@ -245,6 +264,17 @@ func parseBlockStatements(fset *token.FileSet, comments []*ast.CommentGroup, sta
 					})
 				}
 			}
+		case *ast.DeferStmt:
+			deferExpressionUsages := findCallExpressionVariables(t.Call, fset)
+
+			if !atLeastOneInListsMatch(deferExpressionUsages, usagesOnLineAbove) {
+				result = append(result, Result{
+					FileName:   fset.Position(t.Pos()).Filename,
+					LineNumber: fset.Position(t.Pos()).Line,
+					Pos:        fset.Position(t.Pos()),
+					Reason:     "defer statements should only be cuddled with expressions on same variable",
+				})
+			}
 		case *ast.BranchStmt:
 			// TODO: What is this?
 		case *ast.CaseClause:
@@ -257,6 +287,36 @@ func parseBlockStatements(fset *token.FileSet, comments []*ast.CommentGroup, sta
 	return result
 }
 
+// findExpressionVariables will find used identifiers for a node, i.e.
+// mu.Unlock() -> mu
+func findExpressionVariables(node ast.Node, fset *token.FileSet) []string {
+	astExpression, ok := node.(*ast.ExprStmt)
+	if !ok {
+		return []string{}
+	}
+
+	return findCallExpressionVariables(astExpression.X, fset)
+}
+
+func findCallExpressionVariables(node ast.Node, fset *token.FileSet) []string {
+	switch x := node.(type) {
+	case *ast.CallExpr:
+		exp, ok := x.Fun.(*ast.SelectorExpr)
+		if !ok {
+			return []string{}
+		}
+
+		return findConditionVariables(exp.X, fset)
+	default:
+		fmt.Printf("%s:%d: expression variable not implemented (%T)\n", fset.File(x.Pos()).Name(), fset.Position(x.Pos()).Line, x)
+	}
+
+	return []string{}
+}
+
+// findassignments will find all asignmenets for a given node. If the node isn't
+// an assignment statement, an empty list will be return. If it however is an
+// assignment statement, all identifiers on the left hand side will be returned.
 func findAssignments(node ast.Node, fset *token.FileSet) []string {
 	assignments := []string{}
 
@@ -292,6 +352,8 @@ func findConditionVariables(cond ast.Node, fset *token.FileSet) []string {
 		)
 	case *ast.UnaryExpr:
 		return findConditionVariables(v.X, fset)
+	case *ast.IndexExpr:
+		return findConditionVariables(v.X, fset)
 	case *ast.CallExpr:
 		args := []string{}
 
@@ -304,6 +366,8 @@ func findConditionVariables(cond ast.Node, fset *token.FileSet) []string {
 		return args
 	case *ast.BasicLit:
 		// Basic literal, nothing to check.
+	case *ast.SelectorExpr:
+		return findConditionVariables(v.X, fset)
 	default:
 		fmt.Printf("%s:%d: condition type not implemented (%T)\n", fset.File(v.Pos()).Name(), fset.Position(v.Pos()).Line, v)
 	}
