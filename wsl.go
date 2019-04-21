@@ -214,6 +214,22 @@ func parseBlockStatements(fset *token.FileSet, comments []*ast.CommentGroup, sta
 				continue
 			}
 		case *ast.ReturnStmt:
+			// If we're the last statement, check if there's no more than two
+			// lines from the starting statement and the end of this statement.
+			// This is to support short return functions such as:
+			// func (t *Typ) X() {
+			//     t.X = true
+			//     return t
+			// }
+			if i == len(statements)-1 && i == 1 {
+				currentStatementEndsAtLine := fset.Position(stmt.End()).Line
+				previousStatementStartsAtLine := fset.Position(previousStatement.Pos()).Line
+
+				if currentStatementEndsAtLine-previousStatementStartsAtLine <= 2 {
+					continue
+				}
+			}
+
 			result = append(result, Result{
 				FileName:   fset.Position(t.Pos()).Filename,
 				LineNumber: fset.Position(t.Pos()).Line,
