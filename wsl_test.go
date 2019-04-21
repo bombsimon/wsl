@@ -261,7 +261,7 @@ func TestShouldAddEmptyLines(t *testing.T) {
 					return true
 				}
 			}`),
-			expectedErrorStrings: []string{"if statements should only be cuddled with assigments used in the if statement itself"},
+			expectedErrorStrings: []string{"only one cuddle assignment allowed before if statement", "if statements should only be cuddled with assigments used in the if statement itself"},
 		},
 		{
 			description: "if statement with multiple assignments, at least one used",
@@ -270,6 +270,7 @@ func TestShouldAddEmptyLines(t *testing.T) {
 			func main() {
 				c := true
 				fooBar := "string"
+
 				a, b := true, false
 				if c && b || !c && len(fooBar) > 2 {
 					return false
@@ -282,6 +283,10 @@ func TestShouldAddEmptyLines(t *testing.T) {
 
 			func main() {
 				var foo = true
+
+				if foo {
+					fmt.Println("return")
+				}
 				return
 			}`),
 			expectedErrorStrings: []string{"return statements should never be cuddled"},
@@ -513,6 +518,26 @@ func TestShouldAddEmptyLines(t *testing.T) {
 				return T{
 					List: []string{"one", "two"},
 				}
+			}`),
+		},
+		{
+			description: "return statements may be cuddled if the block is less than three lines",
+			code: []byte(`package main
+
+			type T struct {
+				Name string
+				X	 bool
+			}
+
+			func main() {
+				t := &T{"someT"}
+
+				t.SetX()
+			}
+
+			func (t *T) SetX() *T {
+				t.X = true
+				return t
 			}`),
 			expectedErrorStrings: []string{},
 		},
