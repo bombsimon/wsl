@@ -180,6 +180,7 @@ func TestShouldRemoveEmptyLines(t *testing.T) {
 func TestShouldAddEmptyLines(t *testing.T) {
 	cases := []struct {
 		description          string
+		skip                 bool
 		code                 []byte
 		expectedErrorStrings []string
 	}{
@@ -541,32 +542,10 @@ func TestShouldAddEmptyLines(t *testing.T) {
 			}`),
 			expectedErrorStrings: []string{},
 		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.description, func(t *testing.T) {
-			r := ProcessFile("unit-test", tc.code)
-
-			require.Len(t, r, len(tc.expectedErrorStrings), "correct amount of errors found")
-
-			for i := range tc.expectedErrorStrings {
-				assert.Contains(t, r[i].Reason, tc.expectedErrorStrings[i], "expected error found")
-			}
-		})
-	}
-}
-
-func TestTODO(t *testing.T) {
-	// All tests added in this TODO section suold fail. To make the
-	// implementation easier I'm trying to add the tests and handled them one by
-	// one with TDD.
-	cases := []struct {
-		description          string
-		code                 []byte
-		expectedErrorStrings []string
-	}{
+		/* THESE SHOULD BE SKIPPED FOR NOW */
 		{
-			description: "append and functions",
+			description: "append",
+			skip:        true,
 			code: []byte(`package main
 
 			func main() {
@@ -574,26 +553,35 @@ func TestTODO(t *testing.T) {
 					someList = []string{}
 				)
 
-				// This should be OK
-				foo := true
-				someFunc(foo)
-
-				// And this
+				// Should be OK
 				bar := "baz"
 				someList = append(someList, bar)
 
 				// But not this
 				bar := "baz"
 				someList = append(someList, "notBar")
+			}`),
+			expectedErrorStrings: []string{"append only allowed to cuddle with appended value"},
+		},
+		{
+			description: "func",
+			skip:        true,
+			code: []byte(`package main
+
+			func main() {
+				// This should be OK
+				foo := true
+				someFunc(foo)
 
 				// And not this
 				foo := true
 				someFunc(false)
 			}`),
-			expectedErrorStrings: []string{},
+			expectedErrorStrings: []string{"func args only allowed to cuddle with used value"},
 		},
 		{
 			description: "handle channels (example should succeed)",
+			skip:        true,
 			code: []byte(`package main
 
 			func main() {
@@ -608,10 +596,9 @@ func TestTODO(t *testing.T) {
 					}
 				}
 			}`),
-			expectedErrorStrings: []string{},
 		},
 		{
-			description: "handle ForStmt (example should fail)",
+			description: "handle ForStmt",
 			code: []byte(`package main
 
 			func main() {
@@ -624,10 +611,11 @@ func TestTODO(t *testing.T) {
 					}
 				}
 			}`),
-			expectedErrorStrings: []string{},
+			expectedErrorStrings: []string{"for statement without condition should never be cuddled"},
 		},
 		{
-			description: "trigger stmt *ast.SwitchStmt?!",
+			description: "handle *ast.SwitchStmt",
+			skip:        true,
 			code: []byte(`package main
 
 			func main() {
@@ -644,6 +632,7 @@ func TestTODO(t *testing.T) {
 		},
 		{
 			description: "support usage if chained",
+			skip:        true,
 			code: []byte(`package main
 
 			func main() {
@@ -652,7 +641,119 @@ func TestTODO(t *testing.T) {
 					return "this should be OK"
 				}
 			}`),
-			expectedErrorStrings: []string{""},
+		},
+		{
+			description: "support usage if chained",
+			code: []byte(`package main
+
+			func main() {
+				go func() {
+					panic("is this real life?")
+				}()
+
+				fooFunc := func () {}
+				go fooFunc()
+
+				barFunc := func () {}
+				go fooFunc()
+
+				go func() {
+					fmt.Println("hey")
+				}()
+
+				cuddled := true
+				go func() {
+					fmt.Println("hey")
+				}()
+			}`),
+			expectedErrorStrings: []string{
+				"go statements can only invoke functions assigned on line above",
+				"go statements can only invoke functions assigned on line above",
+			},
+		},
+		{
+			description: "switch statements",
+			skip:        true,
+			code: []byte(`package main
+
+			func main() {
+				// Ok!
+				x := GetSome()
+				switch v := x.(type) {
+				case int:
+					return "got int"
+				default:
+					return "got other"
+				}
+
+				// Ok?
+				var id string
+				switch i := objectID.(type) {
+				case int:
+					id = strconv.Itoa(i)
+				case uint32:
+					id = strconv.Itoa(int(i))
+				case string:
+					id = i
+				}
+
+				// Not ok
+				var b bool
+				switch anotherBool {
+				case true:
+					return "a"
+				case false:
+					return "b"
+				}
+			}`),
+		},
+		{
+			description: "switch statements",
+			skip:        true,
+			code: []byte(`package main
+
+			func main() {
+				select {
+				case <-time.After(1*time.Second):
+					return "1s"
+				default:
+					return "are we there yet?"
+				}
+			}`),
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.description, func(t *testing.T) {
+			if tc.skip {
+				t.Skip("not implemented")
+			}
+			r := ProcessFile("unit-test", tc.code)
+
+			require.Len(t, r, len(tc.expectedErrorStrings), "correct amount of errors found")
+
+			for i := range tc.expectedErrorStrings {
+				assert.Contains(t, r[i].Reason, tc.expectedErrorStrings[i], "expected error found")
+			}
+		})
+	}
+}
+
+func TestTODO(t *testing.T) {
+	// This test is used to simulate code to perform TDD. This part should never
+	// be committed with any test.
+	cases := []struct {
+		description          string
+		code                 []byte
+		expectedErrorStrings []string
+	}{
+		{
+			description: "boilerplate",
+			code: []byte(`package main
+
+			func main() {
+				return
+			}`),
 		},
 	}
 

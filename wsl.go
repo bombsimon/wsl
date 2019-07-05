@@ -9,7 +9,7 @@ import (
 	"reflect"
 )
 
-// Result represnets the result of one linted row which was not accepted by the
+// Result represents the result of one linted row which was not accepted by the
 // white space linter.
 type Result struct {
 	FileName   string
@@ -74,8 +74,8 @@ func ProcessAST(fset *token.FileSet, file *ast.File) []Result {
 	return result
 }
 
-// parseBlockBody will parse any kind of block statements such as switch cases and
-// if statements. A list of Result is returned.
+// parseBlockBody will parse any kind of block statements such as switch cases
+// and if statements. A list of Result is returned.
 func parseBlockBody(fset *token.FileSet, comments []*ast.CommentGroup, block *ast.BlockStmt) []Result {
 	result := []Result{}
 
@@ -291,10 +291,60 @@ func parseBlockStatements(fset *token.FileSet, comments []*ast.CommentGroup, sta
 					Reason:     "defer statements should only be cuddled with expressions on same variable",
 				})
 			}
+		case *ast.ForStmt:
+			// No condition, just a for loop - should not be cuddled.
+			if t.Cond == nil {
+				result = append(result, Result{
+					FileName:   fset.Position(t.Pos()).Filename,
+					LineNumber: fset.Position(t.Pos()).Line,
+					Pos:        fset.Position(t.Pos()),
+					Reason:     "for statement without condition should never be cuddled",
+				})
+
+				continue
+			}
+
+			rangesOverValues := findConditionVariables(t.Cond, fset)
+
+			// The same rule applies for ranges as for if statements, see
+			// comments regarding variable usages on the line before or as the
+			// first line in the block for details.
+			if !atLeastOneInListsMatch(rangesOverValues, assignedOnLineAbove) {
+				if !atLeastOneInListsMatch(assignedOnLineAbove, assignedFirstInBlock) {
+					result = append(result, Result{
+						FileName:   fset.Position(t.Pos()).Filename,
+						LineNumber: fset.Position(t.Pos()).Line,
+						Pos:        fset.Position(t.Pos()),
+						Reason:     "for statements should only be cuddled with assignments used in the iteration",
+					})
+				}
+			}
+		case *ast.GoStmt:
+			if c, ok := t.Call.Fun.(*ast.Ident); ok {
+				if atLeastOneInListsMatch([]string{c.Name}, assignedOnLineAbove) {
+					continue
+				}
+			}
+
+			result = append(result, Result{
+				FileName:   fset.Position(t.Pos()).Filename,
+				LineNumber: fset.Position(t.Pos()).Line,
+				Pos:        fset.Position(t.Pos()),
+				Reason:     "go statements can only invoke functions assigned on line above",
+			})
 		case *ast.BranchStmt:
-			// TODO: What is this?
+			// TODO: This is a continue or break within loop
+			// Should probably be handled just like return
+		case *ast.SwitchStmt:
+			// TODO: Handle switch
+		case *ast.TypeSwitchStmt:
+			// TODO: Handle type switch
+		case *ast.CommClause:
+			// TODO: Handle default cases in select
 		case *ast.CaseClause:
-			// TODO: Already handeled?
+			// Case clauses will be checked by not allowing leading ot trailing
+			// whitespaces within the block. There's nothing in the case itself
+			// that may be cuddled.
 		default:
 			fmt.Printf("%s:%d: stmt type not implemented (%T)\n", fset.File(t.Pos()).Name(), fset.Position(t.Pos()).Line, t)
 		}
@@ -424,6 +474,13 @@ func findLeadingAndTrailingWhitespaces(fset *token.FileSet, stmt, nextStatement 
 		firstStatement = t.List[0]
 		lastStatement = t.List[len(t.List)-1]
 	case *ast.CaseClause:
+		if len(t.Body) < 1 {
+			return result
+		}
+
+		firstStatement = t.Body[0]
+		lastStatement = t.Body[len(t.Body)-1]
+	case *ast.CommClause:
 		if len(t.Body) < 1 {
 			return result
 		}
