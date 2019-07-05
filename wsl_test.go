@@ -46,12 +46,13 @@ func TestGenericHandling(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.description, func(t *testing.T) {
-			r := ProcessFile("unit-test", tc.code)
+			p := NewProcessor()
+			p.process("unit-test", tc.code)
 
-			require.Len(t, r, len(tc.expectedErrorStrings), "correct amount of errors found")
+			require.Len(t, p.result, len(tc.expectedErrorStrings), "correct amount of errors found")
 
 			for i := range tc.expectedErrorStrings {
-				assert.Contains(t, r[i].Reason, tc.expectedErrorStrings[i], "expected error found")
+				assert.Contains(t, p.result[i].Reason, tc.expectedErrorStrings[i], "expected error found")
 			}
 		})
 	}
@@ -166,12 +167,13 @@ func TestShouldRemoveEmptyLines(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.description, func(t *testing.T) {
-			r := ProcessFile("unit-test", tc.code)
+			p := NewProcessor()
+			p.process("unit-test", tc.code)
 
-			require.Len(t, r, len(tc.expectedErrorStrings), "correct amount of errors found")
+			require.Len(t, p.result, len(tc.expectedErrorStrings), "correct amount of errors found")
 
 			for i := range tc.expectedErrorStrings {
-				assert.Contains(t, r[i].Reason, tc.expectedErrorStrings[i], "expected error found")
+				assert.Contains(t, p.result[i].Reason, tc.expectedErrorStrings[i], "expected error found")
 			}
 		})
 	}
@@ -185,7 +187,7 @@ func TestShouldAddEmptyLines(t *testing.T) {
 		expectedErrorStrings []string
 	}{
 		{
-			description: "ok to cuddled if statements directly after assigments multiple values",
+			description: "ok to cuddled if statements directly after assignments multiple values",
 			code: []byte(`package main
 
 			func main() {
@@ -196,7 +198,7 @@ func TestShouldAddEmptyLines(t *testing.T) {
 			}`),
 		},
 		{
-			description: "ok to cuddled if statements directly after assigments single value",
+			description: "ok to cuddled if statements directly after assignments single value",
 			code: []byte(`package main
 
 			func main() {
@@ -207,7 +209,7 @@ func TestShouldAddEmptyLines(t *testing.T) {
 			}`),
 		},
 		{
-			description: "ok to cuddled if statements directly after assigments single value, negations",
+			description: "ok to cuddled if statements directly after assignments single value, negations",
 			code: []byte(`package main
 
 			func main() {
@@ -218,7 +220,7 @@ func TestShouldAddEmptyLines(t *testing.T) {
 			}`),
 		},
 		{
-			description: "cannot cuddled if assigments not used",
+			description: "cannot cuddled if assignments not used",
 			code: []byte(`package main
 
 			func main() {
@@ -229,10 +231,10 @@ func TestShouldAddEmptyLines(t *testing.T) {
 					fmt.Println("I'm OK")
 				}
 			}`),
-			expectedErrorStrings: []string{"if statements should only be cuddled with assigments used in the if statement itself"},
+			expectedErrorStrings: []string{"if statements should only be cuddled with assignments used in the if statement itself"},
 		},
 		{
-			description: "cannot cuddled with other things than assigments",
+			description: "cannot cuddled with other things than assignments",
 			code: []byte(`package main
 
 			func main() {
@@ -243,7 +245,7 @@ func TestShouldAddEmptyLines(t *testing.T) {
 					fmt.Println("I'm OK")
 				}
 			}`),
-			expectedErrorStrings: []string{"if statements should only be cuddled with assigments"},
+			expectedErrorStrings: []string{"if statements should only be cuddled with assignments"},
 		},
 		{
 			description: "if statement with multiple assignments above and multiple conditions",
@@ -262,7 +264,7 @@ func TestShouldAddEmptyLines(t *testing.T) {
 					return true
 				}
 			}`),
-			expectedErrorStrings: []string{"only one cuddle assignment allowed before if statement", "if statements should only be cuddled with assigments used in the if statement itself"},
+			expectedErrorStrings: []string{"only one cuddle assignment allowed before if statement", "if statements should only be cuddled with assignments used in the if statement itself"},
 		},
 		{
 			description: "if statement with multiple assignments, at least one used",
@@ -293,7 +295,7 @@ func TestShouldAddEmptyLines(t *testing.T) {
 			expectedErrorStrings: []string{"return statements should never be cuddled"},
 		},
 		{
-			description: "assigments should only be cuddled with assignments (negative)",
+			description: "assignments should only be cuddled with assignments (negative)",
 			code: []byte(`package main
 
 			func main() {
@@ -302,10 +304,10 @@ func TestShouldAddEmptyLines(t *testing.T) {
 				}
 				foo := true
 			}`),
-			expectedErrorStrings: []string{"assigments should only be cuddled with other assigments"},
+			expectedErrorStrings: []string{"assignments should only be cuddled with other assignments"},
 		},
 		{
-			description: "assigments should only be cuddled with assignments",
+			description: "assignments should only be cuddled with assignments",
 			code: []byte(`package main
 
 			func main() {
@@ -329,7 +331,7 @@ func TestShouldAddEmptyLines(t *testing.T) {
 			expectedErrorStrings: []string{"expressions should not be cuddled with declarations or returns"},
 		},
 		{
-			description: "expressions can be cuddlede with assigments",
+			description: "expressions can be cuddlede with assignments",
 			code: []byte(`package main
 
 			func main() {
@@ -340,7 +342,7 @@ func TestShouldAddEmptyLines(t *testing.T) {
 			}`),
 		},
 		{
-			description: "ranges cannot be cuddled with assigments not used in the range",
+			description: "ranges cannot be cuddled with assignments not used in the range",
 			code: []byte(`package main
 
 			func main() {
@@ -397,7 +399,7 @@ func TestShouldAddEmptyLines(t *testing.T) {
 					fmt.Println("denied")
 				}
 			}`),
-			expectedErrorStrings: []string{"if statements should only be cuddled with assigments"},
+			expectedErrorStrings: []string{"if statements should only be cuddled with assignments"},
 		},
 		{
 			description: "allow cuddle for immediate assignment in block",
@@ -728,12 +730,14 @@ func TestShouldAddEmptyLines(t *testing.T) {
 			if tc.skip {
 				t.Skip("not implemented")
 			}
-			r := ProcessFile("unit-test", tc.code)
 
-			require.Len(t, r, len(tc.expectedErrorStrings), "correct amount of errors found")
+			p := NewProcessor()
+			p.process("unit-test", tc.code)
+
+			require.Len(t, p.result, len(tc.expectedErrorStrings), "correct amount of errors found")
 
 			for i := range tc.expectedErrorStrings {
-				assert.Contains(t, r[i].Reason, tc.expectedErrorStrings[i], "expected error found")
+				assert.Contains(t, p.result[i].Reason, tc.expectedErrorStrings[i], "expected error found")
 			}
 		})
 	}
@@ -759,12 +763,13 @@ func TestTODO(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.description, func(t *testing.T) {
-			r := ProcessFile("unit-test", tc.code)
+			p := NewProcessor()
+			p.process("unit-test", tc.code)
 
-			require.Len(t, r, len(tc.expectedErrorStrings), "correct amount of errors found")
+			require.Len(t, p.result, len(tc.expectedErrorStrings), "correct amount of errors found")
 
 			for i := range tc.expectedErrorStrings {
-				assert.Contains(t, r[i].Reason, tc.expectedErrorStrings[i], "expected error found")
+				assert.Contains(t, p.result[i].Reason, tc.expectedErrorStrings[i], "expected error found")
 			}
 		})
 	}

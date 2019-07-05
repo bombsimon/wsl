@@ -15,6 +15,7 @@ func main() {
 		args       []string
 		help       bool
 		notest     bool
+		warnings   bool
 		cwd, _     = os.Getwd()
 		files      = []string{}
 		finalFiles = []string{}
@@ -24,6 +25,8 @@ func main() {
 	flag.BoolVar(&help, "help", false, "")
 	flag.BoolVar(&notest, "n", false, "Don't lint test files")
 	flag.BoolVar(&notest, "no-test", false, "")
+	flag.BoolVar(&warnings, "w", false, "Show warnings (ignored rules)")
+	flag.BoolVar(&warnings, "warnings", false, "")
 
 	flag.Parse()
 
@@ -69,10 +72,19 @@ func main() {
 		finalFiles = append(finalFiles, f)
 	}
 
-	r := wsl.ProcessFiles(finalFiles)
+	r, w := wsl.ProcessFiles(finalFiles)
 
 	for _, x := range r {
 		fmt.Printf("%s:%d: %s\n", x.FileName, x.LineNumber, x.Reason)
+	}
+
+	if warnings && len(w) > 0 {
+		fmt.Println()
+		fmt.Println("⚠️  Warnings found")
+
+		for _, x := range w {
+			fmt.Println(x)
+		}
 	}
 
 	if len(r) > 0 {
