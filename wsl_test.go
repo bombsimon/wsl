@@ -118,8 +118,8 @@ func TestShouldRemoveEmptyLines(t *testing.T) {
 			}`),
 			expectedErrorStrings: []string{
 				"block should not end with a whitespace (or comment)",
-				"case block should not start with a whitespace",
-				"case block should not end with a whitespace",
+				"block should not start with a whitespace",
+				"block should not end with a whitespace",
 			},
 		},
 		{
@@ -292,7 +292,7 @@ func TestShouldAddEmptyLines(t *testing.T) {
 				}
 				return
 			}`),
-			expectedErrorStrings: []string{"return statements should never be cuddled"},
+			expectedErrorStrings: []string{"return statements should not be cuddled if block has more than two lines"},
 		},
 		{
 			description: "assignments should only be cuddled with assignments (negative)",
@@ -483,24 +483,63 @@ func TestShouldAddEmptyLines(t *testing.T) {
 			}`),
 		},
 		{
+			description: "simple defer statements",
+			code: []byte(`package main
+
+			func main() {
+				// OK
+				thingOne := getOne()
+				thingTwo := getTwo()
+
+				defer thingOne.Close()
+				defer thingTwo.Close()
+
+				// OK
+				thingOne := getOne()
+				defer thingOne.Close()
+
+				thingTwo := getTwo()
+				defer thingTwo.Close()
+
+				// NOT OK
+				thingOne := getOne()
+				defer thingOne.Close()
+				thingTwo := getTwo()
+				defer thingTwo.Close()
+
+				// NOT OK
+				thingOne := getOne()
+				thingTwo := getTwo()
+				defer thingOne.Close()
+				defer thingTwo.Close()
+			}`),
+			expectedErrorStrings: []string{
+				"assignments should only be cuddled with other assignments",
+				"only one cuddle assignment allowed before defer statement",
+				"only one cuddle assignment allowed before defer statement",
+			},
+		},
+		{
 			description: "defer statements can be cuddled",
-			code: []byte(`package maino
+			code: []byte(`package main
 
 			import "sync"
 
 			func main() {
 				m := sync.Mutex{}
 
+				// This should probably be OK
 				m.Lock()
 				defer m.Unlock()
 
-				// This should (probably?) yield error
 				foo := true
 				defer func(b bool) {
 					fmt.Printf("%v", b)
 				}()
 			}`),
-			expectedErrorStrings: []string{"defer statements should only be cuddled with expressions on same variable"},
+			expectedErrorStrings: []string{
+				"defer statements should only be cuddled with expressions on same variable",
+			},
 		},
 		{
 			description: "selector expressions are handled like variables",
@@ -544,61 +583,6 @@ func TestShouldAddEmptyLines(t *testing.T) {
 			}`),
 			expectedErrorStrings: []string{},
 		},
-		/* THESE SHOULD BE SKIPPED FOR NOW */
-		{
-			description: "append",
-			skip:        true,
-			code: []byte(`package main
-
-			func main() {
-				var (
-					someList = []string{}
-				)
-
-				// Should be OK
-				bar := "baz"
-				someList = append(someList, bar)
-
-				// But not this
-				bar := "baz"
-				someList = append(someList, "notBar")
-			}`),
-			expectedErrorStrings: []string{"append only allowed to cuddle with appended value"},
-		},
-		{
-			description: "func",
-			skip:        true,
-			code: []byte(`package main
-
-			func main() {
-				// This should be OK
-				foo := true
-				someFunc(foo)
-
-				// And not this
-				foo := true
-				someFunc(false)
-			}`),
-			expectedErrorStrings: []string{"func args only allowed to cuddle with used value"},
-		},
-		{
-			description: "handle channels (example should succeed)",
-			skip:        true,
-			code: []byte(`package main
-
-			func main() {
-				timeoutCh := time.After(timeout)
-
-				for range make([]int, 10) {
-					select {
-					case <-timeoutCh:
-						return true
-					case <-time.After(10 * time.Millisecond):
-						return false
-					}
-				}
-			}`),
-		},
 		{
 			description: "handle ForStmt",
 			code: []byte(`package main
@@ -614,35 +598,6 @@ func TestShouldAddEmptyLines(t *testing.T) {
 				}
 			}`),
 			expectedErrorStrings: []string{"for statement without condition should never be cuddled"},
-		},
-		{
-			description: "handle *ast.SwitchStmt",
-			skip:        true,
-			code: []byte(`package main
-
-			func main() {
-				t := GetT()
-
-				switch t.GetField() {
-				case 1:
-					return 0
-				case 2:
-					return 1
-				}
-			}`),
-			expectedErrorStrings: []string{},
-		},
-		{
-			description: "support usage if chained",
-			skip:        true,
-			code: []byte(`package main
-
-			func main() {
-				r := map[string]interface{}{}
-				if err := json.NewDecoder(someReader).Decode(&r); err != nil {
-					return "this should be OK"
-				}
-			}`),
 		},
 		{
 			description: "support usage if chained",
@@ -675,7 +630,53 @@ func TestShouldAddEmptyLines(t *testing.T) {
 		},
 		{
 			description: "switch statements",
-			skip:        true,
+			code: []byte(`package main
+
+			func main() {
+				// OK
+				var b bool
+				switch b {
+				case true:
+					return "a"
+				case false:
+					return "b"
+				}
+
+				// OK
+				t := time.Now()
+
+				switch {
+				case t.Hour() < 12:
+					fmt.Println("It's before noon")
+				default:
+					fmt.Println("It's after noon")
+				}
+
+				// Not ok
+				var b bool
+				switch anotherBool {
+				case true:
+					return "a"
+				case false:
+					return "b"
+				}
+
+				// Not ok
+				t := time.Now()
+				switch {
+				case t.Hour() < 12:
+					fmt.Println("It's before noon")
+				default:
+					fmt.Println("It's after noon")
+				}
+			}`),
+			expectedErrorStrings: []string{
+				"switch statements should only be cuddled with variables switched",
+				"anonymous switch statements should never be cuddled",
+			},
+		},
+		{
+			description: "type switch statements",
 			code: []byte(`package main
 
 			func main() {
@@ -701,17 +702,91 @@ func TestShouldAddEmptyLines(t *testing.T) {
 
 				// Not ok
 				var b bool
-				switch anotherBool {
-				case true:
+				switch AnotherVal.(type) {
+				case int:
 					return "a"
-				case false:
+				case string:
 					return "b"
+				}
+			}`),
+			expectedErrorStrings: []string{
+				"type switch statements should only be cuddled with variables switched",
+			},
+		},
+		{
+			description: "only cuddle append if appended",
+			code: []byte(`package main
+
+			func main() {
+				var (
+					someList = []string{}
+				)
+
+				// Should be OK
+				bar := "baz"
+				someList = append(someList, bar)
+
+				// But not this
+				bar := "baz"
+				someList = append(someList, "notBar")
+			}`),
+			expectedErrorStrings: []string{"append only allowed to cuddle with appended value"},
+		},
+		{
+			description: "cuddle expressions to assignments",
+			code: []byte(`package main
+
+			func main() {
+				// This should be OK
+				foo := true
+				someFunc(foo)
+
+				// And not this
+				foo := true
+				someFunc(false)
+			}`),
+			expectedErrorStrings: []string{"only cuddled expressions if assigning variable or using from line above"},
+		},
+		{
+			description: "channels and select, no false positives",
+			code: []byte(`package main
+
+			func main() {
+				timeoutCh := time.After(timeout)
+
+				for range make([]int, 10) {
+					select {
+					case <-timeoutCh:
+						return true
+					case <-time.After(10 * time.Millisecond):
+						return false
+					}
 				}
 			}`),
 		},
 		{
 			description: "switch statements",
-			skip:        true,
+			code: []byte(`package main
+
+			func main() {
+				t := GetT()
+				switch t.GetField() {
+				case 1:
+					return 0
+				case 2:
+					return 1
+				}
+
+				notT := GetX()
+				switch notT {
+				case "x":
+					return 0
+				}
+			}`),
+			expectedErrorStrings: []string{},
+		},
+		{
+			description: "select statements",
 			code: []byte(`package main
 
 			func main() {
@@ -722,6 +797,112 @@ func TestShouldAddEmptyLines(t *testing.T) {
 					return "are we there yet?"
 				}
 			}`),
+		},
+		{
+			description: "branch statements (continue/break)",
+			code: []byte(`package main
+
+			func main() {
+				for {
+					// Allowed if only one statement in block.
+					if true {
+						singleLine := true
+						break
+					}
+
+					// Not allowed for multiple lines
+					if true && false {
+						multiLine := true
+						maybeVar := "var"
+						continue
+					}
+
+					// Multiple lines require newline
+					if false {
+						multiLine := true
+						maybeVar := "var"
+
+						break
+					}
+				}
+			}`),
+			expectedErrorStrings: []string{
+				"branch statements should not be cuddled if block has more than two lines",
+			},
+		},
+		{
+			description: "append",
+			code: []byte(`package main
+
+			func main() {
+				var (
+					someList = []string{}
+				)
+
+				// Should be OK
+				bar := "baz"
+				someList = append(someList, fmt.Sprintf("%s", bar))
+
+				// Should be OK
+				bar := "baz"
+				someList = append(someList, []string{"foo", bar}...)
+
+				// Should be OK
+				bar := "baz"
+				someList = append(someList, bar)
+
+				// But not this
+				bar := "baz"
+				someList = append(someList, "notBar")
+
+				// Ok
+				biz := "str"
+				whatever := ItsJustAppend(biz)
+
+				// Ok
+				zzz := "str"
+				whatever := SoThisIsOK(biz)
+			}`),
+			expectedErrorStrings: []string{
+				"append only allowed to cuddle with appended value",
+			},
+		},
+		{
+			description: "support usage if chained",
+			code: []byte(`package main
+
+			func main() {
+				r := map[string]interface{}{}
+				if err := json.NewDecoder(someReader).Decode(&r); err != nil {
+					return "this should be OK"
+				}
+			}`),
+		},
+		{
+			description: "support function literals",
+			code: []byte(`package main
+
+			func main() {
+				n := 1
+				f := func() {
+
+					// This violates whitespaces
+					
+					// Violates cuddle
+					notThis := false
+					if isThisTested {
+						return
+
+					}
+				}
+
+				f()
+			}`),
+			expectedErrorStrings: []string{
+				"block should not start with a whitespace",
+				"block should not end with a whitespace (or comment)",
+				"if statements should only be cuddled with assignments used in the if statement itself",
+			},
 		},
 	}
 
@@ -756,7 +937,6 @@ func TestTODO(t *testing.T) {
 			code: []byte(`package main
 
 			func main() {
-				return
 			}`),
 		},
 	}
@@ -765,6 +945,8 @@ func TestTODO(t *testing.T) {
 		t.Run(tc.description, func(t *testing.T) {
 			p := NewProcessor()
 			p.process("unit-test", tc.code)
+
+			t.Logf("WARNINGS: %s", p.warnings)
 
 			require.Len(t, p.result, len(tc.expectedErrorStrings), "correct amount of errors found")
 

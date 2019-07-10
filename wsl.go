@@ -93,46 +93,17 @@ func (p *processor) parseBlockBody(block *ast.BlockStmt) {
 // node. A list of Result is returned.
 func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 	for i, stmt := range statements {
-		// Start by checking if the statement has a body (probably if-statement,
-		// a range, switch case or similar. Whenever a body is found we start by
-		// parsing it before moving on in the AST.
-		statementBody := reflect.Indirect(reflect.ValueOf(stmt)).FieldByName("Body")
-
-		// Some cases allow cuddling depending on the first statement in a body
-		// of a block or case. If possible extract the first statement.
-		var firstBodyStatement ast.Node
-
-		if statementBody.IsValid() {
-			switch statementBodyContent := statementBody.Interface().(type) {
-			case *ast.BlockStmt:
-				if len(statementBodyContent.List) > 0 {
-					firstBodyStatement = statementBodyContent.List[0]
+		// TODO: How to tell when and where func literals may exist to enforce
+		// linting.
+		if as, isAssignStmt := stmt.(*ast.AssignStmt); isAssignStmt {
+			for _, rhs := range as.Rhs {
+				if fl, isFuncLit := rhs.(*ast.FuncLit); isFuncLit {
+					p.parseBlockBody(fl.Body)
 				}
-
-				p.parseBlockBody(statementBodyContent)
-			case []ast.Stmt:
-				// The Body field for an *ast.CaseClause is of type []ast.Stmt.
-				// We must check leading and trailing whitespaces and then pass
-				// the statements to parseBlockStatements to parse it's content.
-				var nextStatement ast.Node
-
-				// Check if there's more statements (potential casess) after the
-				// current one.
-				if len(statements)-1 > i {
-					nextStatement = statements[i+1]
-				}
-
-				p.findLeadingAndTrailingWhitespaces(stmt, nextStatement)
-				p.parseBlockStatements(statementBodyContent)
-			default:
-				p.addWarning(
-					"body statement type not implemented ",
-					stmt.Pos(), statementBodyContent,
-				)
-
-				continue
 			}
 		}
+
+		firstBodyStatement := p.firstBodyStatement(i, statements)
 
 		// First statement, nothing to do.
 		if i == 0 {
@@ -143,68 +114,55 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 
 		// If the last statement didn't end one line above the current statement
 		// we know we're not cuddled so just move on.
-		if p.fileSet.Position(previousStatement.End()).Line != p.fileSet.Position(stmt.Pos()).Line-1 {
+		if p.nodeEnd(previousStatement) != p.nodeStart(stmt)-1 {
 			continue
 		}
 
 		// We know we're cuddled, extract assigned variables on the line above
 		// which is the only thing we allow cuddling with. If the assignment is
 		// made over multiple lines we should not allow cuddling.
-		assignedOnLineAbove := []string{}
+		var assignedOnLineAbove []string
 
 		// Ensure previous line is not a multi line assignment and if not get
 		// all assigned variables.
-		if p.fileSet.Position(previousStatement.Pos()).Line == p.fileSet.Position(stmt.Pos()).Line-1 {
-			assignedOnLineAbove = p.findAssignments(previousStatement)
+		if p.nodeStart(previousStatement) == p.nodeStart(stmt)-1 {
+			assignedOnLineAbove = p.findLhs(previousStatement)
 		}
 
 		// We could potentially have a block which require us to check the first
 		// argument before ruling out an allowed cuddle.
-		assignedFirstInBlock := []string{}
+		var assignedFirstInBlock []string
 
 		if firstBodyStatement != nil {
-			assignedFirstInBlock = p.findAssignments(firstBodyStatement)
+			assignedFirstInBlock = p.findLhs(firstBodyStatement)
 		}
 
-		// Get usages on the line above, i.e. x.Foo() -> x
-		usagesOnLineAbove := p.findExpressionVariables(previousStatement)
+		lhs := p.findLhs(stmt)
+		rhs := p.findRhs(stmt)
+		all := append(lhs, rhs...)
 
-		switch t := stmt.(type) {
-		case *ast.IfStmt:
-			// Check if we're cuddled with something that's not an assignment.
-			if len(assignedOnLineAbove) == 0 {
-				p.addError(t.Pos(), "if statements should only be cuddled with assignments")
+		/*
+			DEBUG:
+			fmt.Println("LHS: ", lhs)
+			fmt.Println("RHS: ", rhs)
+			fmt.Println("Assigned above: ", assignedOnLineAbove)
+			fmt.Println("Assigned first: ", assignedFirstInBlock)
+		*/
 
-				continue
+		moreThanOneStatementAbove := func() bool {
+			if i < 2 {
+				return false
 			}
 
-			// Check if there are more than one statement before us.
-			if i >= 2 {
-				statementBeforePreviousStatement := statements[i-2]
-
-				if p.fileSet.Position(statementBeforePreviousStatement.End()).Line == p.fileSet.Position(previousStatement.Pos()).Line-1 {
-					p.addError(t.Pos(), "only one cuddle assignment allowed before if statement")
-
-					continue
-				}
+			statementBeforePreviousStatement := statements[i-2]
+			if p.nodeStart(previousStatement)-1 == p.nodeEnd(statementBeforePreviousStatement) {
+				return true
 			}
 
-			// Get all variables used in the condition for the if statement.
-			usedInStatement := p.findConditionVariables(t.Cond)
+			return false
+		}
 
-			if !atLeastOneInListsMatch(usedInStatement, assignedOnLineAbove) {
-				// No variables in if statement was assigned in on the line
-				// above, check if what's cuddled above is used on the first
-				// line in the block.
-				if !atLeastOneInListsMatch(assignedOnLineAbove, assignedFirstInBlock) {
-					// If the variable above isn't used first in the block this
-					// is just too tight code.
-					p.addError(t.Pos(), "if statements should only be cuddled with assignments used in the if statement itself")
-				}
-
-				continue
-			}
-		case *ast.ReturnStmt:
+		isLastStatementInBlockOfOnlyTwoLines := func() bool {
 			// If we're the last statement, check if there's no more than two
 			// lines from the starting statement and the end of this statement.
 			// This is to support short return functions such as:
@@ -213,17 +171,54 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 			//     return t
 			// }
 			if i == len(statements)-1 && i == 1 {
-				currentStatementEndsAtLine := p.fileSet.Position(stmt.End()).Line
-				previousStatementStartsAtLine := p.fileSet.Position(previousStatement.Pos()).Line
-
-				if currentStatementEndsAtLine-previousStatementStartsAtLine <= 2 {
-
-					continue
+				if p.nodeEnd(stmt)-p.nodeStart(previousStatement) <= 2 {
+					return true
 				}
 			}
 
-			p.addError(t.Pos(), "return statements should never be cuddled")
+			return false
+		}
+
+		switch t := stmt.(type) {
+		case *ast.IfStmt:
+			if len(assignedOnLineAbove) == 0 {
+				p.addError(t.Pos(), "if statements should only be cuddled with assignments")
+
+				continue
+			}
+
+			if moreThanOneStatementAbove() {
+				p.addError(t.Pos(), "only one cuddle assignment allowed before if statement")
+
+				continue
+			}
+
+			if !atLeastOneInListsMatch(all, assignedOnLineAbove) {
+				if !atLeastOneInListsMatch(assignedOnLineAbove, assignedFirstInBlock) {
+					p.addError(t.Pos(), "if statements should only be cuddled with assignments used in the if statement itself")
+				}
+			}
+		case *ast.ReturnStmt:
+			if isLastStatementInBlockOfOnlyTwoLines() {
+				continue
+			}
+
+			p.addError(t.Pos(), "return statements should not be cuddled if block has more than two lines")
+		case *ast.BranchStmt:
+			if isLastStatementInBlockOfOnlyTwoLines() {
+				continue
+			}
+
+			p.addError(t.Pos(), "branch statements should not be cuddled if block has more than two lines")
 		case *ast.AssignStmt:
+			// append is usually an assignment but should not be allowed to be
+			// cuddled with anything not appended.
+			if len(rhs) > 0 && rhs[len(rhs)-1] == "append" {
+				if !atLeastOneInListsMatch(assignedOnLineAbove, rhs) {
+					p.addError(t.Pos(), "append only allowed to cuddle with appended value")
+				}
+			}
+
 			if _, ok := previousStatement.(*ast.AssignStmt); ok {
 				continue
 			}
@@ -236,59 +231,109 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 			case *ast.DeclStmt, *ast.ReturnStmt:
 				p.addError(t.Pos(), "expressions should not be cuddled with declarations or returns")
 			}
-		case *ast.RangeStmt:
-			rangesOverValues := p.findConditionVariables(t.X)
 
-			// The same rule applies for ranges as for if statements, see
-			// comments regarding variable usages on the line before or as the
-			// first line in the block for details.
-			if !atLeastOneInListsMatch(rangesOverValues, assignedOnLineAbove) {
+			// If we assigned variables on the line above but didn't use them in
+			// this expression we there should probably be a newline between
+			// them.
+			if len(assignedOnLineAbove) > 0 && !atLeastOneInListsMatch(all, assignedOnLineAbove) {
+				p.addError(t.Pos(), "only cuddled expressions if assigning variable or using from line above")
+			}
+		case *ast.RangeStmt:
+			if moreThanOneStatementAbove() {
+				p.addError(t.Pos(), "only one cuddle assignment allowed before range statement")
+
+				continue
+			}
+
+			if !atLeastOneInListsMatch(all, assignedOnLineAbove) {
 				if !atLeastOneInListsMatch(assignedOnLineAbove, assignedFirstInBlock) {
 					p.addError(t.Pos(), "ranges should only be cuddled with assignments used in the iteration")
 				}
 			}
 		case *ast.DeferStmt:
-			deferExpressionUsages := p.findCallExpressionVariables(t.Call)
+			if _, ok := previousStatement.(*ast.DeferStmt); ok {
+				// We may cuddle multiple defers to group logic.
+				continue
+			}
 
-			if !atLeastOneInListsMatch(deferExpressionUsages, usagesOnLineAbove) {
+			if moreThanOneStatementAbove() {
+				p.addError(t.Pos(), "only one cuddle assignment allowed before defer statement")
+
+				continue
+			}
+
+			// Be extra nice with RHS, it's common to use this for locks:
+			// m.Lock()
+			// defer m.Unlock()
+			previousRhs := p.findRhs(previousStatement)
+			if atLeastOneInListsMatch(rhs, previousRhs) {
+				continue
+			}
+
+			if !atLeastOneInListsMatch(all, assignedOnLineAbove) {
 				p.addError(t.Pos(), "defer statements should only be cuddled with expressions on same variable")
 			}
 		case *ast.ForStmt:
-			// No condition, just a for loop - should not be cuddled.
-			if t.Cond == nil {
+			if len(all) == 0 {
 				p.addError(t.Pos(), "for statement without condition should never be cuddled")
 
 				continue
 			}
 
-			rangesOverValues := p.findConditionVariables(t.Cond)
+			if moreThanOneStatementAbove() {
+				p.addError(t.Pos(), "only one cuddle assignment allowed before for statement")
+
+				continue
+			}
 
 			// The same rule applies for ranges as for if statements, see
 			// comments regarding variable usages on the line before or as the
 			// first line in the block for details.
-			if !atLeastOneInListsMatch(rangesOverValues, assignedOnLineAbove) {
+			if !atLeastOneInListsMatch(all, assignedOnLineAbove) {
 				if !atLeastOneInListsMatch(assignedOnLineAbove, assignedFirstInBlock) {
 					p.addError(t.Pos(), "for statements should only be cuddled with assignments used in the iteration")
 				}
 			}
 		case *ast.GoStmt:
-			if c, ok := t.Call.Fun.(*ast.Ident); ok {
-				if atLeastOneInListsMatch([]string{c.Name}, assignedOnLineAbove) {
-					continue
-				}
+			if moreThanOneStatementAbove() {
+				p.addError(t.Pos(), "only one cuddle assignment allowed before go statement")
+
+				continue
 			}
 
-			p.addError(t.Pos(), "go statements can only invoke functions assigned on line above")
-		case *ast.BranchStmt:
-			// TODO: This is a continue or break within loop
-			// Should probably be handled just like return
+			if !atLeastOneInListsMatch(all, assignedOnLineAbove) {
+				p.addError(t.Pos(), "go statements can only invoke functions assigned on line above")
+			}
 		case *ast.SwitchStmt:
-			// TODO: Handle switch
+			if moreThanOneStatementAbove() {
+				p.addError(t.Pos(), "only one cuddle assignment allowed before switch statement")
+
+				continue
+			}
+
+			if !atLeastOneInListsMatch(all, assignedOnLineAbove) {
+				if len(all) == 0 {
+					p.addError(t.Pos(), "anonymous switch statements should never be cuddled")
+				} else {
+					p.addError(t.Pos(), "switch statements should only be cuddled with variables switched")
+				}
+			}
 		case *ast.TypeSwitchStmt:
-			// TODO: Handle type switch
-		case *ast.CommClause:
-			// TODO: Handle default cases in select
-		case *ast.CaseClause:
+			if moreThanOneStatementAbove() {
+				p.addError(t.Pos(), "only one cuddle assignment allowed before type switch statement")
+
+				continue
+			}
+
+			// Allowed to type assert on variable assigned on line above.
+			if !atLeastOneInListsMatch(rhs, assignedOnLineAbove) {
+				// Allow type assertion on variables used in the first case
+				// immediately.
+				if !atLeastOneInListsMatch(assignedOnLineAbove, assignedFirstInBlock) {
+					p.addError(t.Pos(), "type switch statements should only be cuddled with variables switched")
+				}
+			}
+		case *ast.CaseClause, *ast.CommClause:
 			// Case clauses will be checked by not allowing leading ot trailing
 			// whitespaces within the block. There's nothing in the case itself
 			// that may be cuddled.
@@ -298,100 +343,240 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 	}
 }
 
-// findExpressionVariables will find used identifiers for a node, i.e.
-// mu.Unlock() -> mu
-func (p *processor) findExpressionVariables(node ast.Node) []string {
-	astExpression, ok := node.(*ast.ExprStmt)
-	if !ok {
-		return []string{}
+// firstBodyStatement returns the first statement inside a body block. This is
+// because variables may be cuddled with conditions or statements if it's used
+// directly as the first argument inside a body.
+// The body will then be parsed as a *ast.BlockStmt (regular block) or as a list
+// of []ast.Stmt (case block).
+func (p *processor) firstBodyStatement(i int, allStmt []ast.Stmt) ast.Node {
+	stmt := allStmt[i]
+
+	// Start by checking if the statement has a body (probably if-statement,
+	// a range, switch case or similar. Whenever a body is found we start by
+	// parsing it before moving on in the AST.
+	statementBody := reflect.Indirect(reflect.ValueOf(stmt)).FieldByName("Body")
+
+	// Some cases allow cuddling depending on the first statement in a body
+	// of a block or case. If possible extract the first statement.
+	var firstBodyStatement ast.Node
+
+	if !statementBody.IsValid() {
+		return firstBodyStatement
 	}
 
-	return p.findCallExpressionVariables(astExpression.X)
-}
+	switch statementBodyContent := statementBody.Interface().(type) {
+	case *ast.BlockStmt:
+		if len(statementBodyContent.List) > 0 {
+			firstBodyStatement = statementBodyContent.List[0]
 
-func (p *processor) findCallExpressionVariables(node ast.Node) []string {
-	switch x := node.(type) {
-	case *ast.CallExpr:
-		exp, ok := x.Fun.(*ast.SelectorExpr)
-		if !ok {
-			return []string{}
-		}
-
-		return p.findConditionVariables(exp.X)
-	default:
-		p.addWarning("expression variable not implemented", x.Pos(), x)
-	}
-
-	return []string{}
-}
-
-// findAssignments will find all assignments for a given node. If the node isn't
-// an assignment statement, an empty list will be return. If it however is an
-// assignment statement, all identifiers on the left hand side will be returned.
-func (p *processor) findAssignments(node ast.Node) []string {
-	assignments := []string{}
-
-	astIdentifier, ok := node.(*ast.AssignStmt)
-	if !ok {
-		return assignments
-	}
-
-	for _, identifier := range astIdentifier.Lhs {
-		switch x := identifier.(type) {
-		case *ast.Ident:
-			assignments = append(assignments, x.Name)
-		case *ast.SelectorExpr:
-			// No new variables on left side.
-		case *ast.IndexExpr:
-			assignments = append(p.findConditionVariables(x.X))
-		default:
-			p.addWarning("assignment type not implemented", x.Pos(), x)
-		}
-	}
-
-	return assignments
-}
-
-func (p *processor) findConditionVariables(cond ast.Node) []string {
-	switch v := cond.(type) {
-	case *ast.Ident:
-		return []string{v.Name}
-	case *ast.BinaryExpr:
-		return append(
-			p.findConditionVariables(v.X),
-			p.findConditionVariables(v.Y)...,
-		)
-	case *ast.UnaryExpr:
-		return p.findConditionVariables(v.X)
-	case *ast.IndexExpr:
-		return p.findConditionVariables(v.X)
-	case *ast.CallExpr:
-		args := []string{}
-
-		for _, x := range v.Args {
-			if callExprArg, ok := x.(*ast.Ident); ok {
-				args = append(args, callExprArg.Name)
+			// If the first body statement is a *ast.CaseClause we're
+			// actually interested in the **next** body to know what's
+			// inside the first case.
+			if x, ok := firstBodyStatement.(*ast.CaseClause); ok {
+				if len(x.Body) > 0 {
+					firstBodyStatement = x.Body[0]
+				}
 			}
 		}
 
-		return args
-	case *ast.BasicLit:
-		// Basic literal, nothing to check.
-	case *ast.SelectorExpr:
-		return p.findConditionVariables(v.X)
+		p.parseBlockBody(statementBodyContent)
+	case []ast.Stmt:
+		// The Body field for an *ast.CaseClause or *ast.CommClause is of type
+		// []ast.Stmt. We must check leading and trailing whitespaces and then
+		// pass the statements to parseBlockStatements to parse it's content.
+		var nextStatement ast.Node
+
+		// Check if there's more statements (potential cases) after the
+		// current one.
+		if len(allStmt)-1 > i {
+			nextStatement = allStmt[i+1]
+		}
+
+		p.findLeadingAndTrailingWhitespaces(stmt, nextStatement)
+		p.parseBlockStatements(statementBodyContent)
 	default:
-		p.addWarning("condition type not implemented", v.Pos(), v)
+		p.addWarning(
+			"body statement type not implemented ",
+			stmt.Pos(), statementBodyContent,
+		)
 	}
 
-	return []string{}
+	return firstBodyStatement
+}
+
+func (p *processor) findLhs(node ast.Node) []string {
+	var lhs []string
+
+	if node == nil {
+		return lhs
+	}
+
+	switch t := node.(type) {
+	case *ast.BasicLit, *ast.FuncLit, *ast.SelectStmt,
+		*ast.LabeledStmt, *ast.ForStmt, *ast.SwitchStmt,
+		*ast.ReturnStmt, *ast.GoStmt, *ast.CaseClause,
+		*ast.CommClause, *ast.CallExpr, *ast.UnaryExpr,
+		*ast.BranchStmt, *ast.TypeSpec, *ast.ChanType,
+		*ast.DeferStmt, *ast.TypeAssertExpr, *ast.IncDecStmt,
+		*ast.RangeStmt:
+		// Nothing to add to LHS
+	case *ast.Ident:
+		return []string{t.Name}
+	case *ast.AssignStmt:
+		for _, v := range t.Lhs {
+			lhs = append(lhs, p.findLhs(v)...)
+		}
+	case *ast.GenDecl:
+		for _, v := range t.Specs {
+			lhs = append(lhs, p.findLhs(v)...)
+		}
+	case *ast.ValueSpec:
+		for _, v := range t.Names {
+			lhs = append(lhs, p.findLhs(v)...)
+		}
+	case *ast.BlockStmt:
+		for _, v := range t.List {
+			lhs = append(lhs, p.findLhs(v)...)
+		}
+	case *ast.BinaryExpr:
+		return append(
+			p.findLhs(t.X),
+			p.findLhs(t.Y)...,
+		)
+	case *ast.DeclStmt:
+		return p.findLhs(t.Decl)
+	case *ast.IfStmt:
+		return p.findLhs(t.Cond)
+	case *ast.TypeSwitchStmt:
+		return p.findLhs(t.Assign)
+	case *ast.SendStmt:
+		return p.findLhs(t.Chan)
+	default:
+		if x, ok := maybeX(t); ok {
+			return p.findLhs(x)
+		}
+
+		p.addWarning("UNKNOWN LHS", t.Pos(), t)
+	}
+
+	return lhs
+}
+
+func (p *processor) findRhs(node ast.Node) []string {
+	var rhs []string
+
+	if node == nil {
+		return rhs
+	}
+
+	switch t := node.(type) {
+	case *ast.BasicLit, *ast.SelectStmt, *ast.ChanType,
+		*ast.LabeledStmt, *ast.DeclStmt, *ast.BranchStmt,
+		*ast.TypeSpec, *ast.ArrayType, *ast.CaseClause,
+		*ast.CommClause, *ast.KeyValueExpr, *ast.MapType,
+		*ast.FuncLit:
+	// Nothing to add to RHS
+	case *ast.Ident:
+		return []string{t.Name}
+	case *ast.SelectorExpr:
+		// TODO: Should this be RHS?
+		// Needed for defer as of now
+		return p.findRhs(t.X)
+	case *ast.AssignStmt:
+		for _, v := range t.Rhs {
+			rhs = append(rhs, p.findRhs(v)...)
+		}
+	case *ast.CallExpr:
+		for _, v := range t.Args {
+			rhs = append(rhs, p.findRhs(v)...)
+		}
+
+		rhs = append(rhs, p.findRhs(t.Fun)...)
+	case *ast.CompositeLit:
+		for _, v := range t.Elts {
+			rhs = append(rhs, p.findRhs(v)...)
+		}
+	case *ast.IfStmt:
+		rhs = append(rhs, p.findRhs(t.Cond)...)
+		rhs = append(rhs, p.findRhs(t.Init)...)
+	case *ast.BinaryExpr:
+		return append(
+			p.findRhs(t.X),
+			p.findRhs(t.Y)...,
+		)
+	case *ast.TypeSwitchStmt:
+		return p.findRhs(t.Assign)
+	case *ast.ReturnStmt:
+		for _, v := range t.Results {
+			rhs = append(rhs, p.findRhs(v)...)
+		}
+	case *ast.BlockStmt:
+		for _, v := range t.List {
+			rhs = append(rhs, p.findRhs(v)...)
+		}
+	case *ast.SwitchStmt:
+		return p.findRhs(t.Tag)
+	case *ast.GoStmt:
+		return p.findRhs(t.Call)
+	case *ast.ForStmt:
+		return p.findRhs(t.Cond)
+	case *ast.DeferStmt:
+		return p.findRhs(t.Call)
+	case *ast.SendStmt:
+		return p.findLhs(t.Value)
+	default:
+		if x, ok := maybeX(t); ok {
+			return p.findRhs(x)
+		}
+
+		p.addWarning("UNKNOWN RHS", t.Pos(), t)
+	}
+
+	return rhs
+}
+
+// maybeX extracts the X field from an AST node and returns it with a true value
+// if it exists. If the node doesn't have an X field nil and false is returned.
+// Known fields with X that are handled:
+// IndexExpr, ExprStmt, SelectorExpr, StarExpr, ParentExpr, TypeAssertExpr,
+// RangeStmt, UnaryExpr, ParenExpr, SLiceExpr, IncDecStmt.
+func maybeX(node interface{}) (ast.Node, bool) {
+	maybeHasX := reflect.Indirect(reflect.ValueOf(node)).FieldByName("X")
+	if !maybeHasX.IsValid() {
+		return nil, false
+	}
+
+	n, ok := maybeHasX.Interface().(ast.Node)
+	if !ok {
+		return nil, false
+	}
+
+	return n, true
 }
 
 func atLeastOneInListsMatch(listOne, listTwo []string) bool {
-	for _, lOne := range listOne {
-		for _, lTwo := range listTwo {
-			if lOne == lTwo {
-				return true
-			}
+	sliceToMap := func(s []string) map[string]struct{} {
+		m := map[string]struct{}{}
+
+		for _, v := range s {
+			m[v] = struct{}{}
+		}
+
+		return m
+	}
+
+	m1 := sliceToMap(listOne)
+	m2 := sliceToMap(listTwo)
+
+	for k1 := range m1 {
+		if _, ok := m2[k1]; ok {
+			return true
+		}
+	}
+
+	for k2 := range m2 {
+		if _, ok := m1[k2]; ok {
+			return true
 		}
 	}
 
@@ -400,41 +585,46 @@ func atLeastOneInListsMatch(listOne, listTwo []string) bool {
 
 // findLeadingAndTrailingWhitespaces will find leading and trailing whitespaces
 // in a node. The method takes comments in consideration which will make the
-// parser more gentle. A list of Result is returned.
+// parser more gentle.
 func (p *processor) findLeadingAndTrailingWhitespaces(stmt, nextStatement ast.Node) {
 	var (
 		allowedLinesBeforeFirstStatement = 1
 		commentMap                       = ast.NewCommentMap(p.fileSet, stmt, p.file.Comments)
-		firstStatement                   ast.Node
-		lastStatement                    ast.Node
+		blockStatements                  []ast.Stmt
+		blockStartLine                   int
+		blockEndLine                     int
 	)
 
+	// Depending on the block type, get the statements in the block and where
+	// the block starts (and ends).
 	switch t := stmt.(type) {
 	case *ast.BlockStmt:
-		if len(t.List) < 1 {
-			return
-		}
-
-		firstStatement = t.List[0]
-		lastStatement = t.List[len(t.List)-1]
+		blockStatements = t.List
+		blockStartLine = p.fileSet.Position(t.Lbrace).Line
+		blockEndLine = p.fileSet.Position(t.Rbrace).Line
 	case *ast.CaseClause:
-		if len(t.Body) < 1 {
-			return
-		}
-
-		firstStatement = t.Body[0]
-		lastStatement = t.Body[len(t.Body)-1]
+		blockStatements = t.Body
+		blockStartLine = p.fileSet.Position(t.Colon).Line
 	case *ast.CommClause:
-		if len(t.Body) < 1 {
-			return
-		}
-
-		firstStatement = t.Body[0]
-		lastStatement = t.Body[len(t.Body)-1]
+		blockStatements = t.Body
+		blockStartLine = p.fileSet.Position(t.Colon).Line
 	default:
 		p.addWarning("whitespace node type not implemented ", stmt.Pos(), stmt)
+
+		return
 	}
 
+	if len(blockStatements) < 1 {
+		return
+	}
+
+	var (
+		firstStatement = blockStatements[0]
+		lastStatement  = blockStatements[len(blockStatements)-1]
+	)
+
+	// Get the comment related to the first statement, we do allow commends in
+	// the beginning of a block before the first statement.
 	if c, ok := commentMap[firstStatement]; ok {
 		commentsBefore := c[0]
 
@@ -444,44 +634,49 @@ func (p *processor) findLeadingAndTrailingWhitespaces(stmt, nextStatement ast.No
 		}
 	}
 
-	switch t := stmt.(type) {
-	case *ast.BlockStmt:
-		if p.fileSet.Position(firstStatement.Pos()).Line != p.fileSet.Position(t.Lbrace).Line+allowedLinesBeforeFirstStatement {
-			p.addErrorOffset(
-				firstStatement.Pos(),
-				-1,
-				"block should not start with a whitespace",
-			)
+	if p.fileSet.Position(firstStatement.Pos()).Line != blockStartLine+allowedLinesBeforeFirstStatement {
+		p.addErrorOffset(
+			firstStatement.Pos(),
+			-1,
+			"block should not start with a whitespace",
+		)
+	}
+
+	// If the blockEndLine is 0 we're a case clause. If we don't have any
+	// nextStatement the trailing whitespace will be handled when parsing the
+	// switch. If we do have a next statement we can see where it starts by
+	// getting it's colon position.
+	if blockEndLine == 0 {
+		if nextStatement == nil {
+			return
 		}
 
-		if p.fileSet.Position(lastStatement.End()).Line != p.fileSet.Position(t.Rbrace).Line-1 {
-			p.addErrorOffset(
-				lastStatement.Pos(),
-				1,
-				"block should not end with a whitespace (or comment)",
-			)
-		}
-	case *ast.CaseClause:
-		if p.fileSet.Position(firstStatement.Pos()).Line != p.fileSet.Position(t.Colon).Line+allowedLinesBeforeFirstStatement {
-			p.addErrorOffset(
-				lastStatement.Pos(),
-				-1,
-				"case block should not start with a whitespace",
-			)
-		}
-
-		if nextStatement != nil {
-			if nextStatementCase, ok := nextStatement.(*ast.CaseClause); ok {
-				if p.fileSet.Position(lastStatement.End()).Line != p.fileSet.Position(nextStatementCase.Colon).Line-1 {
-					p.addErrorOffset(
-						lastStatement.Pos(),
-						1,
-						"case block should not end with a whitespace (or comment)",
-					)
-				}
-			}
+		switch n := nextStatement.(type) {
+		case *ast.CaseClause:
+			blockEndLine = p.fileSet.Position(n.Colon).Line
+		case *ast.CommClause:
+			blockEndLine = p.fileSet.Position(n.Colon).Line
+		default:
+			// We're not at the end of the case?
+			return
 		}
 	}
+
+	if p.fileSet.Position(lastStatement.End()).Line != blockEndLine-1 {
+		p.addErrorOffset(
+			lastStatement.End(),
+			1,
+			"block should not end with a whitespace (or comment)",
+		)
+	}
+}
+
+func (p *processor) nodeStart(node ast.Node) int {
+	return p.fileSet.Position(node.Pos()).Line
+}
+
+func (p *processor) nodeEnd(node ast.Node) int {
+	return p.fileSet.Position(node.End()).Line
 }
 
 // Add an error for the file and line number for the current token.Pos with the
