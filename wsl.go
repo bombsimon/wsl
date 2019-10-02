@@ -82,6 +82,11 @@ func (p *processor) process(filename string, data []byte) {
 // parseBlockBody will parse any kind of block statements such as switch cases
 // and if statements. A list of Result is returned.
 func (p *processor) parseBlockBody(block *ast.BlockStmt) {
+	// Nothing to do if there's no value.
+	if reflect.ValueOf(block).IsNil() {
+		return
+	}
+
 	// Start by finding leading and trailing whitespaces.
 	p.findLeadingAndTrailingWhitespaces(block, nil)
 

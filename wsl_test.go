@@ -42,6 +42,12 @@ func TestGenericHandling(t *testing.T) {
 				// }
 			}`),
 		},
+		{
+			description: "do not panic on empty blocks",
+			code: []byte(`package main
+
+			func x(r string) (x uintptr)`),
+		},
 	}
 
 	for _, tc := range cases {
