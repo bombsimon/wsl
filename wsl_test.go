@@ -48,6 +48,14 @@ func TestGenericHandling(t *testing.T) {
 
 			func x(r string) (x uintptr)`),
 		},
+		{
+			description: "no false positives for comments",
+			code: []byte(`package main
+
+			func main() { // This is a comment, not the first line
+				fmt.Println("hello, world")
+			}`),
+		},
 	}
 
 	for _, tc := range cases {
