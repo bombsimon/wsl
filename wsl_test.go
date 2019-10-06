@@ -1,6 +1,7 @@
 package wsl
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -54,6 +55,14 @@ func TestGenericHandling(t *testing.T) {
 
 			func main() { // This is a comment, not the first line
 				fmt.Println("hello, world")
+			}`),
+		},
+		{
+			description: "no false positives for one line functions",
+			code: []byte(`package main
+
+			func main() {
+				s := func() error { return nil }
 			}`),
 		},
 	}
@@ -901,7 +910,7 @@ func TestShouldAddEmptyLines(t *testing.T) {
 				f := func() {
 
 					// This violates whitespaces
-					
+
 					// Violates cuddle
 					notThis := false
 					if isThisTested {
@@ -916,6 +925,57 @@ func TestShouldAddEmptyLines(t *testing.T) {
 				"block should not start with a whitespace",
 				"block should not end with a whitespace (or comment)",
 				"if statements should only be cuddled with assignments used in the if statement itself",
+			},
+		},
+		{
+			description: "locks",
+			code: []byte(`package main
+
+			func main() {
+				hashFileCache.Lock()
+				out, ok := hashFileCache.m[file]
+				hashFileCache.Unlock()
+
+				mu := &sync.Mutex{}
+				mu.X(y).Z.RLock()
+				x, y := someMap[someKey]
+				mu.RUnlock()
+			}`),
+		},
+		{
+			description: "append type",
+			code: []byte(`package main
+
+			func main() {
+				s := []string{}
+
+				// Multiple append should be OK
+				s = append(s, "one")
+				s = append(s, "two")
+				s = append(s, "three")
+
+				// Both assigned and called should be allowed to be cuddled.
+				// It's not nice, but they belong'
+				p.defs = append(p.defs, x)
+				def.parseFrom(p)
+				p.defs = append(p.defs, def)
+				def.parseFrom(p)
+				def.parseFrom(p)
+				p.defs = append(p.defs, x)
+			}`),
+		},
+		{
+			description: "AllowAssignAndCallsCuddle",
+			code: []byte(`package main
+
+			func main() {
+				for i := range make([]int, 10) {
+					fmt.Println("x")
+				}
+				x.Calling()
+			}`),
+			expectedErrorStrings: []string{
+				"expressions should not be cuddled with blocks",
 			},
 		},
 	}
@@ -938,6 +998,48 @@ func TestShouldAddEmptyLines(t *testing.T) {
 	}
 }
 
+func TestWithConfig(t *testing.T) {
+	// This test is used to simulate code to perform TDD. This part should never
+	// be committed with any test.
+	cases := []struct {
+		description          string
+		code                 []byte
+		expectedErrorStrings []string
+		customConfig         *Configuration
+	}{
+		{
+			description: "AllowAssignAndCallsCuddle",
+			code: []byte(`package main
+
+			func main() {
+				p.token(':')
+				d.StartBit = p.uint()
+				p.token('|')
+				d.Size = p.uint()
+			}`),
+			customConfig: &Configuration{
+				AllowAssignAndCallsCuddle: true,
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.description, func(t *testing.T) {
+			p := NewProcessor()
+			if tc.customConfig != nil {
+				p = NewProcessorWithConfig(*tc.customConfig)
+			}
+
+			p.process("unit-test", tc.code)
+			require.Len(t, p.result, len(tc.expectedErrorStrings), "correct amount of errors found")
+
+			for i := range tc.expectedErrorStrings {
+				assert.Contains(t, p.result[i].Reason, tc.expectedErrorStrings[i], "expected error found")
+			}
+		})
+	}
+}
+
 func TestTODO(t *testing.T) {
 	// This test is used to simulate code to perform TDD. This part should never
 	// be committed with any test.
@@ -945,12 +1047,16 @@ func TestTODO(t *testing.T) {
 		description          string
 		code                 []byte
 		expectedErrorStrings []string
+		customConfig         *Configuration
 	}{
 		{
 			description: "boilerplate",
 			code: []byte(`package main
 
 			func main() {
+				for i := range make([]int, 10) {
+					fmt.Println("x")
+				}
 			}`),
 		},
 	}
@@ -958,9 +1064,17 @@ func TestTODO(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.description, func(t *testing.T) {
 			p := NewProcessor()
+			if tc.customConfig != nil {
+				p = NewProcessorWithConfig(*tc.customConfig)
+			}
+
 			p.process("unit-test", tc.code)
 
 			t.Logf("WARNINGS: %s", p.warnings)
+
+			for _, r := range p.result {
+				fmt.Println(r.String())
+			}
 
 			require.Len(t, p.result, len(tc.expectedErrorStrings), "correct amount of errors found")
 

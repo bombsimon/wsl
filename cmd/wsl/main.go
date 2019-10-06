@@ -12,27 +12,26 @@ import (
 
 func main() {
 	var (
-		args       []string
-		help       bool
-		notest     bool
-		warnings   bool
-		cwd, _     = os.Getwd()
-		files      = []string{}
-		finalFiles = []string{}
+		args         []string
+		help         bool
+		noTest       bool
+		showWarnings bool
+		cwd, _       = os.Getwd()
+		files        = []string{}
+		finalFiles   = []string{}
 	)
 
 	flag.BoolVar(&help, "h", false, "Show this help text")
 	flag.BoolVar(&help, "help", false, "")
-	flag.BoolVar(&notest, "n", false, "Don't lint test files")
-	flag.BoolVar(&notest, "no-test", false, "")
-	flag.BoolVar(&warnings, "w", false, "Show warnings (ignored rules)")
-	flag.BoolVar(&warnings, "warnings", false, "")
+	flag.BoolVar(&noTest, "n", false, "Don't lint test files")
+	flag.BoolVar(&noTest, "no-test", false, "")
+	flag.BoolVar(&showWarnings, "w", false, "Show warnings (ignored rules)")
+	flag.BoolVar(&showWarnings, "warnings", false, "")
 
 	flag.Parse()
 
 	if help {
 		showHelp()
-
 		return
 	}
 
@@ -57,7 +56,7 @@ func main() {
 
 	// Use relative path to print shorter names, sort out test files if chosen.
 	for _, f := range files {
-		if notest {
+		if noTest {
 			if strings.HasSuffix(f, "_test.go") {
 				continue
 			}
@@ -72,26 +71,25 @@ func main() {
 		finalFiles = append(finalFiles, f)
 	}
 
-	r, w := wsl.ProcessFiles(finalFiles)
+	processor := wsl.NewProcessor()
+	result, warnings := processor.ProcessFiles(finalFiles)
 
-	for _, x := range r {
-		fmt.Printf("%s:%d: %s\n", x.FileName, x.LineNumber, x.Reason)
+	for _, r := range result {
+		fmt.Println(r.String())
 	}
 
-	if warnings && len(w) > 0 {
+	if showWarnings && len(warnings) > 0 {
 		fmt.Println()
 		fmt.Println("⚠️  Warnings found")
 
-		for _, x := range w {
-			fmt.Println(x)
+		for _, w := range warnings {
+			fmt.Println(w)
 		}
 	}
 
-	if len(r) > 0 {
+	if len(result) > 0 {
 		os.Exit(2)
 	}
-
-	return
 }
 
 func expandGoWildcard(root string) []string {
