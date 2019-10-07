@@ -26,6 +26,17 @@ type Configuration struct {
 	//  y = AnotherAssign()
 	AllowAssignAndCallsCuddle bool
 
+	// AllowMultiLineAssignmentCuddled allows cuddling to assignments even if
+	// they span over multiple lines. This defaults to true which allows the
+	// following example:
+	//  err := function(
+	//  	"multiple", "lines",
+	//  )
+	//  if err != nil {
+	//  	// ...
+	//  }
+	AllowMultiLineAssignmentCuddled bool
+
 	// AllowCuddleWithCalls is a list of call idents that everything can be
 	// cuddled with. Defaults to calls looking like locks to support a flow like
 	// this:
@@ -39,6 +50,17 @@ type Configuration struct {
 	//  allow := thisAssignment()
 	//  mu.Unlock()
 	AllowCuddleWithRHS []string
+}
+
+// DefaultConfig returns default configuration
+func DefaultConfig() Configuration {
+	return Configuration{
+		CheckAppend:                     true,
+		AllowAssignAndCallsCuddle:       true,
+		AllowMultiLineAssignmentCuddled: true,
+		AllowCuddleWithCalls:            []string{"Lock", "RLock"},
+		AllowCuddleWithRHS:              []string{"Unlock", "RUnlock"},
+	}
 }
 
 type Result struct {
@@ -70,12 +92,7 @@ func NewProcessorWithConfig(cfg Configuration) *Processor {
 
 // NewProcessor will create a Processor.
 func NewProcessor() *Processor {
-	return NewProcessorWithConfig(Configuration{
-		CheckAppend:               true,
-		AllowAssignAndCallsCuddle: true,
-		AllowCuddleWithCalls:      []string{"Lock", "RLock", "RWLock"},
-		AllowCuddleWithRHS:        []string{"Unlock", "RUnlock", "RWUnlock"},
-	})
+	return NewProcessorWithConfig(DefaultConfig())
 }
 
 // ProcessFiles takes a string slice with file names (full paths) and lints
@@ -141,6 +158,7 @@ func (p *Processor) parseBlockBody(block *ast.BlockStmt) {
 
 // parseBlockStatements will parse all the statements found in the body of a
 // node. A list of Result is returned.
+// nolint: gocognit
 func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 	for i, stmt := range statements {
 		// TODO: How to tell when and where func literals may exist to enforce
@@ -177,11 +195,22 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 		// special handling of things such as mutexes.
 		var calledOnLineAbove []string
 
+		// Check if the previous statement spans over multiple lines.
+		var isMultiLineAssignment = p.nodeStart(previousStatement) != p.nodeStart(stmt)-1
+
 		// Ensure previous line is not a multi line assignment and if not get
 		// rightAndLeftHandSide assigned variables.
-		if p.nodeStart(previousStatement) == p.nodeStart(stmt)-1 {
+		if !isMultiLineAssignment {
 			assignedOnLineAbove = p.findLHS(previousStatement)
 			calledOnLineAbove = p.findRHS(previousStatement)
+		}
+
+		// If previous assignment is multi line and we allow it, fetch
+		// assignments (but only assignments).
+		if isMultiLineAssignment && p.config.AllowMultiLineAssignmentCuddled {
+			if _, ok := previousStatement.(*ast.AssignStmt); ok {
+				assignedOnLineAbove = p.findLHS(previousStatement)
+			}
 		}
 
 		// We could potentially have a block which require us to check the first
