@@ -948,7 +948,7 @@ func TestShouldAddEmptyLines(t *testing.T) {
 			}`),
 		},
 		{
-			description: "AllowAssignAndCallsCuddle",
+			description: "AllowAssignAndCallCuddle",
 			code: []byte(`package main
 
 			func main() {
@@ -991,7 +991,7 @@ func TestWithConfig(t *testing.T) {
 		customConfig         *Configuration
 	}{
 		{
-			description: "AllowAssignAndCallsCuddle",
+			description: "AllowAssignAndCallCuddle",
 			code: []byte(`package main
 
 			func main() {
@@ -1001,7 +1001,7 @@ func TestWithConfig(t *testing.T) {
 				d.Size = p.uint()
 			}`),
 			customConfig: &Configuration{
-				AllowAssignAndCallsCuddle: true,
+				AllowAssignAndCallCuddle: true,
 			},
 		},
 		{
@@ -1020,7 +1020,7 @@ func TestWithConfig(t *testing.T) {
 				}
 			}`),
 			customConfig: &Configuration{
-				AllowMultiLineAssignmentCuddled: false,
+				AllowMultiLineAssignCuddle: false,
 			},
 			expectedErrorStrings: []string{"if statements should only be cuddled with assignments"},
 		},
@@ -1049,9 +1049,29 @@ func TestWithConfig(t *testing.T) {
 				}
 			}`),
 			customConfig: &Configuration{
-				AllowMultiLineAssignmentCuddled: true,
+				AllowMultiLineAssignCuddle: true,
 			},
 			expectedErrorStrings: []string{"if statements should only be cuddled with assignments used in the if statement itself"},
+		},
+		{
+			description: "strict append",
+			code: []byte(`package main
+
+			func main() {
+				x := []string{}
+				y := "not in x"
+				x = append(x, "not y") // Should not be allowed
+
+				z := "in x"
+				x = append(x, z) // Should be allowed
+
+				m := transform(z)
+				x := append(x, z) // Should be allowed
+			}`),
+			customConfig: &Configuration{
+				StrictAppend: true,
+			},
+			expectedErrorStrings: []string{"append only allowed to cuddle with appended value"},
 		},
 	}
 

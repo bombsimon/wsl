@@ -10,36 +10,49 @@ import (
 )
 
 type Configuration struct {
-	// CheckAppend will do special handling when assigning from append (x =
+	// StrictAppend will do strict checking when assigning from append (x =
 	// append(x, y)). If this is set to true the append call must append either
-	// a variable assigned on the line above or a variable called on the line
-	// above.
-	CheckAppend bool
+	// a variable assigned, called or used on the line above. Example on not
+	// allowed when this is true:
+	//
+	//  x := []string{}
+	//  y := "not going in X"
+	//  x = append(x, "not y") // This is not allowed with StrictAppend
+	//  z := "going in X"
+	//
+	//  x = append(x, z) // This is allowed with StrictAppend
+	//
+	//  m := transform(z)
+	//  x = append(x, z) // So is this because Z is used above.
+	StrictAppend bool
 
-	// AllowAssignAndCallsCuddle allows assignments to be cuddled with variables
+	// AllowAssignAndCallCuddle allows assignments to be cuddled with variables
 	// used in calls on line above and calls to be cuddled with assignments of
 	// variables used in call on line above.
 	// Example supported with this set to true:
+	//
 	//  x.Call()
-	//  y = Assign()
+	//  x = Assign()
 	//  x.AnotherCall()
-	//  y = AnotherAssign()
-	AllowAssignAndCallsCuddle bool
+	//  x = AnotherAssign()
+	AllowAssignAndCallCuddle bool
 
-	// AllowMultiLineAssignmentCuddled allows cuddling to assignments even if
-	// they span over multiple lines. This defaults to true which allows the
+	// AllowMultiLineAssignCuddle allows cuddling to assignments even if they
+	// span over multiple lines. This defaults to true which allows the
 	// following example:
+	//
 	//  err := function(
 	//  	"multiple", "lines",
 	//  )
 	//  if err != nil {
 	//  	// ...
 	//  }
-	AllowMultiLineAssignmentCuddled bool
+	AllowMultiLineAssignCuddle bool
 
 	// AllowCuddleWithCalls is a list of call idents that everything can be
 	// cuddled with. Defaults to calls looking like locks to support a flow like
 	// this:
+	//
 	//  mu.Lock()
 	//  allow := thisAssignment
 	AllowCuddleWithCalls []string
@@ -47,6 +60,7 @@ type Configuration struct {
 	// AllowCuddleWithRHS is a list of right hand side variables that is allowed
 	// to be cuddled with anything. Defaults to assignments or calls looking
 	// like unlocks to support a flow like this:
+	//
 	//  allow := thisAssignment()
 	//  mu.Unlock()
 	AllowCuddleWithRHS []string
@@ -55,14 +69,15 @@ type Configuration struct {
 // DefaultConfig returns default configuration
 func DefaultConfig() Configuration {
 	return Configuration{
-		CheckAppend:                     true,
-		AllowAssignAndCallsCuddle:       true,
-		AllowMultiLineAssignmentCuddled: true,
-		AllowCuddleWithCalls:            []string{"Lock", "RLock"},
-		AllowCuddleWithRHS:              []string{"Unlock", "RUnlock"},
+		StrictAppend:               true,
+		AllowAssignAndCallCuddle:   true,
+		AllowMultiLineAssignCuddle: true,
+		AllowCuddleWithCalls:       []string{"Lock", "RLock"},
+		AllowCuddleWithRHS:         []string{"Unlock", "RUnlock"},
 	}
 }
 
+// Result represents the result of one error.
 type Result struct {
 	FileName   string
 	LineNumber int
@@ -70,6 +85,7 @@ type Result struct {
 	Reason     string
 }
 
+// String returns the filename, line number and reason of a Result.
 func (r *Result) String() string {
 	return fmt.Sprintf("%s:%d: %s", r.FileName, r.LineNumber, r.Reason)
 }
@@ -207,7 +223,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 
 		// If previous assignment is multi line and we allow it, fetch
 		// assignments (but only assignments).
-		if isMultiLineAssignment && p.config.AllowMultiLineAssignmentCuddled {
+		if isMultiLineAssignment && p.config.AllowMultiLineAssignCuddle {
 			if _, ok := previousStatement.(*ast.AssignStmt); ok {
 				assignedOnLineAbove = p.findLHS(previousStatement)
 			}
@@ -308,7 +324,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			// append is usually an assignment but should not be allowed to be
 			// cuddled with anything not appended.
 			if len(rightHandSide) > 0 && rightHandSide[len(rightHandSide)-1] == "append" {
-				if p.config.CheckAppend {
+				if p.config.StrictAppend {
 					if !atLeastOneInListsMatch(calledOrAssignedOnLineAbove, rightHandSide) {
 						p.addError(t.Pos(), "append only allowed to cuddle with appended value")
 					}
@@ -322,12 +338,12 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 
 			// If the assignment is from a type or variable called on the line
-			// above we can allow it by setting AllowAssignAndCallsCuddle to
+			// above we can allow it by setting AllowAssignAndCallCuddle to
 			// true.
 			// Example (x is used):
 			//  x.function()
 			//  a.Field = x.anotherFunction()
-			if p.config.AllowAssignAndCallsCuddle {
+			if p.config.AllowAssignAndCallCuddle {
 				if atLeastOneInListsMatch(calledOrAssignedOnLineAbove, rightAndLeftHandSide) {
 					continue
 				}
@@ -346,11 +362,11 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 
 			// If the expression is called on a type or variable used or
 			// assigned on the line we can allow it by setting
-			// AllowAssignAndCallsCuddle to true.
+			// AllowAssignAndCallCuddle to true.
 			// Example of allowed cuddled (x is used):
 			//  a.Field = x.func()
 			//  x.function()
-			if p.config.AllowAssignAndCallsCuddle {
+			if p.config.AllowAssignAndCallCuddle {
 				if atLeastOneInListsMatch(calledOrAssignedOnLineAbove, rightAndLeftHandSide) {
 					continue
 				}
