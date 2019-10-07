@@ -408,23 +408,6 @@ func TestShouldAddEmptyLines(t *testing.T) {
 			}`),
 		},
 		{
-			description: "multi line assignment should not be seen as assignment above",
-			code: []byte(`package main
-
-			func main() {
-				// This should not be OK since the assignment is split at
-				// multiple rows.
-				err := SomeFunc(
-					"taking multiple values",
-					"suddendly not a single line",
-				)
-				if err != nil {
-					fmt.Println("denied")
-				}
-			}`),
-			expectedErrorStrings: []string{"if statements should only be cuddled with assignments"},
-		},
-		{
 			description: "allow cuddle for immediate assignment in block",
 			code: []byte(`package main
 
@@ -1020,6 +1003,55 @@ func TestWithConfig(t *testing.T) {
 			customConfig: &Configuration{
 				AllowAssignAndCallsCuddle: true,
 			},
+		},
+		{
+			description: "multi line assignment ok when enabled",
+			code: []byte(`package main
+
+			func main() {
+				// This should not be OK since the assignment is split at
+				// multiple rows.
+				err := SomeFunc(
+					"taking multiple values",
+					"suddendly not a single line",
+				)
+				if err != nil {
+					fmt.Println("denied")
+				}
+			}`),
+			customConfig: &Configuration{
+				AllowMultiLineAssignmentCuddled: false,
+			},
+			expectedErrorStrings: []string{"if statements should only be cuddled with assignments"},
+		},
+		{
+			description: "multi line assignment not ok when disabled",
+			code: []byte(`package main
+
+			func main() {
+				// This should not be OK since the assignment is split at
+				// multiple rows.
+				err := SomeFunc(
+					"taking multiple values",
+					"suddenly not a single line",
+				)
+				if err != nil {
+					fmt.Println("accepted")
+				}
+
+				// This should still fail since it's not the same variable
+				noErr := SomeFunc(
+					"taking multiple values",
+					"suddenly not a single line",
+				)
+				if err != nil {
+					fmt.Println("rejected")
+				}
+			}`),
+			customConfig: &Configuration{
+				AllowMultiLineAssignmentCuddled: true,
+			},
+			expectedErrorStrings: []string{"if statements should only be cuddled with assignments used in the if statement itself"},
 		},
 	}
 

@@ -19,6 +19,7 @@ func main() {
 		cwd, _       = os.Getwd()
 		files        = []string{}
 		finalFiles   = []string{}
+		config       = wsl.DefaultConfig()
 	)
 
 	flag.BoolVar(&help, "h", false, "Show this help text")
@@ -27,6 +28,10 @@ func main() {
 	flag.BoolVar(&noTest, "no-test", false, "")
 	flag.BoolVar(&showWarnings, "w", false, "Show warnings (ignored rules)")
 	flag.BoolVar(&showWarnings, "warnings", false, "")
+
+	flag.BoolVar(&config.CheckAppend, "check-append", true, "Strict rules for append")
+	flag.BoolVar(&config.AllowAssignAndCallsCuddle, "allow-assign-and-call", true, "Allow assignments and calls to be cuddled (if using same variable/type)")
+	flag.BoolVar(&config.AllowMultiLineAssignmentCuddled, "allow-multi-line-assignment", true, "Allow cuddling with multi line assignments")
 
 	flag.Parse()
 
@@ -71,7 +76,7 @@ func main() {
 		finalFiles = append(finalFiles, f)
 	}
 
-	processor := wsl.NewProcessor()
+	processor := wsl.NewProcessorWithConfig(config)
 	result, warnings := processor.ProcessFiles(finalFiles)
 
 	for _, r := range result {
