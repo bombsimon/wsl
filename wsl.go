@@ -661,6 +661,10 @@ func (p *Processor) findRHS(node ast.Node) []string {
 	case *ast.IndexExpr:
 		rhs = append(rhs, p.findRHS(t.Index)...)
 		rhs = append(rhs, p.findRHS(t.X)...)
+	case *ast.SliceExpr:
+		rhs = append(rhs, p.findRHS(t.X)...)
+		rhs = append(rhs, p.findRHS(t.Low)...)
+		rhs = append(rhs, p.findRHS(t.High)...)
 	default:
 		if x, ok := maybeX(t); ok {
 			return p.findRHS(x)
@@ -676,7 +680,7 @@ func (p *Processor) findRHS(node ast.Node) []string {
 // if it exists. If the node doesn't have an X field nil and false is returned.
 // Known fields with X that are handled:
 // IndexExpr, ExprStmt, SelectorExpr, StarExpr, ParentExpr, TypeAssertExpr,
-// RangeStmt, UnaryExpr, ParenExpr, SLiceExpr, IncDecStmt.
+// RangeStmt, UnaryExpr, ParenExpr, SliceExpr, IncDecStmt.
 func maybeX(node interface{}) (ast.Node, bool) {
 	maybeHasX := reflect.Indirect(reflect.ValueOf(node)).FieldByName("X")
 	if !maybeHasX.IsValid() {
