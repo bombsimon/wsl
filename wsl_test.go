@@ -961,6 +961,29 @@ func TestShouldAddEmptyLines(t *testing.T) {
 				"expressions should not be cuddled with blocks",
 			},
 		},
+		{
+			description: "indexes in maps and arrays",
+			code: []byte(`package main
+
+			func main() {
+				for i := range make([]int, 10) {
+					key := GetKey()
+					if val, ok := someMap[key]; ok {
+						fmt.Println("ok!")
+					}
+
+					someOtherMap := GetMap()
+					if val, ok := someOtherMap[key]; ok {
+						fmt.Println("ok")
+					}
+
+					someIndex := 3
+					if val := someSlice[someIndex]; val != nil {
+						retunr
+					}
+				}
+			}`),
+		},
 	}
 
 	for _, tc := range cases {
