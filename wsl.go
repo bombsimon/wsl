@@ -113,6 +113,7 @@ func NewProcessor() *Processor {
 
 // ProcessFiles takes a string slice with file names (full paths) and lints
 // them.
+// nolint: gocritic
 func (p *Processor) ProcessFiles(filenames []string) ([]Result, []string) {
 	for _, filename := range filenames {
 		data, err := ioutil.ReadFile(filename)
@@ -244,14 +245,6 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			calledOrAssignedOnLineAbove = append(calledOnLineAbove, assignedOnLineAbove...)
 		)
 
-		/*
-			DEBUG:
-			fmt.Println("LHS: ", leftHandSide)
-			fmt.Println("RHS: ", rightHandSide)
-			fmt.Println("Assigned above: ", assignedOnLineAbove)
-			fmt.Println("Assigned first: ", assignedFirstInBlock)
-		*/
-
 		// If we called some kind of lock on the line above we allow cuddling
 		// anything.
 		if atLeastOneInListsMatch(calledOnLineAbove, p.config.AllowCuddleWithCalls) {
@@ -282,6 +275,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			//     t.X = true
 			//     return t
 			// }
+			// nolint: gocritic
 			if i == len(statements)-1 && i == 1 {
 				if p.nodeEnd(stmt)-p.nodeStart(previousStatement) <= 2 {
 					return true
@@ -664,6 +658,9 @@ func (p *Processor) findRHS(node ast.Node) []string {
 		return p.findRHS(t.Call)
 	case *ast.SendStmt:
 		return p.findLHS(t.Value)
+	case *ast.IndexExpr:
+		rhs = append(rhs, p.findRHS(t.Index)...)
+		rhs = append(rhs, p.findRHS(t.X)...)
 	default:
 		if x, ok := maybeX(t); ok {
 			return p.findRHS(x)
@@ -726,6 +723,7 @@ func atLeastOneInListsMatch(listOne, listTwo []string) bool {
 // findLeadingAndTrailingWhitespaces will find leading and trailing whitespaces
 // in a node. The method takes comments in consideration which will make the
 // parser more gentle.
+// nolint: gocognit
 func (p *Processor) findLeadingAndTrailingWhitespaces(stmt, nextStatement ast.Node) {
 	var (
 		allowedLinesBeforeFirstStatement = 1
