@@ -984,6 +984,36 @@ func TestShouldAddEmptyLines(t *testing.T) {
 				}
 			}`),
 		},
+		{
+			description: "splice slice, concat key",
+			code: []byte(`package main
+
+			func main() {
+				start := 0
+				if v := aSlice[start:3]; v {
+					fmt.Println("")
+				}
+
+				someKey := "str"
+				if v, ok := someMap[obtain(someKey)+"str"]; ok {
+					fmt.Println("Hey there")
+				}
+
+				end := 10
+				if v := arr[3:notEnd]; !v {
+					// Error
+				}
+
+				notKey := "str"
+				if v, ok := someMap[someKey]; ok {
+					// Error
+				}
+			}`),
+			expectedErrorStrings: []string{
+				"if statements should only be cuddled with assignments used in the if statement itself",
+				"if statements should only be cuddled with assignments used in the if statement itself",
+			},
+		},
 	}
 
 	for _, tc := range cases {
