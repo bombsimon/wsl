@@ -815,9 +815,9 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(stmt, nextStatement ast.No
 
 		switch n := nextStatement.(type) {
 		case *ast.CaseClause:
-			blockEndPos = n.Colon
+			blockEndPos = n.Case
 		case *ast.CommClause:
-			blockEndPos = n.Colon
+			blockEndPos = n.Case
 		default:
 			// We're not at the end of the case?
 			return
