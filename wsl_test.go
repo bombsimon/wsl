@@ -1167,6 +1167,27 @@ func TestWithConfig(t *testing.T) {
 			},
 			expectedErrorStrings: []string{"append only allowed to cuddle with appended value"},
 		},
+		{
+			description: "allow case ending whitespace",
+			code: []byte(`package main
+
+			func main() {
+				switch {
+				case 1:
+					fmt.Println(1)
+
+				case 2:
+					fmt.Println(1)
+
+				case 3:
+					// Still not allowed to end this block with a whitespace.
+					fmt.Println(1)
+				}
+			}`),
+			customConfig: &Configuration{
+				AllowCaseTrailingWhitespace: true,
+			},
+		},
 	}
 
 	for _, tc := range cases {

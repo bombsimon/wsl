@@ -10,6 +10,7 @@ import (
 	"github.com/bombsimon/wsl"
 )
 
+// nolint: gocognit
 func main() {
 	var (
 		args         []string
@@ -32,6 +33,7 @@ func main() {
 	flag.BoolVar(&config.StrictAppend, "strict-append", true, "Strict rules for append")
 	flag.BoolVar(&config.AllowAssignAndCallCuddle, "allow-assign-and-call", true, "Allow assignments and calls to be cuddled (if using same variable/type)")
 	flag.BoolVar(&config.AllowMultiLineAssignCuddle, "allow-multi-line-assign", true, "Allow cuddling with multi line assignments")
+	flag.BoolVar(&config.AllowCaseTrailingWhitespace, "allow-case-trailing-whitespace", false, "Allow case statements to end with an empty line")
 
 	flag.Parse()
 
