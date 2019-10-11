@@ -49,6 +49,22 @@ type Configuration struct {
 	//  }
 	AllowMultiLineAssignCuddle bool
 
+	// AllowCaseTrailingWhitespace will allow case blocks to end with a
+	// whitespace. Sometimes this might actually improve readability. This
+	// defaults to false but setting it to true will enable the following
+	// example:
+	//  switch {
+	//  case 1:
+	//      fmt.Println(1)
+	//
+	// case 2:
+	//     fmt.Println(2)
+	//
+	// case 3:
+	//     fmt:println(3)
+	// }
+	AllowCaseTrailingWhitespace bool
+
 	// AllowCuddleWithCalls is a list of call idents that everything can be
 	// cuddled with. Defaults to calls looking like locks to support a flow like
 	// this:
@@ -69,11 +85,12 @@ type Configuration struct {
 // DefaultConfig returns default configuration
 func DefaultConfig() Configuration {
 	return Configuration{
-		StrictAppend:               true,
-		AllowAssignAndCallCuddle:   true,
-		AllowMultiLineAssignCuddle: true,
-		AllowCuddleWithCalls:       []string{"Lock", "RLock"},
-		AllowCuddleWithRHS:         []string{"Unlock", "RUnlock"},
+		StrictAppend:                true,
+		AllowAssignAndCallCuddle:    true,
+		AllowMultiLineAssignCuddle:  true,
+		AllowCaseTrailingWhitespace: false,
+		AllowCuddleWithCalls:        []string{"Lock", "RLock"},
+		AllowCuddleWithRHS:          []string{"Unlock", "RUnlock"},
 	}
 }
 
@@ -810,6 +827,11 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(stmt, nextStatement ast.No
 	// getting it's colon position.
 	if blockEndLine == 0 {
 		if nextStatement == nil {
+			return
+		}
+
+		// If we allow case to end white whitespace just return.
+		if p.config.AllowCaseTrailingWhitespace {
 			return
 		}
 
