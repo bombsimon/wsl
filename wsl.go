@@ -65,6 +65,13 @@ type Configuration struct {
 	// }
 	AllowCaseTrailingWhitespace bool
 
+	// AllowCuddleDeclaration will allow multiple var/declaration statements to
+	// be cuddled. This defaults to false but setting it to true will enable the
+	// following example:
+	//  var foo bool
+	//  var err error
+	AllowCuddleDeclaration bool
+
 	// AllowCuddleWithCalls is a list of call idents that everything can be
 	// cuddled with. Defaults to calls looking like locks to support a flow like
 	// this:
@@ -362,7 +369,9 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 
 			p.addError(t.Pos(), "assignments should only be cuddled with other assignments")
 		case *ast.DeclStmt:
-			p.addError(t.Pos(), "declarations should never be cuddled")
+			if !p.config.AllowCuddleDeclaration {
+				p.addError(t.Pos(), "declarations should never be cuddled")
+			}
 		case *ast.ExprStmt:
 			switch previousStatement.(type) {
 			case *ast.DeclStmt, *ast.ReturnStmt:

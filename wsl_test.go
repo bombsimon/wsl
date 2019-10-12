@@ -1188,6 +1188,23 @@ func TestWithConfig(t *testing.T) {
 				AllowCaseTrailingWhitespace: true,
 			},
 		},
+		{
+			description: "allow cuddle var",
+			code: []byte(`package main
+
+			func main() {
+				var t bool
+				var err error
+
+				var t = true
+				if t {
+					fmt.Println("x")
+				}
+			}`),
+			customConfig: &Configuration{
+				AllowCuddleDeclaration: true,
+			},
+		},
 	}
 
 	for _, tc := range cases {

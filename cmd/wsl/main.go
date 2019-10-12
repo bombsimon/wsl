@@ -34,6 +34,7 @@ func main() {
 	flag.BoolVar(&config.AllowAssignAndCallCuddle, "allow-assign-and-call", true, "Allow assignments and calls to be cuddled (if using same variable/type)")
 	flag.BoolVar(&config.AllowMultiLineAssignCuddle, "allow-multi-line-assign", true, "Allow cuddling with multi line assignments")
 	flag.BoolVar(&config.AllowCaseTrailingWhitespace, "allow-case-trailing-whitespace", false, "Allow case statements to end with an empty line")
+	flag.BoolVar(&config.AllowCuddleDeclaration, "allow-declarations", false, "Allow declarations to be cuddled")
 
 	flag.Parse()
 
