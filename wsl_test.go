@@ -1055,6 +1055,18 @@ func TestShouldAddEmptyLines(t *testing.T) {
 				"block should not end with a whitespace (or comment)",
 			},
 		},
+		{
+			description: "allow http body close best practice",
+			code: []byte(`package main
+
+			func main() {
+				resp, err := client.Do(req)
+				if err != nil {
+					return err
+				}
+				defer resp.Body.Close()
+			}`),
+		},
 	}
 
 	for _, tc := range cases {
