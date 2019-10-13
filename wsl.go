@@ -414,6 +414,25 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 				continue
 			}
 
+			// Special treatment of deferring body closes after error checking
+			// according to best practices. See
+			// https://github.com/bombsimon/wsl/issues/31 which links to
+			// discussion about error handling after HTTP requests. This is hard
+			// coded and very specific but for now this is to be seen as a
+			// special case. What this does is that it *only* allows a defer
+			// statement with `Close` on the right hand side to be cuddled with
+			// an if-statement to support this:
+			//  resp, err := client.Do(req)
+			//  if err != nil {
+			//      return err
+			//  }
+			//  defer resp.Body.Close()
+			if _, ok := previousStatement.(*ast.IfStmt); ok {
+				if atLeastOneInListsMatch(rightHandSide, []string{"Close"}) {
+					continue
+				}
+			}
+
 			if moreThanOneStatementAbove() {
 				p.addError(t.Pos(), "only one cuddle assignment allowed before defer statement")
 
