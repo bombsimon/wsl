@@ -42,6 +42,7 @@ Below are the available checklist for any hit from `wsl`. If you do not see
 any, feel free to raise an issue.
 
 * [Expressions Should Not Be Cuddled With Blocks](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#expressions-should-not-be-cuddled-with-blocks)
+* [For Statement Without Condition Should Never Be Cuddled](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#for-statement-without-condition-should-never-be-cuddled)
 * [Go Statements Can Only Invoke Functions Assigned On Line Above](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#go-statements-can-only-invoke-functions-assigned-on-line-above)
 * [Only One Cuddle Assignment Allowed Before Go Statement](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#only-one-cuddle-assignment-allowed-before-go-statement)
 * [Only One Cuddle Assignment Allowed Before If Statement](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#only-one-cuddle-assignment-allowed-before-if-statement)
