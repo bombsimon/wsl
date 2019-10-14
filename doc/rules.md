@@ -33,6 +33,41 @@ fmt.Println(t)
 
 <br/><hr/>
 
+### For Statement Without Condition Should Never Be Cuddled
+`for` loop without conditions (infinity loop) should deserves its own
+attention. Hence, it should not be cuddled with anyone.
+
+
+```go
+func example3(y int) {
+	if y == 0 {
+		y = 15
+	}
+	for {
+		fmt.Printf("count %v\n", y)
+		y--
+	}
+}
+```
+
+#### Recommended Amendment
+Add an empty line before the `for` loop.
+
+```go
+func example3(y int) {
+	if y == 0 {
+		y = 15
+	}
+
+	for {
+		fmt.Printf("count %v\n", y)
+		y--
+	}
+}
+```
+
+<br/><hr/>
+
 ### Go Statements Can Only Invoke Functions Assigned On Line Above
 `go` statement deserves clarity from any nearby non-related executions. Hence,
 it deserves an empty line separation before it.
