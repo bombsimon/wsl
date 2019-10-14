@@ -41,8 +41,8 @@ This linter can also be used as a part of
 Below are the available checklist for any hit from `wsl`. If you do not see
 any, feel free to raise an issue.
 
+* [Expressions Should Not Be Cuddled With Blocks](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#expressions-should-not-be-cuddled-with-blocks)
 * [Only One Cuddle Assignment Allowed Before If Statement](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#only-one-cuddle-assignment-allowed-before-if-statement)
-
 * [Only One Cuddle Assignment Allowed Before Switch Statement](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#only-one-cuddle-assignment-allowed-before-switch-statement)
 
 
