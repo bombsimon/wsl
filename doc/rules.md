@@ -124,3 +124,64 @@ func (c *Chain) Run(x func(super *Chain)) *Chain {
 	return c
 }
 ```
+
+<br/><br/>
+
+### Return Statements Should Not Be Cuddled If Block Has More Than Two Lines
+`return` statement should not be cuddled if the function block is not a
+2-lines block. Otherwise, there should be a clarity with `return` line. If
+the function block is single/double lines, the `return` statement can be
+cuddled.
+
+
+```go
+func Generate(x int) (s string) {
+	switch x {
+	case 1:
+		s = "one"
+	case 2:
+		s = "two"
+	case 3:
+		s = "three"
+	}
+	return s
+}
+
+func Sign(y *int) string {
+	*y += 15
+
+	return fmt.Sprintf("Hello world by %v\n", y)
+}
+
+func Check(z int) string {
+	return fmt.Sprintf("Checking in by %v\n", x)
+}
+```
+
+#### Recommended Amendment
+An empty line between `return` and multi-line block or no empty line between
+`return` and single-line block.
+
+```go
+func Generate(x int) (s string) {
+	switch x {
+	case 1:
+		s = "one"
+	case 2:
+		s = "two"
+	case 3:
+		s = "three"
+	}
+
+	return s
+}
+
+func Sign(y *int) string {
+	*y += 15
+	return fmt.Sprintf("Hello world by %v\n", y)
+}
+
+func Check(z int) string {
+	return fmt.Sprintf("Checking in by %v\n", x)
+}
+```
