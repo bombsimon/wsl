@@ -6,7 +6,8 @@ linter.
 These are the default configurations set by `wsl`.
 
 ## Checklist
-The following are the checklist for each hits.
+The following are the checklist for each hits arranged in
+**alphabetical order**.
 
 <br/><hr/>
 
