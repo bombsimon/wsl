@@ -1,10 +1,16 @@
-# Whitespace Linter (WSL)
-
-## Checks Overviews
+# Whitespace Linter Checklist (WSL)
 This page describes checks supported by [wsl](https://github.com/bombsimon/wsl)
 linter.
 
-# Only One Cuddle Assignment Allowed Before If Statement
+## Configurations
+These are the default configurations set by `wsl`.
+
+## Checklist
+The following are the checklist for each hits.
+
+<br/><br/>
+
+### Only One Cuddle Assignment Allowed Before If Statement
 If block should only be cuddled with 1 related assignment. If you have more
 than 1 assignment(s), they should have more space between them for clarity
 purposes. One bad example is:
@@ -22,7 +28,7 @@ if la != lb {
 }
 ```
 
-## Recommended Amendment
+#### Recommended Amendment
 An empty line between the last assignment and the `if` block.
 
 ```go
@@ -39,7 +45,9 @@ if la != lb {
 }
 ```
 
-# Only One Cuddle Assignment Allowed Before Switch Statement
+<br/><br/>
+
+### Only One Cuddle Assignment Allowed Before Switch Statement
 Switch block should only be cuddled with 1 related assignment. If you have more
 than 1 assignment(s), they should have more space between them for clarity
 purposes. One bad example is:
@@ -64,7 +72,7 @@ func (c *Chain) Run(x func(super *Chain)) *Chain {
 }
 ```
 
-## Recommended Amendment
+#### Recommended Amendment
 An empty line between the last assignment and the `switch` block.
 
 ```go
