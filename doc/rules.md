@@ -71,6 +71,40 @@ func Example() {
 
 <br/><br/>
 
+### Only One Cuddle Assignment Allowed Before Go Statement
+`go` block should only be cuddled with 1 related assignment. If you have more
+than 1 assignment(s), they should have a space between them for clarity
+purposes. One bad example is:
+
+```go
+func Example() {
+	name := "Josh"
+	s := func() {
+		fmt.Printf("Hello World %v\n", name)
+	}
+	go s()
+	fmt.Printf("Job run by: %v\n", name)
+}
+```
+
+#### Recommended Amendment
+An empty line between the last assignment and the `go` block.
+
+```go
+func Example() {
+	name := "Josh"
+	s := func() {
+		fmt.Printf("Hello World %v\n", name)
+	}
+
+	go s()
+	fmt.Printf("Job run by: %v\n", name)
+}
+```
+
+
+<br/><br/>
+
 ### Only One Cuddle Assignment Allowed Before If Statement
 If block should only be cuddled with 1 related assignment. If you have more
 than 1 assignment(s), they should have more space between them for clarity
