@@ -4,6 +4,35 @@ linter.
 
 <br/><br/>
 
+### Expressions Should Not Be Cuddled With Blocks
+Code expressions should not be cuddled with a block (e.g. `if` or `switch`).
+There must be some clarity between the block and the new expression itself.
+One bad example is:
+
+```go
+t, err := b.processData(5, 12, 23, 12)
+if err != nil {
+	// handle error
+	return
+}
+fmt.Println(t)
+```
+
+#### Recommended Amendment
+An empty line between the expression and block.
+
+```go
+t, err := b.processData(5, 12, 23, 12)
+if err != nil {
+	// handle error
+	return
+}
+
+fmt.Println(t)
+```
+
+<br/><br/>
+
 ### Only One Cuddle Assignment Allowed Before If Statement
 If block should only be cuddled with 1 related assignment. If you have more
 than 1 assignment(s), they should have more space between them for clarity
