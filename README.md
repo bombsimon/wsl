@@ -36,6 +36,16 @@ test files, use `-n` or `--no-test`.
 This linter can also be used as a part of
 [golangci-lint](https://github.com/golangci/golangci-lint)
 
+## Checklist
+
+Below are the available checklist for any hit from `wsl`. If you do not see
+any, feel free to raise an issue.
+
+* [Only One Cuddle Assignment Allowed Before If Statement](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#only-one-cuddle-assignment-allowed-before-if-statement)
+
+* [Only One Cuddle Assignment Allowed Before Switch Statement](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#only-one-cuddle-assignment-allowed-before-switch-statement)
+
+
 ## Rules
 
 Note that this linter doesn't take in consideration the issues that will be
