@@ -33,6 +33,38 @@ fmt.Println(t)
 
 <br/><br/>
 
+### Go Statements Can Only Invoke Functions Assigned On Line Above
+`go` statement deserves clarity from any nearby non-related executions. Hence,
+it deserves an empty line separation before it.
+
+```go
+func Example() {
+	name := "Josh"
+	go func() {
+		fmt.Printf("Hello World\n")
+	}()
+
+	fmt.Printf("Job run by: %v\n", name)
+}
+```
+
+#### Recommended Amendment
+Add an empty before `go` statement.
+
+```go
+func Example() {
+	name := "Josh"
+
+	go func() {
+		fmt.Printf("Hello World\n")
+	}()
+
+	fmt.Printf("Job run by: %v\n", name)
+}
+```
+
+<br/><br/>
+
 ### Only One Cuddle Assignment Allowed Before If Statement
 If block should only be cuddled with 1 related assignment. If you have more
 than 1 assignment(s), they should have more space between them for clarity
