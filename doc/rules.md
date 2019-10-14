@@ -100,6 +100,64 @@ func Example() {
 
 <br/><hr/>
 
+### If Statements Should Only Be Cuddled With Assignments
+`if` statement should only cuddle with one related assignment. Otherwise, it
+should have a distance between `if` and whoever else is.
+
+```go
+func (c *Chain) Intercept(label int) {
+	exist := c.CMDExist(label)
+	c.sync.Lock()
+	defer c.sync.Unlock()
+	if exist {
+		c.next = label
+	} else {
+		c.err = fmt.Errorf("some error message")
+	}
+}
+
+func Example(a int) {
+	exist := a < 10
+	i := 10
+	if exist {
+		fmt.Printf("yes the thing exists.")
+	}
+}
+```
+
+#### Recommended Amendment
+Group that single related assignment together with the `if` block and give one
+empty line before them.
+
+If environment is not allowed like mutex lock blocking
+(e.g. `Intercept(...)`), add an empty line before the `if` block.
+
+```go
+func (c *Chain) Intercept(label int) {
+	exist := c.CMDExist(label)
+	c.sync.Lock()
+	defer c.sync.Unlock()
+
+	if exist {
+		c.next = label
+	} else {
+		c.err = fmt.Errorf("some error message")
+	}
+}
+
+func Example(a int) {
+	i := 10
+
+	exist := a < 10
+	if exist {
+		fmt.Printf("yes the thing exists.")
+	}
+}
+```
+
+
+<br/><hr/>
+
 ### Only One Cuddle Assignment Allowed Before Go Statement
 `go` block should only be cuddled with 1 related assignment. If you have more
 than 1 assignment(s), they should have a space between them for clarity
