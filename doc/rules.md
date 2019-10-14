@@ -2,7 +2,7 @@
 This page describes checks supported by [wsl](https://github.com/bombsimon/wsl)
 linter.
 
-<br/><br/>
+<br/><hr/>
 
 ### Expressions Should Not Be Cuddled With Blocks
 Code expressions should not be cuddled with a block (e.g. `if` or `switch`).
@@ -31,7 +31,7 @@ if err != nil {
 fmt.Println(t)
 ```
 
-<br/><br/>
+<br/><hr/>
 
 ### Go Statements Can Only Invoke Functions Assigned On Line Above
 `go` statement deserves clarity from any nearby non-related executions. Hence,
@@ -63,7 +63,7 @@ func Example() {
 }
 ```
 
-<br/><br/>
+<br/><hr/>
 
 ### Only One Cuddle Assignment Allowed Before Go Statement
 `go` block should only be cuddled with 1 related assignment. If you have more
@@ -97,7 +97,7 @@ func Example() {
 ```
 
 
-<br/><br/>
+<br/><hr/>
 
 ### Only One Cuddle Assignment Allowed Before If Statement
 If block should only be cuddled with 1 related assignment. If you have more
@@ -134,7 +134,7 @@ if la != lb {
 }
 ```
 
-<br/><br/>
+<br/><hr/>
 
 ### Only One Cuddle Assignment Allowed Before Switch Statement
 `switch` block should only be cuddled with 1 related assignment. If you have
@@ -185,7 +185,7 @@ func (c *Chain) Run(x func(super *Chain)) *Chain {
 }
 ```
 
-<br/><br/>
+<br/><hr/>
 
 ### Return Statements Should Not Be Cuddled If Block Has More Than Two Lines
 `return` statement should not be cuddled if the function block is not a
