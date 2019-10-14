@@ -126,6 +126,21 @@ func TestShouldRemoveEmptyLines(t *testing.T) {
 			}`),
 		},
 		{
+			description: "Example tests parsed correct when ending with comments",
+			code: []byte(`package foo
+
+			func ExampleFoo() {
+				fmt.Println("hello world")
+
+				// Output: hello world
+			}
+
+			func ExampleBar() {
+				fmt.Println("hello world")
+				// Output: hello world
+			}`),
+		},
+		{
 			description: "whitespaces parsed correctly in case blocks",
 			code: []byte(`package main
 			func main() {
