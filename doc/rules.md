@@ -551,6 +551,58 @@ func (c *Chain) Run(x func(super *Chain)) *Chain {
 
 <br/><hr/>
 
+### Ranges Should Only Be Cuddled With Assignments Used In The Iteration
+`range` statements should only cuddle with assignments related to it. Otherwise,
+it creates unrelated relationship perception that sends the reader to wonder
+why are they closely together. One bad example is:
+
+```go
+func example(y []int) []string {
+	r := 15
+	t := []string{}
+
+	x := 5
+	for _, v := range y {
+		t = append(t, fmt.Sprintf("%v: got %v\n", r, v))
+	}
+
+
+	fmt.Printf("This is x %v.\n", x)
+	for _, v := range y {
+		t = append(t, fmt.Sprintf("%v: got %v\n", r, v))
+	}
+
+	return t
+}
+```
+
+#### Recommended Amendment
+Either group the related assignment together with the `range` block and
+add an empty line before them (first `range`) OR an empty line before the
+`range` block (second `range`):
+
+```go
+func example(y []int) []string {
+	r := 15
+	x := 5
+
+	t := []string{}
+	for _, v := range y {
+		t = append(t, fmt.Sprintf("%v: got %v\n", r, v))
+	}
+
+	fmt.Printf("This is x %v.\n", x)
+
+	for _, v := range y {
+		t = append(t, fmt.Sprintf("%v: got %v\n", r, v))
+	}
+
+	return t
+}
+```
+
+<br/><hr/>
+
 ### Return Statements Should Not Be Cuddled If Block Has More Than Two Lines
 `return` statement should not be cuddled if the function block is not a
 2-lines block. Otherwise, there should be a clarity with `return` line. If

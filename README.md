@@ -55,6 +55,7 @@ any, feel free to raise an issue.
 * [Only One Cuddle Assignment Allowed Before If Statement](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#only-one-cuddle-assignment-allowed-before-if-statement)
 * [Only One Cuddle Assignment Allowed Before Range Statement](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#only-one-cuddle-assignment-allowed-before-range-statement)
 * [Only One Cuddle Assignment Allowed Before Switch Statement](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#only-one-cuddle-assignment-allowed-before-switch-statement)
+* [Ranges Should Only Be Cuddled With Assignments Used In The Iteration](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#ranges-should-only-be-cuddled-with-assignments-used-in-the-iteration)
 * [Return Statements Should Not Be Cuddled If Block Has More Than Two Lines](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#return-statements-should-not-be-cuddled-if-block-has-more-than-two-lines)
 
 ## Rules
