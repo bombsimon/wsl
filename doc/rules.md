@@ -465,6 +465,41 @@ if la != lb {
 
 <br/><hr/>
 
+### Only One Cuddle Assignment Allowed Before Range Statement
+`range` block should only be cuddled with 1 related assignment. If you have more
+than 1 assignment(s), they should have more space between them for clarity
+purposes. One bad example is:
+
+```go
+func example(y []int) []string {
+	r := 5
+	t := []string{}
+	for _, v := range y {
+		t = append(t, fmt.Sprintf("%v: got %v\n", r, v))
+	}
+
+	return t
+}
+```
+
+#### Recommended Amendment
+Give an empty line before `range` statement:
+
+```go
+func example(y []int) []string {
+	r := 5
+	t := []string{}
+
+	for _, v := range y {
+		t = append(t, fmt.Sprintf("%v: got %v\n", r, v))
+	}
+
+	return t
+}
+```
+
+<br/><hr/>
+
 ### Only One Cuddle Assignment Allowed Before Switch Statement
 `switch` block should only be cuddled with 1 related assignment. If you have
 more than 1 assignment(s), they should have more space between them for clarity
