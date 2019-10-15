@@ -49,6 +49,7 @@ any, feel free to raise an issue.
 * [Branch Statements Should Not Be Cuddled If Block Has More Than Two Lines](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#branch-statements-should-not-be-cuddled-if-block-has-more-than-two-lines)
 * [Declarations Should Never Be Cuddled](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#declarations-should-never-be-cuddled)
 * [Expressions Should Not Be Cuddled With Blocks](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#expressions-should-not-be-cuddled-with-blocks)
+* [Expressions Should Not Be Cuddled With Declarations Or Returns](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#expressions-should-not-be-cuddled-with-declarations-or-returns)
 * [For Statement Without Condition Should Never Be Cuddled](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#for-statement-without-condition-should-never-be-cuddled)
 * [Go Statements Can Only Invoke Functions Assigned On Line Above](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#go-statements-can-only-invoke-functions-assigned-on-line-above)
 * [If Statements Should Only Be Cuddled With Assignments](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#if-statements-should-only-be-cuddled-with-assignments)

@@ -352,6 +352,46 @@ fmt.Println(t)
 
 <br/><hr/>
 
+### Expressions Should Not Be Cuddled With Declarations Or Returns
+Any expressions should not cuddle with any declarations (`var`) or `return`.
+They deserve some space for clarity. One bad example is (`run()`):
+
+```go
+func example(eolType int) int {
+	var i int
+	run()
+
+	i = eolType + 5
+
+	fmt.Printf("Hello by %v times in one pack\n", i)
+
+	run()
+	return i
+}
+```
+
+#### Recommended Amendment
+Give an empty after the declaration (`var`) and an empty line before the
+`return`:
+
+```go
+func example(eolType int) int {
+	var i int
+
+	run()
+
+	i = eolType + 5
+
+	fmt.Printf("Hello by %v times in one pack\n", i)
+	run()
+
+	return i
+}
+```
+
+
+<br/><hr/>
+
 ### For Statement Without Condition Should Never Be Cuddled
 `for` loop without conditions (infinity loop) should deserves its own
 attention. Hence, it should not be cuddled with anyone.
