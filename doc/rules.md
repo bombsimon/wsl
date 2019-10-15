@@ -533,6 +533,36 @@ func example(eolType int) string {
 	return eol
 ```
 
+<br/><hr/>
+
+### Only One Cuddle Assignment Allowed Before For Statement
+`for` block should only be cuddled with 1 related assignment. If you have more
+than 1 assignment(s), they should have a space between them for clarity
+purposes. One bad example is:
+
+```go
+func example(eolType int) {
+	i := 0
+	a := 0
+	for i = 0; i < eolType; i++ {
+		fmt.Printf("%v) Hello world by %v times!\n", i, a)
+	}
+}
+```
+
+#### Recommended Amendment
+An empty line between the last assignment and the `for` block.
+
+```go
+func example(eolType int) {
+	i := 0
+	a := 0
+
+	for i = 0; i < eolType; i++ {
+		fmt.Printf("%v) Hello world by %v times!\n", i, a)
+	}
+}
+```
 
 <br/><hr/>
 

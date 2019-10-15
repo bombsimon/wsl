@@ -53,6 +53,7 @@ any, feel free to raise an issue.
 * [If Statements Should Only Be Cuddled With Assignments](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#if-statements-should-only-be-cuddled-with-assignments)
 * [If Statements Should Only Be Cuddled With Assignments Used In The If Statement Itself](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#if-statements-should-only-be-cuddled-with-assignments-used-in-the-if-statement-itself)
 * [Only Cuddled Expressions If Assigning Variable Or Using From Line Above](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#only-cuddled-expressions-if-assigning-variable-or-using-from-line-above)
+* [Only One Cuddle Assginment Allowed Before For Statement](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#only-one-cuddle-assignment-allowed-before-for-statement)
 * [Only One Cuddle Assignment Allowed Before Go Statement](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#only-one-cuddle-assignment-allowed-before-go-statement)
 * [Only One Cuddle Assignment Allowed Before If Statement](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#only-one-cuddle-assignment-allowed-before-if-statement)
 * [Only One Cuddle Assignment Allowed Before Range Statement](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#only-one-cuddle-assignment-allowed-before-range-statement)
