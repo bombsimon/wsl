@@ -1151,3 +1151,61 @@ func example(eolType int) string {
 	return eol
 }
 ```
+
+<br/><hr/>
+
+### Type Switch Statements Should Only Be Cuddled With Variables Switched
+`type` `switch` statements should only cuddle with its switching variable.
+Otherwise, it makes unclear relationship between the `switch` block and whatever
+before it. Here is a bad example:
+
+```go
+func example(y interface{}) int {
+	n := 0
+
+	z := 5
+	switch x := y.(type) {
+	case int:
+		n += x
+	case int8:
+		n += int(x)
+	case int16:
+		n += int(x)
+	case int32:
+		n += int(x)
+	case int64:
+		n += int(x)
+	}
+
+	fmt.Printf("z is %v\n", z)
+
+	return n
+}
+```
+
+#### Recommended Amendment
+Give an empty line before the `switch` statement:
+
+```go
+func example(y interface{}) int {
+	n := 0
+	z := 5
+
+	switch x := y.(type) {
+	case int:
+		n += x
+	case int8:
+		n += int(x)
+	case int16:
+		n += int(x)
+	case int32:
+		n += int(x)
+	case int64:
+		n += int(x)
+	}
+
+	fmt.Printf("z is %v\n", z)
+
+	return n
+}
+```

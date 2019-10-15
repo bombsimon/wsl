@@ -67,7 +67,7 @@ any, feel free to raise an issue.
 * [Return Statements Should Not Be Cuddled If Block Has More Than Two Lines](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#return-statements-should-not-be-cuddled-if-block-has-more-than-two-lines)
 * [Stmt Type Not Implemented](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#stmt-type-not-implemented)
 * [Switch Statements Should Only Be Cuddled With Variables Switched](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#switch-statements-should-only-be-cuddled-with-variables-switched)
-
+* [Type Switch Statements Should Only Be Cuddled With Variables Switched](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#type-switch-statements-should-only-be-cuddled-with-variables-switched)
 
 ## Rules
 
