@@ -661,3 +661,51 @@ func Check(z int) string {
 	return fmt.Sprintf("Checking in by %v\n", x)
 }
 ```
+
+<br/><hr/>
+
+### Switch Statements Should Only Be Cuddled With Variables Switched
+`switch` statements with associated switching variable should not cuddle with
+non-associated switching entity. This will set the reader wondering why are
+they grouped together at the first place. One bad example is:
+
+```go
+func example(eolType int) string {
+	eol := ""
+	switch eolType {
+	case 2:
+		eol = "\r"
+	case 3:
+		eol = "\r\n"
+	case 1:
+		fallthrough
+	default:
+		eol = "\n"
+	}
+
+	return eol
+}
+```
+
+#### Recommended Amendment
+Group related assignment together and add an empty line before them OR add an
+empty line before the `switch`:
+
+```go
+func example(eolType int) string {
+	eol := ""
+
+	switch eolType {
+	case 2:
+		eol = "\r"
+	case 3:
+		eol = "\r\n"
+	case 1:
+		fallthrough
+	default:
+		eol = "\n"
+	}
+
+	return eol
+}
+```
