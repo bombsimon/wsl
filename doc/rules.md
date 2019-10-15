@@ -44,6 +44,39 @@ func example(y int) {
 
 <br/><hr/>
 
+### Block Should Not End With A Whitespace (Or Comment)
+Having an empty trailing whitespace is unnecessary and makes the block
+definition looks never-ending long. You want to let reader know that the
+code definitions end right after the last statement. Also, any trailing
+comments should be on the top. One bad example:
+
+```go
+func example(y int) string {
+	x := y + 1
+	z := x + 2
+
+	return fmt.Sprintf("got z: %v\n", z)
+	// TODO: add mux function later.
+
+}
+```
+
+#### Recommended Amendment
+Remove the unnecessary trailing whitespace line (after `return` statement).
+Move the comment to the top.
+
+```go
+func example(y int) string {
+	// TODO: add mux function later.
+	x := y + 1
+	z := x + 2
+
+	return fmt.Sprintf("got z: %v\n", z)
+}
+```
+
+<br/><hr/>
+
 ### Block Should Not Start With A Whitespace
 Having an empty leading whitespace is unnecessary and makes the block definition
 looks disconnected and long. You want to let reader to know that the code
