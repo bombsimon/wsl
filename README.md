@@ -46,6 +46,7 @@ any, feel free to raise an issue.
 * [Assignments Should Only Be Cuddled With Other Assignments](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#assignments-should-only-be-cuddled-with-other-assignments)
 * [Block Should Not End With A Whitespace (Or Comment)](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#block-should-not-end-with-a-whitespace-or-comment)
 * [Block Should Not Start With A Whitespace](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#block-should-not-start-with-a-whitespace)
+* [Declarations Should Never Be Cuddled](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#declarations-should-never-be-cuddled)
 * [Expressions Should Not Be Cuddled With Blocks](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#expressions-should-not-be-cuddled-with-blocks)
 * [For Statement Without Condition Should Never Be Cuddled](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#for-statement-without-condition-should-never-be-cuddled)
 * [Go Statements Can Only Invoke Functions Assigned On Line Above](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#go-statements-can-only-invoke-functions-assigned-on-line-above)

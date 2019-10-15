@@ -196,6 +196,91 @@ func example(y int) string {
 
 <br/><hr/>
 
+### Declarations Should Never Be Cuddled
+`var` declarations, in opinion, should never be cuddled. Instead, multiple
+`var` patterns is encouraged to use the grouped `var` format. One case study is:
+
+```go
+func example(eolType int) string {
+	var eol string
+	var i int
+
+	if eolType < 0 {
+		return ""
+	}
+
+	i = eolType
+	switch i {
+	case 2:
+		eol = "\r"
+	case 3:
+		eol = "\r\n"
+	case 1:
+		fallthrough
+	default:
+		eol = "\n"
+	}
+
+	return eol
+}
+```
+
+#### Recommended Amendment
+Since this hit is opinionated, there are 3 ways to deal with it:
+
+1) Use the grouped `var` pattern:
+
+```go
+func example(eolType int) string {
+	var (
+		eol = ""
+		i = 0
+	)
+
+	if eolType < 0 {
+		return ""
+	}
+
+	i = eolType
+	switch i {
+	case 2:
+		eol = "\r"
+	case 3:
+		eol = "\r\n"
+	case 1:
+		fallthrough
+	default:
+		eol = "\n"
+	}
+
+	return eol
+}
+```
+
+<br/>
+
+2) Pass in the `wsl` `-allow-declarations` argument. Example:
+
+```bash
+$ wsl -allow-declarations <file> [files...]
+```
+
+<br/>
+
+3) Add to false-positive exclusion list. However, it is preferbly to do step 2
+instead because the argument offered by `wsl` is also offered in the CI linter
+tool. Example, for `golangci-lint` configurations:
+
+```bash
+$ golangci-lint run \
+	--disable-all \
+	--enable wsl \
+	--exclude "declarations should never be cuddled" \
+	.
+```
+
+<br/><hr/>
+
 ### Expressions Should Not Be Cuddled With Blocks
 Code expressions should not be cuddled with a block (e.g. `if` or `switch`).
 There must be some clarity between the block and the new expression itself.
