@@ -617,6 +617,104 @@ func example(eolType int) string {
 
 <br/><hr/>
 
+### Only One Cuddle Assignment Allowed Before Defer Statement
+`defer` statement should only be cuddled with 1 related assignment. If you have
+more than 1 assignment(s), they should have a space between them for clarity
+purposes. One bad example is (`defer s(t)`):
+
+```go
+func example() int {
+	var t string
+
+	f1, err := os.Open("/path/to/f1.txt")
+	if err != nil {
+		// handle error
+		return -1
+	}
+	defer f1.Close()
+
+	f2, err := os.Open("/path/to/f2.txt")
+	if err != nil {
+		// handle error
+		return -1
+	}
+
+	t = "2"
+	s := func(t string) {
+		err := f2.Close()
+		if err != nil {
+			// handle close error
+			fmt.Printf("got t: %v\n", t)
+			return
+		}
+	}
+	defer s(t)
+
+	return compare(f1, f2)
+}
+```
+
+> **EXCEPTION**: It is allowed to use the following:
+>
+> 1) The `defer` after `error` check as reported in [Issue #31](https://github.com/bombsimon/wsl/issues/31)
+>
+> ```go
+> f1, err := os.Open("/path/to/f1.txt")
+> if err != nil {
+>	// handle error
+>	return -1
+> }
+> defer f1.Close()
+> ```
+>
+> OR
+>
+> 2) The conventional mutex `Lock` and `Unlock`.
+>
+> ```go
+> m.Lock()
+> defer m.Unlock()
+> ```
+
+
+#### Recommended Amendment
+Add an empty line before `defer` (`defer s(t)`):
+
+```go
+func example() int {
+	var t string
+
+	f1, err := os.Open("/path/to/f1.txt")
+	if err != nil {
+		// handle error
+		return -1
+	}
+	defer f1.Close()
+
+	f2, err := os.Open("/path/to/f2.txt")
+	if err != nil {
+		// handle error
+		return -1
+	}
+
+	t = "2"
+	s := func(t string) {
+		err := f2.Close()
+		if err != nil {
+			// handle close error
+			fmt.Printf("got t: %v\n", t)
+			return
+		}
+	}
+
+	defer s(t)
+
+	return compare(f1, f2)
+}
+```
+
+<br/><hr/>
+
 ### Only One Cuddle Assignment Allowed Before For Statement
 `for` block should only be cuddled with 1 related assignment. If you have more
 than 1 assignment(s), they should have a space between them for clarity
