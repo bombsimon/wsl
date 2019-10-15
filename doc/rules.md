@@ -196,6 +196,48 @@ func example(y int) string {
 
 <br/><hr/>
 
+### Branch Statements Should Not Be Cuddled If Block Has More Than Two Lines
+Branch statements (`break`, `continue`, and `return`) should stand out clearly
+when the block is having more than or equal to 2 lines. Hence, it deserves
+some spacing. One bad example is:
+
+```go
+for i := range make([]int, 5) {
+	if i > 2 {
+		sendToOne(i)
+		sendToSecond(i)
+		continue
+	}
+
+	if statement == "is short" {
+		sendToOne(i)
+		break
+	}
+}
+```
+
+#### Recommended Amendment
+Add an empty line before the branch statements (`continue`) contained within
+a more than or equal to 2 lines code block:
+
+```go
+for i := range make([]int, 5) {
+	if i > 2 {
+		sendToOne(i)
+		sendToSecond(i)
+
+		continue
+	}
+
+	if statement == "is short" {
+		sendToOne(i)
+		break
+	}
+}
+```
+
+<br/><hr/>
+
 ### Declarations Should Never Be Cuddled
 `var` declarations, in opinion, should never be cuddled. Instead, multiple
 `var` patterns is encouraged to use the grouped `var` format. One case study is:
