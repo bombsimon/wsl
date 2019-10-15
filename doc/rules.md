@@ -4,6 +4,46 @@ linter.
 
 <br/><hr/>
 
+### Assignments Should Only Be Cuddled With Other Assignments
+Assignments should either be grouped together or have some space between whoever
+else before it. One bad example is `x` and `z` in such case:
+
+```go
+func example(y int) {
+	t := 2
+
+	x := y + 1
+
+	if x == 1 {
+		x = 0
+	}
+	z := x + 2
+
+	fmt.Printf("got z:%v t:%v\n", z, t)
+}
+```
+
+#### Recommended Amendment
+Group all assignments together when possible (`t` and `x`). Otherwise, leave
+an empty line before the assignment (e.g. `z`).
+
+```go
+func example(y int) {
+	t := 2
+	x := y + 1
+
+	if x == 1 {
+		x = 0
+	}
+
+	z := x + 2
+
+	fmt.Printf("got z: %v\n", z)
+}
+```
+
+<br/><hr/>
+
 ### Expressions Should Not Be Cuddled With Blocks
 Code expressions should not be cuddled with a block (e.g. `if` or `switch`).
 There must be some clarity between the block and the new expression itself.
