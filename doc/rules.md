@@ -43,6 +43,57 @@ func (c *TimingStruct, s *SwitchesStruct) {
 
 <br/><hr/>
 
+### Append Only Allowed To Cuddle With Appended Value
+`append` is only allowed to cuddle with the appended value. Otherwise, they
+deserve some distance. A bad example here would be
+`append with z cuddled with x assignment` and
+`append with x cuddled with if block`:
+
+```go
+func example(y int) string {
+	z := []byte{}
+	x := []byte{}
+	z = append(z, byte(y))
+
+	if len(z) == 0 {
+		fmt.Printf("this is bad x: %v\n", x)
+
+		z = []byte{}
+	}
+	x = append(x, byte(y+1))
+	x = append(x, byte(y+2))
+
+	return fmt.Sprintf("got z:%v x:%v\n", z, x)
+}
+```
+
+#### Recommended Amendment
+Group them if available (`append` with `z`) and leave an empty line before them.
+Otherwise, leave an empty space before the `append` statement (`append` with
+`x`):
+
+```go
+func example(y int) string {
+	x := []byte{}
+
+	z := []byte{}
+	z = append(z, byte(y))
+
+	if len(z) == 0 {
+		fmt.Printf("this is bad x: %v\n", x)
+
+		z = []byte{}
+	}
+
+	x = append(x, byte(y+1))
+	x = append(x, byte(y+2))
+
+	return fmt.Sprintf("got z:%v x:%v\n", z, x)
+}
+```
+
+<br/><hr/>
+
 ### Assignments Should Only Be Cuddled With Other Assignments
 Assignments should either be grouped together or have some space between whoever
 else before it. One bad example is `x` and `z` in such case:

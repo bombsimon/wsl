@@ -42,6 +42,7 @@ Below are the available checklist for any hit from `wsl`. If you do not see
 any, feel free to raise an issue.
 
 * [Anonymous Switch Statements Should Never Be Cuddled](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#anonymous-switch-statements-should-never-be-cuddled)
+* [Append Only Allowed To Cuddle With Appended Value](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#append-only-allowed-to-cuddle-with-appended-value)
 * [Assignments Should Only Be Cuddled With Other Assignments](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#assignments-should-only-be-cuddled-with-other-assignments)
 * [Block Should Not End With A Whitespace (Or Comment)](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#block-should-not-end-with-a-whitespace-or-comment)
 * [Block Should Not Start With A Whitespace](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#block-should-not-start-with-a-whitespace)
