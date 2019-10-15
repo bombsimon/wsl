@@ -984,6 +984,63 @@ func (c *Chain) Run(x func(super *Chain)) *Chain {
 
 <br/><hr/>
 
+### Only One Cuddle Assignment Allowed Before Type Switch Statement
+`type` `switch` block should only be cuddled with 1 related assignment. If you
+have more than 1 assignment(s), they should have more space between them for
+clarity purposes. One bad example is:
+
+```go
+func example(y interface{}) int {
+	n := 0
+	z := 5
+	switch x := y.(type) {
+	case int:
+		n = x + z
+	case int8:
+		n = int(x) + z
+	case int16:
+		n = int(x) + z
+	case int32:
+		n = int(x) + z
+	case int64:
+		n = int(x) + z
+	}
+
+	fmt.Printf("z is %v\n", z)
+
+	return n
+}
+```
+
+#### Recommended Amendment
+An empty line between the last assignment and the `switch` block.
+
+```go
+func example(y interface{}) int {
+	n := 0
+	z := 5
+
+	switch x := y.(type) {
+	case int:
+		n = x + z
+	case int8:
+		n = int(x) + z
+	case int16:
+		n = int(x) + z
+	case int32:
+		n = int(x) + z
+	case int64:
+		n = int(x) + z
+	}
+
+	fmt.Printf("z is %v\n", z)
+
+	return n
+}
+```
+
+<br/><hr/>
+
 ### Ranges Should Only Be Cuddled With Assignments Used In The Iteration
 `range` statements should only cuddle with assignments related to it. Otherwise,
 it creates unrelated relationship perception that sends the reader to wonder
