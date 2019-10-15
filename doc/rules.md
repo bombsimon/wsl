@@ -323,6 +323,54 @@ $ golangci-lint run \
 
 <br/><hr/>
 
+### Defer Statements Should Only Be Cuddled With Expressions On Same Variable
+`defer` statement should only cuddle with related expressions. Otherwise, it
+deserves some distance from whatever it is. One bad example is:
+
+```go
+func example() int {
+	t := "2"
+	s := func(t string) {
+		if t == "" {
+			// handle close error
+			fmt.Printf("got t: %v\n", t)
+			return
+		}
+	}
+
+	x := 4
+	defer s(t)
+	fmt.Printf("x is: %v\n", x)
+
+	return 0
+}
+```
+
+#### Recommended Amendment:
+Add an empty line before `defer`:
+
+```go
+func example() int {
+	t := "2"
+	s := func(t string) {
+		if t == "" {
+			// handle close error
+			fmt.Printf("got t: %v\n", t)
+			return
+		}
+	}
+
+	x := 4
+
+	defer s(t)
+	fmt.Printf("x is: %v\n", x)
+
+	return 0
+}
+```
+
+<br/><hr/>
+
 ### Expressions Should Not Be Cuddled With Blocks
 Code expressions should not be cuddled with a block (e.g. `if` or `switch`).
 There must be some clarity between the block and the new expression itself.

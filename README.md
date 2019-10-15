@@ -48,6 +48,7 @@ any, feel free to raise an issue.
 * [Block Should Not Start With A Whitespace](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#block-should-not-start-with-a-whitespace)
 * [Branch Statements Should Not Be Cuddled If Block Has More Than Two Lines](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#branch-statements-should-not-be-cuddled-if-block-has-more-than-two-lines)
 * [Declarations Should Never Be Cuddled](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#declarations-should-never-be-cuddled)
+* [Defer Statements Should Only Be Cuddled With Expressions On Same Variable](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#defer-statements-should-only-be-cuddled-with-expressions-on-same-variable)
 * [Expressions Should Not Be Cuddled With Blocks](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#expressions-should-not-be-cuddled-with-blocks)
 * [Expressions Should Not Be Cuddled With Declarations Or Returns](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#expressions-should-not-be-cuddled-with-declarations-or-returns)
 * [For Statement Without Condition Should Never Be Cuddled](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#for-statement-without-condition-should-never-be-cuddled)
