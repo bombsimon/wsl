@@ -4,6 +4,45 @@ linter.
 
 <br/><hr/>
 
+### Anonymous Switch Statements Should Never Be Cuddled
+Anonymous `switch` statements (mindless `switch`) should deserve its needed
+attention that it does not need any assigned variables. Hence, it should not
+cuddle with anything before it. One bad example is:
+
+```go
+func (c *TimingStruct, s *SwitchesStruct) {
+	c.timeout = goodTimeout
+	switch {
+	case s.Switches["bad timeout"]:
+		c.timeout = badTimeout
+	case s.Switches["zero timeout"]:
+		c.timeout = 0
+	}
+
+	fmt.Printf("timer set. Delivering in time.\n")
+}
+```
+
+#### Recommended Amendment
+Add an empty line before the `switch` statement:
+
+```go
+func (c *TimingStruct, s *SwitchesStruct) {
+	c.timeout = goodTimeout
+
+	switch {
+	case s.Switches["bad timeout"]:
+		c.timeout = badTimeout
+	case s.Switches["zero timeout"]:
+		c.timeout = 0
+	}
+
+	fmt.Printf("timer set. Delivering in time.\n")
+}
+```
+
+<br/><hr/>
+
 ### Assignments Should Only Be Cuddled With Other Assignments
 Assignments should either be grouped together or have some space between whoever
 else before it. One bad example is `x` and `z` in such case:
