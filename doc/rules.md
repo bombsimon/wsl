@@ -479,6 +479,63 @@ func example(y int) string {
 
 <br/><hr/>
 
+### Only Cuddled Expressions If Assigning Variable Or Using From Line Above
+When an assignment is cuddling with an unrelated expression, they create
+confusing relationship to one another. Therefore, they should keep their
+distance. One bad example (all `fmt` printouts):
+
+```go
+func example(eolType int) string {
+	var eol string
+
+	switch eolType {
+	case 2:
+		eol = "\r"
+		fmt.Printf("It's a return caret!\n")
+	case 3:
+		eol = "\r\n"
+		fmt.Printf("It's a return and newline caret!\n")
+	case 1:
+		fallthrough
+	default:
+		eol = "\n"
+		fmt.Printf("It's a newline caret!\n")
+	}
+
+	return eol
+}
+```
+
+#### Recommended Amendment
+Provide an empty line before the expression:
+
+```go
+func example(eolType int) string {
+	var eol string
+
+	switch eolType {
+	case 2:
+		eol = "\r"
+
+		fmt.Printf("It's a return caret!\n")
+	case 3:
+		eol = "\r\n"
+
+		fmt.Printf("It's a return and newline caret!\n")
+	case 1:
+		fallthrough
+	default:
+		eol = "\n"
+
+		fmt.Printf("It's a newline caret!\n")
+	}
+
+	return eol
+```
+
+
+<br/><hr/>
+
 ### Only One Cuddle Assignment Allowed Before Go Statement
 `go` block should only be cuddled with 1 related assignment. If you have more
 than 1 assignment(s), they should have a space between them for clarity
