@@ -257,6 +257,50 @@ func Example(a int) {
 }
 ```
 
+<br/><hr/>
+
+### If Statements Should Only Be Cuddled With Assignments Used In The If Statement Itself
+`if` statements should only cuddle with the associated assignment. Otherwise,
+it deserves some space between itself and whoever before it. One bad example is
+the `if` block that uses `x` cuddled with `z` assignment:
+
+```go
+func example(y int) string {
+	x := y + 1
+
+	z := x + 2
+	if x != 0 {
+		fmt.Printf("bad x\n")
+	}
+
+	if y != 0 {
+		fmt.Printf("what's going on? %v\n", y)
+	}
+
+	return fmt.Sprintf("got z: %v\n", z)
+}
+```
+
+#### Recommended Amendment
+Shift the `if` block close to the assignment when possible (`if` with `x`).
+Otherwise, leave an empty line before it (`if` uses `y`):
+
+```go
+func example(y int) string {
+	x := y + 1
+	if x != 0 {
+		fmt.Printf("bad x\n")
+	}
+
+	z := x + 2
+
+	if y != 0 {
+		fmt.Printf("what's going on? %v\n", y)
+	}
+
+	return fmt.Sprintf("got z: %v\n", z)
+}
+```
 
 <br/><hr/>
 
