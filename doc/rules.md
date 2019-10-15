@@ -475,6 +475,39 @@ func example3(y int) {
 
 <br/><hr/>
 
+### For Statements Should Only Be Cuddled With Assignments Used In The Iteration
+`for` statement should only cuddle with related assignments. Otherwise, its
+relationship status can be very complicated, making reader wondering what the
+co-relation between the `for` block and whatever it is. One bad example is:
+
+```go
+func example(y int) int {
+	x := y + 2
+	for i := 0; i < y+10; i++ {
+		fmt.Printf("this is i:%v\n", i)
+	}
+
+	return i
+}
+```
+
+#### Recommended Amendment
+Add an empty line before the `for` statement:
+
+```go
+func example(y int) int {
+	x := y + 2
+
+	for i := 0; i < y+10; i++ {
+		fmt.Printf("this is i:%v\n", i)
+	}
+
+	return i
+}
+```
+
+<br/><hr/>
+
 ### Go Statements Can Only Invoke Functions Assigned On Line Above
 `go` statement deserves clarity from any nearby non-related executions. Hence,
 it deserves an empty line separation before it.

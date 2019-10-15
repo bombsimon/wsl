@@ -52,6 +52,7 @@ any, feel free to raise an issue.
 * [Expressions Should Not Be Cuddled With Blocks](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#expressions-should-not-be-cuddled-with-blocks)
 * [Expressions Should Not Be Cuddled With Declarations Or Returns](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#expressions-should-not-be-cuddled-with-declarations-or-returns)
 * [For Statement Without Condition Should Never Be Cuddled](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#for-statement-without-condition-should-never-be-cuddled)
+* [For Statements Should Only Be Cuddled With Assignments Used In The Iteration](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#for-statements-should-only-be-cuddled-with-assignments-used-in-the-iteration)
 * [Go Statements Can Only Invoke Functions Assigned On Line Above](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#go-statements-can-only-invoke-functions-assigned-on-line-above)
 * [If Statements Should Only Be Cuddled With Assignments](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#if-statements-should-only-be-cuddled-with-assignments)
 * [If Statements Should Only Be Cuddled With Assignments Used In The If Statement Itself](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#if-statements-should-only-be-cuddled-with-assignments-used-in-the-if-statement-itself)
