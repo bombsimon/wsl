@@ -749,6 +749,15 @@ func Check(z int) string {
 
 <br/><hr/>
 
+### Stmt Type Not Implemented
+Congratulations! You had found an unforseenable future detection. This hit
+simply means the detection is not implemented.
+
+#### Recommended Amendment
+Raise an [issue](https://github.com/bombsimon/wsl/issues/new).
+
+<br/><hr/>
+
 ### Switch Statements Should Only Be Cuddled With Variables Switched
 `switch` statements with associated switching variable should not cuddle with
 non-associated switching entity. This will set the reader wondering why are

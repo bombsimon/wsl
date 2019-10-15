@@ -58,6 +58,7 @@ any, feel free to raise an issue.
 * [Only One Cuddle Assignment Allowed Before Switch Statement](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#only-one-cuddle-assignment-allowed-before-switch-statement)
 * [Ranges Should Only Be Cuddled With Assignments Used In The Iteration](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#ranges-should-only-be-cuddled-with-assignments-used-in-the-iteration)
 * [Return Statements Should Not Be Cuddled If Block Has More Than Two Lines](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#return-statements-should-not-be-cuddled-if-block-has-more-than-two-lines)
+* [Stmt Type Not Implemented](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#stmt-type-not-implemented)
 * [Switch Statements Should Only Be Cuddled With Variables Switched](https://github.com/hollowaykeanho/wsl/blob/master/doc/rules.md#switch-statements-should-only-be-cuddled-with-variables-switched)
 
 
