@@ -44,6 +44,35 @@ func example(y int) {
 
 <br/><hr/>
 
+### Block Should Not Start With A Whitespace
+Having an empty leading whitespace is unnecessary and makes the block definition
+looks disconnected and long. You want to let reader to know that the code
+definitions start right after the block declaration. One bad example is:
+
+```go
+func example(y int) string {
+
+	x := y + 1
+	z := x + 2
+
+	return fmt.Sprintf("got z: %v\n", z)
+}
+```
+
+#### Recommended Amendment
+Remove the unnecessary leading whitespace line (before `x` definition).
+
+```go
+func example(y int) string {
+	x := y + 1
+	z := x + 2
+
+	return fmt.Sprintf("got z: %v\n", z)
+}
+```
+
+<br/><hr/>
+
 ### Expressions Should Not Be Cuddled With Blocks
 Code expressions should not be cuddled with a block (e.g. `if` or `switch`).
 There must be some clarity between the block and the new expression itself.
