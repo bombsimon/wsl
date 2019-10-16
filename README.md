@@ -40,14 +40,41 @@ the instructions there.
 <br/>
 
 ## Usage
+How to use depends on how you install `wsl`.
 
-Run with `wsl [--no-test] <file1> [files...]` or `wsl ./package/...`. The "..."
-wildcard is not used like other `go` commands but instead can only be to a
-relative or absolute path.
+### By Go Get (Local Installation)
+The general command format for `wsl` is:
+
+```bash
+$ wsl [--no-test] [arguments] <file1> [files...]
+$ wsl [--no-test] [arguments] </path/to/package/...>
+
+# Example
+
+$ wsl ./main.go
+$ wsl --no-test ./main.go
+$ wsl -allow-declaration ./main.go
+$ wsl --no-test -allow-declaration ./main.go
+$ wsl --no-test -allow-declaration ./myProject/...
+```
+
+The "..." wildcard is not used like other `go` commands but instead can only
+be to a relative or absolute path.
 
 By default, the linter will run on `./...` which means all go files in the
 current path and all subsequent paths, including test files. To disable linting
 test files, use `-n` or `--no-test`.
+
+### By Golangci-Lint (CI automation)
+The recommended command is:
+
+```bash
+$ golangci-lint --disable-all --enable wsl
+```
+
+For more information, please refer to
+[golangci-lint](https://github.com/golangci/golangci-lint)'s documentation.
+
 
 <br/>
 
