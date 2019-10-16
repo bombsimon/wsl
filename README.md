@@ -21,9 +21,25 @@ might be bugs or unintentional false positives so I would love an
 [issue](https://github.com/bombsimon/wsl/issues/new) to fix, discuss, change or
 make something configurable!
 
-## Usage
+<br/>
 
-Install by using `go get -u github.com/bombsimon/wsl/cmd/...`.
+## Installation
+
+### By Go Get (Local Installation)
+You can do that by using:
+
+```bash
+$ go get -u github.com/bombsion/wsl/cmd/...
+```
+
+### By Golangci-Lint (CI automation)
+`wsl` is already integrated with
+[golangci-lint](https://github.com/golangci/golangci-lint). Please refer to
+the instructions there.
+
+<br/>
+
+## Usage
 
 Run with `wsl [--no-test] <file1> [files...]` or `wsl ./package/...`. The "..."
 wildcard is not used like other `go` commands but instead can only be to a
@@ -33,8 +49,7 @@ By default, the linter will run on `./...` which means all go files in the
 current path and all subsequent paths, including test files. To disable linting
 test files, use `-n` or `--no-test`.
 
-This linter can also be used as a part of
-[golangci-lint](https://github.com/golangci/golangci-lint)
+<br/>
 
 ## Checklist
 
