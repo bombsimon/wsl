@@ -1232,6 +1232,65 @@ func TestWithConfig(t *testing.T) {
 				AllowCuddleDeclaration: true,
 			},
 		},
+		{
+			description: "support to end blocks with a comment",
+			code: []byte(`package main
+
+			func main() {
+				for i := range make([]int, 10) {
+					fmt.Println("x")
+					// This is OK
+				}
+
+				for i := range make([]int, 10) {
+					fmt.Println("x")
+					// Pad
+					// With empty lines
+					//
+					// This is OK
+				}
+
+				for i := range make([]int, 10) {
+					fmt.Println("x")
+
+					// This is NOT OK
+				}
+
+				for i := range make([]int, 10) {
+					fmt.Println("x")
+					// This is NOT OK
+
+				}
+
+				for i := range make([]int, 10) {
+					fmt.Println("x")
+					/* Block comment one line OK */
+				}
+
+				for i := range make([]int, 10) {
+					fmt.Println("x")
+					/*
+						Block comment one multiple lines OK
+					*/
+				}
+
+				switch {
+				case true:
+					fmt.Println("x")
+					// This is OK
+				case false:
+					fmt.Println("y")
+					// This is OK
+				}
+			}`),
+			customConfig: &Configuration{
+				AllowTrailingComment: true,
+			},
+			expectedErrorStrings: []string{
+				"block should not end with a whitespace (or comment)",
+				"block should not end with a whitespace (or comment)",
+			},
+		},
 	}
 
 	for _, tc := range cases {
