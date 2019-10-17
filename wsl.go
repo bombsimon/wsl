@@ -66,6 +66,9 @@ type Configuration struct {
 	// }
 	AllowCaseTrailingWhitespace bool
 
+	// AllowTrailingComment will allow blocks to end with comments.
+	AllowTrailingComment bool
+
 	// AllowCuddleDeclaration will allow multiple var/declaration statements to
 	// be cuddled. This defaults to false but setting it to true will enable the
 	// following example:
@@ -97,6 +100,7 @@ func DefaultConfig() Configuration {
 		AllowAssignAndCallCuddle:    true,
 		AllowMultiLineAssignCuddle:  true,
 		AllowCaseTrailingWhitespace: false,
+		AllowTrailingComment:        false,
 		AllowCuddleWithCalls:        []string{"Lock", "RLock"},
 		AllowCuddleWithRHS:          []string{"Unlock", "RUnlock"},
 	}
@@ -859,8 +863,10 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 			return
 		}
 
-		// If we allow case to end white whitespace just return.
-		if p.config.AllowCaseTrailingWhitespace {
+		// If we allow case to end white whitespace or comment just return.
+		// TODO: Includes a false-positive where a newline before/after a
+		// comment in the case is valid but that's OK for now.
+		if p.config.AllowCaseTrailingWhitespace || p.config.AllowTrailingComment {
 			return
 		}
 
@@ -875,6 +881,28 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 		}
 
 		blockEndLine = p.fileSet.Position(blockEndPos).Line
+	}
+
+	if p.config.AllowTrailingComment {
+		if lastComment, ok := commentMap[lastStatement]; ok {
+			var (
+				lastCommentGroup = lastComment[len(lastComment)-1]
+				lastCommentLine  = lastCommentGroup.List[len(lastCommentGroup.List)-1]
+				countNewlines    = 0
+			)
+
+			if strings.Contains(lastCommentLine.Text, "\n") {
+				for _, x := range lastCommentLine.Text {
+					if x == '\n' {
+						countNewlines++
+					}
+				}
+			}
+
+			if p.nodeStart(lastCommentLine)+countNewlines == blockEndLine-1 {
+				return
+			}
+		}
 	}
 
 	if p.nodeEnd(lastStatement) != blockEndLine-1 && !isExampleFunc(ident) {
