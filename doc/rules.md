@@ -41,7 +41,7 @@ case s.Switches["zero timeout"]:
 ### Append only allowed to cuddle with appended value
 
 > Can be configured, see [configuration
-documentation](configuration.md#strict-appendrulesmdappend-only-allowed-to-cuddle-with-appended-value)
+documentation](configuration.md#strict-append)
 
 `append` is only allowed to cuddle with the appended value. Otherwise, they
 deserve some distance. If the variables you're assigning isn't going to be
@@ -114,9 +114,8 @@ fmt.Println("x")
 ### Block should not end with a whitespace (or comment)
 
 > Can be configured, see [configuration
-documentation](configuration.md#allow-case-trailing-whitespacerulesmdblock-should-not-end-with-a-whitespace-or-comment)
-([for
-comments](configuration.md#allow-trailing-commentrulesmdblock-should-not-end-with-a-whitespace-or-comment))
+documentation](configuration.md#allow-case-trailing-whitespace) ([for
+comments](configuration.md#allow-trailing-comment))
 
 Having an empty trailing whitespace is unnecessary and makes the block
 definition looks never-ending long. You want to let reader know that the
@@ -217,7 +216,7 @@ for i := range make([]int, 5) {
 ### Declarations should never be cuddled
 
 > Can be configured, see
-[configuration documentation](configuration.md#allow-cuddle-declarationsrulesmddeclarations-should-never-be-cuddled)
+[configuration documentation](configuration.md#allow-cuddle-declarations)
 
 `var` declarations, in opinion, should never be cuddled. Instead, multiple
 `var` patterns is encouraged to use the grouped `var` format. One case study is:
@@ -346,7 +345,7 @@ attention. Hence, it should not be cuddled with anyone.
 ```go
 x := "hey"
 for {
-    fmt.Printf("count %v\n", y)
+    fmt.Printf("x")
 }
 ```
 
@@ -358,7 +357,7 @@ Add an empty line before the `for` loop.
 x := "hey"
 
 for {
-    fmt.Printf("count %v\n", y)
+    fmt.Printf("x")
 }
 ```
 
@@ -373,12 +372,12 @@ co-relation between the `for` block and whatever it is. One bad example is:
 ```go
 x := y + 2
 for i := 0; i < y+10; i++ {
-    fmt.Printf("this is i:%v\n", i)
+    fmt.Println(i)
 }
 
 list := getList()
 for i, v := range anotherList {
-    fmt.Printf("%d: %s\n", i, v)
+    fmt.Println(i)
 }
 ```
 
@@ -503,7 +502,7 @@ if !x {
 ### Only cuddled expressions if assigning variable or using from line above
 
 > Can be configured, see
-[configuration documentation](configuration.md#allow-assign-can-callrulesmdonly-cuddled-expressions-if-assigning-variable-or-using-from-line-above)
+[configuration documentation](configuration.md#allow-assign-and-call)
 
 When an assignment is cuddling with an unrelated expression, they create
 confusing relationship to one another. Therefore, they should keep their
@@ -533,7 +532,7 @@ thisIsBetter.CallIt()
 
 `defer` statement should only be cuddled with 1 related assignment. If you have
 more than 1 assignment(s), they should have a space between them for clarity
-purposes. One bad example is (`defer s(t)`):
+purposes. One bad example is:
 
 ```go
 assignmentOne := Something()
@@ -565,7 +564,7 @@ defer assignmentTwo()
 
 #### Recommended amendment
 
-Add an empty line before `defer` (`defer s(t)`):
+Add an empty line before `defer`:
 
 ```go
 assignmentOne := Something()
