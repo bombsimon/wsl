@@ -124,11 +124,8 @@ code definitions end right after the last statement. Also, any trailing
 comments should be on the top. One bad example:
 
 ```go
-func example(y int) string {
-    x := y + 1
-    z := x + 2
-
-    return fmt.Sprintf("got z: %v\n", z)
+func example() string {
+    return fmt.Sprintf("x")
     // TODO: add mux function later.
 
 }
@@ -142,10 +139,7 @@ Move the comment to the top.
 ```go
 func example(y int) string {
     // TODO: add mux function later.
-    x := y + 1
-    z := x + 2
-
-    return fmt.Sprintf("got z: %v\n", z)
+    return fmt.Sprintf("x")
 }
 ```
 
@@ -158,12 +152,9 @@ looks disconnected and long. You want to let reader to know that the code
 definitions start right after the block declaration. One bad example is:
 
 ```go
-func example(y int) string {
+func example() string {
 
-    x := y + 1
-    z := x + 2
-
-    return fmt.Sprintf("got z: %v\n", z)
+    return fmt.Sprintf("x")
 }
 ```
 
@@ -172,11 +163,8 @@ func example(y int) string {
 Remove the unnecessary leading whitespace line (before `x` definition).
 
 ```go
-func example(y int) string {
-    x := y + 1
-    z := x + 2
-
-    return fmt.Sprintf("got z: %v\n", z)
+func example() string {
+    return fmt.Sprintf("x")
 }
 ```
 
@@ -235,28 +223,8 @@ for i := range make([]int, 5) {
 `var` patterns is encouraged to use the grouped `var` format. One case study is:
 
 ```go
-func example(eolType int) string {
-    var eol string
-    var i int
-
-    if eolType < 0 {
-        return ""
-    }
-
-    i = eolType
-    switch i {
-    case 2:
-        eol = "\r"
-    case 3:
-        eol = "\r\n"
-    case 1:
-        fallthrough
-    default:
-        eol = "\n"
-    }
-
-    return eol
-}
+var eol string
+var i int
 ```
 
 #### Recommended amendment
@@ -266,48 +234,20 @@ Since this hit is opinionated, there are 3 ways to deal with it:
 1) Use the grouped `var` pattern:
 
 ```go
-func example(eolType int) string {
-    var (
-        eol = ""
-        i = 0
-    )
-
-    if eolType < 0 {
-        return ""
-    }
-
-    i = eolType
-    switch i {
-    case 2:
-        eol = "\r"
-    case 3:
-        eol = "\r\n"
-    case 1:
-        fallthrough
-    default:
-        eol = "\n"
-    }
-
-    return eol
-}
+var (
+    eol = ""
+    i   = 0
+)
 ```
 
-2) Pass in the `wsl` `-allow-declarations` argument. Example:
+2) Allow it by configuration (`wsl`  or `golangci-lint`)
 
-```sh
-wsl -allow-declarations <file> [files...]
-```
+3) Use an empty line between them
 
-3) Add to false-positive exclusion list. However, it is preferbly to do step 2
-instead because the argument offered by `wsl` is also offered in the CI linter
-tool. Example, for `golangci-lint` configurations:
+```go
+var eol = ""
 
-```bash
-$ golangci-lint run \
-    --disable-all \
-    --enable wsl \
-    --exclude "declarations should never be cuddled" \
-    .
+var i = 0
 ```
 
 ---
@@ -318,22 +258,8 @@ $ golangci-lint run \
 deserves some distance from whatever it is. One bad example is:
 
 ```go
-func example() int {
-    t := "2"
-    s := func(t string) {
-        if t == "" {
-            // handle close error
-            fmt.Printf("got t: %v\n", t)
-            return
-        }
-    }
-
-    x := 4
-    defer s(t)
-    fmt.Printf("x is: %v\n", x)
-
-    return 0
-}
+x := 4
+defer notX()
 ```
 
 #### Recommended amendment
@@ -341,23 +267,12 @@ func example() int {
 Add an empty line before `defer`:
 
 ```go
-func example() int {
-    t := "2"
-    s := func(t string) {
-        if t == "" {
-            // handle close error
-            fmt.Printf("got t: %v\n", t)
-            return
-        }
-    }
+x := 4
 
-    x := 4
+defer notX()
 
-    defer s(t)
-    fmt.Printf("x is: %v\n", x)
-
-    return 0
-}
+thisIsX := func() {}
+defer thisIsX()
 ```
 
 ---
@@ -369,7 +284,7 @@ There must be some clarity between the block and the new expression itself.
 One bad example is:
 
 ```go
-t, err := b.processData(5, 12, 23, 12)
+t, err := someFunc()
 if err != nil {
     // handle error
     return
@@ -382,7 +297,7 @@ fmt.Println(t)
 An empty line between the expression and block.
 
 ```go
-t, err := b.processData(5, 12, 23, 12)
+t, err := someFunc()
 if err != nil {
     // handle error
     return
@@ -399,17 +314,11 @@ Any expressions should not cuddle with any declarations (`var`) or `return`.
 They deserve some space for clarity. One bad example is (`run()`):
 
 ```go
-func example(eolType int) int {
-    var i int
-    run()
+var i int
+run()
 
-    i = eolType + 5
-
-    fmt.Printf("Hello by %v times in one pack\n", i)
-
-    run()
-    return i
-}
+return i
+run()
 ```
 
 #### Recommended amendment
@@ -418,18 +327,13 @@ Give an empty after the declaration (`var`) and an empty line before the
 `return`:
 
 ```go
-func example(eolType int) int {
-    var i int
+var i int
 
-    run()
+run()
 
-    i = eolType + 5
+return i
 
-    fmt.Printf("Hello by %v times in one pack\n", i)
-    run()
-
-    return i
-}
+run()
 ```
 
 ---
@@ -440,14 +344,9 @@ func example(eolType int) int {
 attention. Hence, it should not be cuddled with anyone.
 
 ```go
-func example3(y int) {
-    if y == 0 {
-        y = 15
-    }
-    for {
-        fmt.Printf("count %v\n", y)
-        y--
-    }
+x := "hey"
+for {
+    fmt.Printf("count %v\n", y)
 }
 ```
 
@@ -456,15 +355,10 @@ func example3(y int) {
 Add an empty line before the `for` loop.
 
 ```go
-func example3(y int) {
-    if y == 0 {
-        y = 15
-    }
+x := "hey"
 
-    for {
-        fmt.Printf("count %v\n", y)
-        y--
-    }
+for {
+    fmt.Printf("count %v\n", y)
 }
 ```
 
@@ -477,13 +371,14 @@ relationship status can be very complicated, making reader wondering what the
 co-relation between the `for` block and whatever it is. One bad example is:
 
 ```go
-func example(y int) int {
-    x := y + 2
-    for i := 0; i < y+10; i++ {
-        fmt.Printf("this is i:%v\n", i)
-    }
+x := y + 2
+for i := 0; i < y+10; i++ {
+    fmt.Printf("this is i:%v\n", i)
+}
 
-    return i
+list := getList()
+for i, v := range anotherList {
+    fmt.Printf("%d: %s\n", i, v)
 }
 ```
 
@@ -492,14 +387,20 @@ func example(y int) int {
 Add an empty line before the `for` statement:
 
 ```go
-func example(y int) int {
-    x := y + 2
+x := y + 2
 
-    for i := 0; i < y+10; i++ {
-        fmt.Printf("this is i:%v\n", i)
-    }
+for i := 0; i < y+10; i++ {
+    fmt.Printf("this is i:%v\n", i)
+}
 
-    return i
+step := 2
+for i := 0; i < y+10; i+=step {
+    fmt.Printf("this is i:%v\n", i)
+}
+
+list := getList()
+for i, v := range list {
+    fmt.Printf("%d: %s\n", i, v)
 }
 ```
 
@@ -511,14 +412,8 @@ func example(y int) int {
 it deserves an empty line separation before it.
 
 ```go
-func Example() {
-    name := "Josh"
-    go func() {
-        fmt.Printf("Hello World\n")
-    }()
-
-    fmt.Printf("Job run by: %v\n", name)
-}
+thisIsFunc := func() {}
+go thisIsNOTFunc()
 ```
 
 #### Recommended amendment
@@ -526,15 +421,12 @@ func Example() {
 Add an empty before `go` statement.
 
 ```go
-func Example() {
-    name := "Josh"
+thisIsFunc := func() {}
+go thisIsFunc()
 
-    go func() {
-        fmt.Printf("Hello World\n")
-    }()
+thisIsNOTFunc := func() {}
 
-    fmt.Printf("Job run by: %v\n", name)
-}
+go callingAnotherFunc()
 ```
 
 ---
@@ -545,23 +437,12 @@ func Example() {
 should have a distance between `if` and whoever else is.
 
 ```go
-func (c *Chain) Intercept(label int) {
-    exist := c.CMDExist(label)
-    c.sync.Lock()
-    defer c.sync.Unlock()
-    if exist {
-        c.next = label
-    } else {
-        c.err = fmt.Errorf("some error message")
-    }
+one := 1
+if 1 == 1 {
+    fmt.Println("duuh")
 }
-
-func Example(a int) {
-    exist := a < 10
-    i := 10
-    if exist {
-        fmt.Printf("yes the thing exists.")
-    }
+if 1 != one {
+    fmt.Println("i don't believe you!")
 }
 ```
 
@@ -574,25 +455,13 @@ If environment is not allowed like mutex lock blocking
 (e.g. `Intercept(...)`), add an empty line before the `if` block.
 
 ```go
-func (c *Chain) Intercept(label int) {
-    exist := c.CMDExist(label)
-    c.sync.Lock()
-    defer c.sync.Unlock()
-
-    if exist {
-        c.next = label
-    } else {
-        c.err = fmt.Errorf("some error message")
-    }
+if 1 == 1 {
+    fmt.Println("duuh")
 }
 
-func Example(a int) {
-    i := 10
-
-    exist := a < 10
-    if exist {
-        fmt.Printf("yes the thing exists.")
-    }
+one := 1
+if 1 != one {
+    fmt.Println("i don't believe you!")
 }
 ```
 
@@ -605,19 +474,9 @@ it deserves some space between itself and whoever before it. One bad example is
 the `if` block that uses `x` cuddled with `z` assignment:
 
 ```go
-func example(y int) string {
-    x := y + 1
-
-    z := x + 2
-    if x != 0 {
-        fmt.Printf("bad x\n")
-    }
-
-    if y != 0 {
-        fmt.Printf("what's going on? %v\n", y)
-    }
-
-    return fmt.Sprintf("got z: %v\n", z)
+x := true
+if true {
+    fmt.Println("didn't use cuddled variable")
 }
 ```
 
@@ -627,19 +486,15 @@ Shift the `if` block close to the assignment when possible (`if` with `x`).
 Otherwise, leave an empty line before it (`if` uses `y`):
 
 ```go
-func example(y int) string {
-    x := y + 1
-    if x != 0 {
-        fmt.Printf("bad x\n")
-    }
+y := true
 
-    z := x + 2
+if true {
+    fmt.Println("didn't use cuddled variable")
+}
 
-    if y != 0 {
-        fmt.Printf("what's going on? %v\n", y)
-    }
-
-    return fmt.Sprintf("got z: %v\n", z)
+x := false
+if !x {
+    fmt.Println("proper usage of variable")
 }
 ```
 
@@ -655,25 +510,8 @@ confusing relationship to one another. Therefore, they should keep their
 distance. One bad example (all `fmt` printouts):
 
 ```go
-func example(eolType int) string {
-    var eol string
-
-    switch eolType {
-    case 2:
-        eol = "\r"
-        fmt.Printf("It's a return caret!\n")
-    case 3:
-        eol = "\r\n"
-        fmt.Printf("It's a return and newline caret!\n")
-    case 1:
-        fallthrough
-    default:
-        eol = "\n"
-        fmt.Printf("It's a newline caret!\n")
-    }
-
-    return eol
-}
+notInExpression := GetIt()
+call.SomethingElse()
 ```
 
 #### Recommended amendment
@@ -681,27 +519,12 @@ func example(eolType int) string {
 Provide an empty line before the expression:
 
 ```go
-func example(eolType int) string {
-    var eol string
+notInExpression := GetIt()
 
-    switch eolType {
-    case 2:
-        eol = "\r"
+call.SomethingElse()
 
-        fmt.Printf("It's a return caret!\n")
-    case 3:
-        eol = "\r\n"
-
-        fmt.Printf("It's a return and newline caret!\n")
-    case 1:
-        fallthrough
-    default:
-        eol = "\n"
-
-        fmt.Printf("It's a newline caret!\n")
-    }
-
-    return eol
+thisIsBetter := GetIt()
+thisIsBetter.CallIt()
 ```
 
 ---
@@ -713,35 +536,9 @@ more than 1 assignment(s), they should have a space between them for clarity
 purposes. One bad example is (`defer s(t)`):
 
 ```go
-func example() int {
-    var t string
-
-    f1, err := os.Open("/path/to/f1.txt")
-    if err != nil {
-        // handle error
-        return -1
-    }
-    defer f1.Close()
-
-    f2, err := os.Open("/path/to/f2.txt")
-    if err != nil {
-        // handle error
-        return -1
-    }
-
-    t = "2"
-    s := func(t string) {
-        err := f2.Close()
-        if err != nil {
-            // handle close error
-            fmt.Printf("got t: %v\n", t)
-            return
-        }
-    }
-    defer s(t)
-
-    return compare(f1, f2)
-}
+assignmentOne := Something()
+assignmentTwo := AnotherThing()
+defer assignmentTwo()
 ```
 
 > **EXCEPTION**: It is allowed to use the following:
@@ -771,36 +568,10 @@ func example() int {
 Add an empty line before `defer` (`defer s(t)`):
 
 ```go
-func example() int {
-    var t string
+assignmentOne := Something()
 
-    f1, err := os.Open("/path/to/f1.txt")
-    if err != nil {
-        // handle error
-        return -1
-    }
-    defer f1.Close()
-
-    f2, err := os.Open("/path/to/f2.txt")
-    if err != nil {
-        // handle error
-        return -1
-    }
-
-    t = "2"
-    s := func(t string) {
-        err := f2.Close()
-        if err != nil {
-            // handle close error
-            fmt.Printf("got t: %v\n", t)
-            return
-        }
-    }
-
-    defer s(t)
-
-    return compare(f1, f2)
-}
+assignmentTwo := AnotherThing()
+defer assignmentTwo()
 ```
 
 ---
@@ -812,12 +583,10 @@ than 1 assignment(s), they should have a space between them for clarity
 purposes. One bad example is:
 
 ```go
-func example(eolType int) {
-    i := 0
-    a := 0
-    for i = 0; i < eolType; i++ {
-        fmt.Printf("%v) Hello world by %v times!\n", i, a)
-    }
+i := 0
+a := 0
+for i = 0; i < 5; i++ {
+    fmt.Println("x")
 }
 ```
 
@@ -826,13 +595,16 @@ func example(eolType int) {
 An empty line between the last assignment and the `for` block.
 
 ```go
-func example(eolType int) {
-    i := 0
-    a := 0
+i := 0
+a := 0
 
-    for i = 0; i < eolType; i++ {
-        fmt.Printf("%v) Hello world by %v times!\n", i, a)
-    }
+for i = 0; i < 5; i++ {
+    fmt.Println("x")
+}
+
+j := 0
+for i = 0; j < 5; i++ {
+    fmt.Println("x")
 }
 ```
 
@@ -845,14 +617,9 @@ than 1 assignment(s), they should have a space between them for clarity
 purposes. One bad example is:
 
 ```go
-func Example() {
-    name := "Josh"
-    s := func() {
-        fmt.Printf("Hello World %v\n", name)
-    }
-    go s()
-    fmt.Printf("Job run by: %v\n", name)
-}
+assignOne := SomeOne()
+assignTwo := SomeTwo()
+go assignTwo()
 ```
 
 #### Recommended amendment
@@ -860,15 +627,10 @@ func Example() {
 An empty line between the last assignment and the `go` block.
 
 ```go
-func Example() {
-    name := "Josh"
-    s := func() {
-        fmt.Printf("Hello World %v\n", name)
-    }
+assignOne := SomeOne()
 
-    go s()
-    fmt.Printf("Job run by: %v\n", name)
-}
+assignTwo := SomeTwo()
+go assignTwo()
 ```
 
 ---
@@ -880,15 +642,10 @@ than 1 assignment(s), they should have more space between them for clarity
 purposes. One bad example is:
 
 ```go
-la := len(*a)
-lb := len(*b)
-if la != lb {
-    fmt.Printf("subject A and B has incorrect length: %v|%v \n",
-        la,
-        lb,
-    )
-
-        return 3
+lengthA := len(sliceA)
+lengthB := len(sliceB)
+if lengthA != lengthB {
+    fmt.Println("not equal")
 }
 ```
 
@@ -897,16 +654,16 @@ if la != lb {
 An empty line between the last assignment and the `if` block.
 
 ```go
-la := len(*a)
-lb := len(*b)
+lengthA := len(sliceA)
+lengthB := len(sliceB)
 
-if la != lb {
-    fmt.Printf("subject A and B has incorrect length: %v|%v \n",
-        la,
-        lb,
-    )
+if lengthA != lengthB {
+    fmt.Println("not equal")
+}
 
-        return 3
+lengthC := len(sliceC)
+if lengthC > 1 {
+    fmt.Println("only one assignment is ok")
 }
 ```
 
@@ -919,14 +676,10 @@ than 1 assignment(s), they should have more space between them for clarity
 purposes. One bad example is:
 
 ```go
-func example(y []int) []string {
-    r := 5
-    t := []string{}
-    for _, v := range y {
-        t = append(t, fmt.Sprintf("%v: got %v\n", r, v))
-    }
-
-    return t
+listA := GetA()
+listB := GetB()
+for _, v := range lsitB {
+    fmt.Println(v)
 }
 ```
 
@@ -936,14 +689,16 @@ Give an empty line before `range` statement:
 
 ```go
 func example(y []int) []string {
-    r := 5
-    t := []string{}
+listA := GetA()
+listB := GetB()
 
-    for _, v := range y {
-        t = append(t, fmt.Sprintf("%v: got %v\n", r, v))
-    }
+for _, v := range lsitB {
+    fmt.Println(v)
+}
 
-    return t
+listC := GetC()
+for _, v := range lsitC {
+    fmt.Println(v)
 }
 ```
 
@@ -956,22 +711,13 @@ more than 1 assignment(s), they should have more space between them for clarity
 purposes. One bad example is:
 
 ```go
-func (c *Chain) Run(x func(super *Chain)) *Chain {
-    c.sync.Lock()
-    defer c.sync.Unlock()
-    switch {
-    case c.stop:
-    case c.err != nil:
-        go c.handleError()
-    case len(c.interrupts) != 0:
-        go c.handleInterrupts(x)
-    case c.next != notIntercepted:
-        go c.handleNext(x)
-    case x != nil:
-        go x(c)
-    }
-
-    return c
+assignOne := SomeOone()
+assignTwo := SomeTwo()
+switch assignTwo {
+case 1:
+    fmt.Println("one")
+default:
+    fmt.Println("NOT one")
 }
 ```
 
@@ -980,23 +726,20 @@ func (c *Chain) Run(x func(super *Chain)) *Chain {
 An empty line between the last assignment and the `switch` block:
 
 ```go
-func (c *Chain) Run(x func(super *Chain)) *Chain {
-    c.sync.Lock()
-    defer c.sync.Unlock()
+assignOne := SomeOone()
+assignTwo := SomeTwo()
 
-    switch {
-    case c.stop:
-    case c.err != nil:
-        go c.handleError()
-    case len(c.interrupts) != 0:
-        go c.handleInterrupts(x)
-    case c.next != notIntercepted:
-        go c.handleNext(x)
-    case x != nil:
-        go x(c)
-    }
+switch assignTwo {
+case 1:
+    fmt.Println("one")
+default:
+    fmt.Println("NOT one")
+}
 
-    return c
+
+assignThree := SomeThree()
+switch assignTwo {
+// cases
 }
 ```
 
@@ -1006,28 +749,16 @@ func (c *Chain) Run(x func(super *Chain)) *Chain {
 
 `type` `switch` block should only be cuddled with 1 related assignment. If you
 have more than 1 assignment(s), they should have more space between them for
-clarity purposes. One bad example is:
+clarity purposes.
 
 ```go
-func example(y interface{}) int {
-    n := 0
-    z := 5
-    switch x := y.(type) {
-    case int:
-        n = x + z
-    case int8:
-        n = int(x) + z
-    case int16:
-        n = int(x) + z
-    case int32:
-        n = int(x) + z
-    case int64:
-        n = int(x) + z
-    }
-
-    fmt.Printf("z is %v\n", z)
-
-    return n
+someT := GetT()
+anotherT := GetT()
+switch v := anotherT.(type) {
+case int:
+    fmt.Println("was int")
+default:
+    fmt.Println("was not int")
 }
 ```
 
@@ -1036,26 +767,19 @@ func example(y interface{}) int {
 An empty line between the last assignment and the `switch` block.
 
 ```go
-func example(y interface{}) int {
-    n := 0
-    z := 5
+someT := GetT()
+anotherT := GetT()
 
-    switch x := y.(type) {
-    case int:
-        n = x + z
-    case int8:
-        n = int(x) + z
-    case int16:
-        n = int(x) + z
-    case int32:
-        n = int(x) + z
-    case int64:
-        n = int(x) + z
-    }
+switch v := anotherT.(type) {
+case int:
+    fmt.Println("was int")
+default:
+    fmt.Println("was not int")
+}
 
-    fmt.Printf("z is %v\n", z)
-
-    return n
+thirdT := GetT()
+switch v := thirdT.(type)
+// cases
 }
 ```
 
@@ -1068,22 +792,11 @@ it creates unrelated relationship perception that sends the reader to wonder
 why are they closely together. One bad example is:
 
 ```go
-func example(y []int) []string {
-    r := 15
-    t := []string{}
+y := []string{"a", "b", "c"}
 
-    x := 5
-    for _, v := range y {
-        t = append(t, fmt.Sprintf("%v: got %v\n", r, v))
-    }
-
-
-    fmt.Printf("This is x %v.\n", x)
-    for _, v := range y {
-        t = append(t, fmt.Sprintf("%v: got %v\n", r, v))
-    }
-
-    return t
+x := 5
+for _, v := range y {
+    fmt.Println(v)
 }
 ```
 
@@ -1094,22 +807,15 @@ add an empty line before them (first `range`) OR an empty line before the
 `range` block (second `range`):
 
 ```go
-func example(y []int) []string {
-    r := 15
-    x := 5
+y := []string{"a", "b", "c"}
+for _, v := range y {
+    fmt.Println(v)
+}
 
-    t := []string{}
-    for _, v := range y {
-        t = append(t, fmt.Sprintf("%v: got %v\n", r, v))
-    }
-
-    fmt.Printf("This is x %v.\n", x)
-
-    for _, v := range y {
-        t = append(t, fmt.Sprintf("%v: got %v\n", r, v))
-    }
-
-    return t
+// May also cuddle if used first in block
+t2 := []string{}
+for _, v := range y {
+    t2 = append(t2, v)
 }
 ```
 
@@ -1123,7 +829,7 @@ the function block is single/double lines, the `return` statement can be
 cuddled.
 
 ```go
-func Generate(x int) (s string) {
+func F1(x int) (s string) {
     switch x {
     case 1:
         s = "one"
@@ -1133,16 +839,6 @@ func Generate(x int) (s string) {
         s = "three"
     }
     return s
-}
-
-func Sign(y *int) string {
-    *y += 15
-
-    return fmt.Sprintf("Hello world by %v\n", y)
-}
-
-func Check(z int) string {
-    return fmt.Sprintf("Checking in by %v\n", x)
 }
 ```
 
@@ -1152,7 +848,7 @@ An empty line between `return` and multi-line block or no empty line between
 `return` and single-line block.
 
 ```go
-func Generate(x int) (s string) {
+func F1(x int) (s string) {
     switch x {
     case 1:
         s = "one"
@@ -1165,13 +861,13 @@ func Generate(x int) (s string) {
     return s
 }
 
-func Sign(y *int) string {
-    *y += 15
-    return fmt.Sprintf("Hello world by %v\n", y)
+func PlusFifteenAsString(y int) string {
+    y += 15
+    return fmt.Sprintf("%s", y)
 }
 
-func Check(z int) string {
-    return fmt.Sprintf("Checking in by %v\n", x)
+func IsNotZero(i int) string {
+    return i != 0
 }
 ```
 
@@ -1195,20 +891,14 @@ non-associated switching entity. This will set the reader wondering why are
 they grouped together at the first place. One bad example is:
 
 ```go
-func example(eolType int) string {
-    eol := ""
-    switch eolType {
-    case 2:
-        eol = "\r"
-    case 3:
-        eol = "\r\n"
-    case 1:
-        fallthrough
-    default:
-        eol = "\n"
-    }
-
-    return eol
+notInSwitch := ""
+switch someThingElse {
+case 1:
+    fmt.Println("one")
+case 2:
+    fmt.Println("one")
+case 3:
+    fmt.Println("three")
 }
 ```
 
@@ -1218,21 +908,21 @@ Group related assignment together and add an empty line before them OR add an
 empty line before the `switch`:
 
 ```go
-func example(eolType int) string {
-    eol := ""
+notInSwitch := ""
 
-    switch eolType {
-    case 2:
-        eol = "\r"
-    case 3:
-        eol = "\r\n"
-    case 1:
-        fallthrough
-    default:
-        eol = "\n"
-    }
+switch someThingElse {
+case 1:
+    fmt.Println("one")
+case 2:
+    fmt.Println("one")
+case 3:
+    fmt.Println("three")
+}
 
-    return eol
+inSwitch := 2
+switch inSwitch {
+case 1:
+    fmt.Println("better")
 }
 ```
 
@@ -1245,26 +935,12 @@ Otherwise, it makes unclear relationship between the `switch` block and whatever
 before it. Here is a bad example:
 
 ```go
-func example(y interface{}) int {
-    n := 0
-
-    z := 5
-    switch x := y.(type) {
-    case int:
-        n += x
-    case int8:
-        n += int(x)
-    case int16:
-        n += int(x)
-    case int32:
-        n += int(x)
-    case int64:
-        n += int(x)
-    }
-
-    fmt.Printf("z is %v\n", z)
-
-    return n
+notInSwitch := GetSomeType()
+switch someThingElse.(type) {
+case int:
+    fmt.Println("int")
+default:
+    fmt.Println("not int")
 }
 ```
 
@@ -1273,25 +949,17 @@ func example(y interface{}) int {
 Give an empty line before the `switch` statement:
 
 ```go
-func example(y interface{}) int {
-    n := 0
-    z := 5
+notInSwitch := GetSomeType()
 
-    switch x := y.(type) {
-    case int:
-        n += x
-    case int8:
-        n += int(x)
-    case int16:
-        n += int(x)
-    case int32:
-        n += int(x)
-    case int64:
-        n += int(x)
-    }
+switch someThingElse.(type) {
+case int:
+    fmt.Println("int")
+default:
+    fmt.Println("not int")
+}
 
-    fmt.Printf("z is %v\n", z)
-
-    return n
+inSwitch := GetSomeType()
+switch inSwitch.(type) {
+// cases
 }
 ```
