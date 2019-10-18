@@ -21,41 +21,41 @@ might be bugs or unintentional false positives so I would love an
 [issue](https://github.com/bombsimon/wsl/issues/new) to fix, discuss, change or
 make something configurable!
 
-<br/>
-
 ## Installation
 
-### By Go Get (Local Installation)
+### By `go get` (local installation)
+
 You can do that by using:
 
-```bash
-$ go get -u github.com/bombsion/wsl/cmd/...
+```sh
+go get -u github.com/bombsion/wsl/cmd/...
 ```
 
-### By Golangci-Lint (CI automation)
-`wsl` is already integrated with
-[golangci-lint](https://github.com/golangci/golangci-lint). Please refer to
-the instructions there.
+### By golangci-lint (CI automation)
 
-<br/>
+`wsl` is already integrated with
+[golangci-lint](https://github.com/golangci/golangci-lint). Please refer to the
+instructions there.
 
 ## Usage
+
 How to use depends on how you install `wsl`.
 
-### By Go Get (Local Installation)
+### With local binary
+
 The general command format for `wsl` is:
 
-```bash
-$ wsl [--no-test] [arguments] <file1> [files...]
-$ wsl [--no-test] [arguments] </path/to/package/...>
+```sh
+$ wsl [flags] <file1> [files...]
+$ wsl [flags] </path/to/package/...>
 
-# Example
+# Examples
 
 $ wsl ./main.go
 $ wsl --no-test ./main.go
 $ wsl -allow-declaration ./main.go
-$ wsl --no-test -allow-declaration ./main.go
-$ wsl --no-test -allow-declaration ./myProject/...
+$ wsl --no-test --allow-cuddle-declaration ./main.go
+$ wsl --no-test --allow-trailing-comment ./myProject/...
 ```
 
 The "..." wildcard is not used like other `go` commands but instead can only
@@ -65,53 +65,60 @@ By default, the linter will run on `./...` which means all go files in the
 current path and all subsequent paths, including test files. To disable linting
 test files, use `-n` or `--no-test`.
 
-### By Golangci-Lint (CI automation)
+### By `golangci-lint` (CI automation)
+
 The recommended command is:
 
-```bash
-$ golangci-lint --disable-all --enable wsl
+```sh
+golangci-lint --disable-all --enable wsl
 ```
 
 For more information, please refer to
 [golangci-lint](https://github.com/golangci/golangci-lint)'s documentation.
 
+## Issues and configuration
 
-<br/>
+The linter suppers a few ways to configure it to satisfy more than one kind of
+code style. These settings could be set either with flags or with YAML
+configuration if used via `golangci-lint`.
 
-## Checklist
+The supported configuration can be found [in the documentation](doc/configuration.md).
 
-Below are the available checklist for any hit from `wsl`. If you do not see
-any, feel free to raise an [issue](https://github.com/bombsimon/wsl/issues/new).
+Below are the available checklist for any hit from `wsl`. If you do not see any,
+feel free to raise an [issue](https://github.com/bombsimon/wsl/issues/new).
 
 > **Note**:  this linter doesn't take in consideration the issues that will be
 > fixed with `go fmt -s` so ensure that the code is properly formatted before
 > use.
 
-* [Anonymous Switch Statements Should Never Be Cuddled](https://github.com/bombsimon/wsl/blob/master/doc/rules.md#anonymous-switch-statements-should-never-be-cuddled)
-* [Append Only Allowed To Cuddle With Appended Value](https://github.com/bombsimon/wsl/blob/master/doc/rules.md#append-only-allowed-to-cuddle-with-appended-value)
-* [Assignments Should Only Be Cuddled With Other Assignments](https://github.com/bombsimon/wsl/blob/master/doc/rules.md#assignments-should-only-be-cuddled-with-other-assignments)
-* [Block Should Not End With A Whitespace (Or Comment)](https://github.com/bombsimon/wsl/blob/master/doc/rules.md#block-should-not-end-with-a-whitespace-or-comment)
-* [Block Should Not Start With A Whitespace](https://github.com/bombsimon/wsl/blob/master/doc/rules.md#block-should-not-start-with-a-whitespace)
-* [Branch Statements Should Not Be Cuddled If Block Has More Than Two Lines](https://github.com/bombsimon/wsl/blob/master/doc/rules.md#branch-statements-should-not-be-cuddled-if-block-has-more-than-two-lines)
-* [Declarations Should Never Be Cuddled](https://github.com/bombsimon/wsl/blob/master/doc/rules.md#declarations-should-never-be-cuddled)
-* [Defer Statements Should Only Be Cuddled With Expressions On Same Variable](https://github.com/bombsimon/wsl/blob/master/doc/rules.md#defer-statements-should-only-be-cuddled-with-expressions-on-same-variable)
-* [Expressions Should Not Be Cuddled With Blocks](https://github.com/bombsimon/wsl/blob/master/doc/rules.md#expressions-should-not-be-cuddled-with-blocks)
-* [Expressions Should Not Be Cuddled With Declarations Or Returns](https://github.com/bombsimon/wsl/blob/master/doc/rules.md#expressions-should-not-be-cuddled-with-declarations-or-returns)
-* [For Statement Without Condition Should Never Be Cuddled](https://github.com/bombsimon/wsl/blob/master/doc/rules.md#for-statement-without-condition-should-never-be-cuddled)
-* [For Statements Should Only Be Cuddled With Assignments Used In The Iteration](https://github.com/bombsimon/wsl/blob/master/doc/rules.md#for-statements-should-only-be-cuddled-with-assignments-used-in-the-iteration)
-* [Go Statements Can Only Invoke Functions Assigned On Line Above](https://github.com/bombsimon/wsl/blob/master/doc/rules.md#go-statements-can-only-invoke-functions-assigned-on-line-above)
-* [If Statements Should Only Be Cuddled With Assignments](https://github.com/bombsimon/wsl/blob/master/doc/rules.md#if-statements-should-only-be-cuddled-with-assignments)
-* [If Statements Should Only Be Cuddled With Assignments Used In The If Statement Itself](https://github.com/bombsimon/wsl/blob/master/doc/rules.md#if-statements-should-only-be-cuddled-with-assignments-used-in-the-if-statement-itself)
-* [Only Cuddled Expressions If Assigning Variable Or Using From Line Above](https://github.com/bombsimon/wsl/blob/master/doc/rules.md#only-cuddled-expressions-if-assigning-variable-or-using-from-line-above)
-* [Only One Cuddle Assignment Allowed Before Defer Statement](https://github.com/bombsimon/wsl/blob/master/doc/rules.md#only-one-cuddle-assignment-allowed-before-defer-statement)
-* [Only One Cuddle Assginment Allowed Before For Statement](https://github.com/bombsimon/wsl/blob/master/doc/rules.md#only-one-cuddle-assignment-allowed-before-for-statement)
-* [Only One Cuddle Assignment Allowed Before Go Statement](https://github.com/bombsimon/wsl/blob/master/doc/rules.md#only-one-cuddle-assignment-allowed-before-go-statement)
-* [Only One Cuddle Assignment Allowed Before If Statement](https://github.com/bombsimon/wsl/blob/master/doc/rules.md#only-one-cuddle-assignment-allowed-before-if-statement)
-* [Only One Cuddle Assignment Allowed Before Range Statement](https://github.com/bombsimon/wsl/blob/master/doc/rules.md#only-one-cuddle-assignment-allowed-before-range-statement)
-* [Only One Cuddle Assignment Allowed Before Switch Statement](https://github.com/bombsimon/wsl/blob/master/doc/rules.md#only-one-cuddle-assignment-allowed-before-switch-statement)
-* [Only One Cuddle Assignment Allowed Before Type Switch Statement](https://github.com/bombsimon/wsl/blob/master/doc/rules.md#only-one-cuddle-assignment-allowed-before-type-switch-statement)
-* [Ranges Should Only Be Cuddled With Assignments Used In The Iteration](https://github.com/bombsimon/wsl/blob/master/doc/rules.md#ranges-should-only-be-cuddled-with-assignments-used-in-the-iteration)
-* [Return Statements Should Not Be Cuddled If Block Has More Than Two Lines](https://github.com/bombsimon/wsl/blob/master/doc/rules.md#return-statements-should-not-be-cuddled-if-block-has-more-than-two-lines)
-* [Stmt Type Not Implemented](https://github.com/bombsimon/wsl/blob/master/doc/rules.md#stmt-type-not-implemented)
-* [Switch Statements Should Only Be Cuddled With Variables Switched](https://github.com/bombsimon/wsl/blob/master/doc/rules.md#switch-statements-should-only-be-cuddled-with-variables-switched)
-* [Type Switch Statements Should Only Be Cuddled With Variables Switched](https://github.com/bombsimon/wsl/blob/master/doc/rules.md#type-switch-statements-should-only-be-cuddled-with-variables-switched)
+* [Anonymous switch statements should never be cuddled](doc/rules.md#anonymous-switch-statements-should-never-be-cuddled)
+* [Append only allowed to cuddle with appended value](doc/rules.md#append-only-allowed-to-cuddle-with-appended-value)
+* [Assignments should only be cuddled with other assignments](doc/rules.md#assignments-should-only-be-cuddled-with-other-assignments)
+* [Block should not end with a whitespace (or comment)](doc/rules.md#block-should-not-end-with-a-whitespace-or-comment)
+* [Block should not start with a whitespace](doc/rules.md#block-should-not-start-with-a-whitespace)
+* [Branch statements should not be cuddled if block has more than two lines](doc/rules.md#branch-statements-should-not-be-cuddled-if-block-has-more-than-two-lines)
+* [Declarations should never be cuddled](doc/rules.md#declarations-should-never-be-cuddled)
+* [Defer statements should only be cuddled with expressions on same variable](doc/rules.md#defer-statements-should-only-be-cuddled-with-expressions-on-same-variable)
+* [Expressions should not be cuddled with blocks](doc/rules.md#expressions-should-not-be-cuddled-with-blocks)
+* [Expressions should not be cuddled with declarations or returns](doc/rules.md#expressions-should-not-be-cuddled-with-declarations-or-returns)
+* [For statement without condition should never be cuddled](doc/rules.md#for-statement-without-condition-should-never-be-cuddled)
+* [For statements should only be cuddled with assignments used in the iteration](doc/rules.md#for-statements-should-only-be-cuddled-with-assignments-used-in-the-iteration)
+* [Go statements can only invoke functions assigned on line above](doc/rules.md#go-statements-can-only-invoke-functions-assigned-on-line-above)
+* [If statements should only be cuddled with assignments](doc/rules.md#if-statements-should-only-be-cuddled-with-assignments)
+* [If statements should only be cuddled with assignments used in the if
+  statement
+  itself](doc/rules.md#if-statements-should-only-be-cuddled-with-assignments-used-in-the-if-statement-itself)
+* [Only cuddled expressions if assigning variable or using from line
+  above](doc/rules.md#only-cuddled-expressions-if-assigning-variable-or-using-from-line-above)
+* [Only one cuddle assignment allowed before defer statement](doc/rules.md#only-one-cuddle-assignment-allowed-before-defer-statement)
+* [Only one cuddle assginment allowed before for statement](doc/rules.md#only-one-cuddle-assignment-allowed-before-for-statement)
+* [Only one cuddle assignment allowed before go statement](doc/rules.md#only-one-cuddle-assignment-allowed-before-go-statement)
+* [Only one cuddle assignment allowed before if statement](doc/rules.md#only-one-cuddle-assignment-allowed-before-if-statement)
+* [Only one cuddle assignment allowed before range statement](doc/rules.md#only-one-cuddle-assignment-allowed-before-range-statement)
+* [Only one cuddle assignment allowed before switch statement](doc/rules.md#only-one-cuddle-assignment-allowed-before-switch-statement)
+* [Only one cuddle assignment allowed before type switch statement](doc/rules.md#only-one-cuddle-assignment-allowed-before-type-switch-statement)
+* [Ranges should only be cuddled with assignments used in the iteration](doc/rules.md#ranges-should-only-be-cuddled-with-assignments-used-in-the-iteration)
+* [Return statements should not be cuddled if block has more than two lines](doc/rules.md#return-statements-should-not-be-cuddled-if-block-has-more-than-two-lines)
+* [Stmt type not implemented](doc/rules.md#stmt-type-not-implemented)
+* [Switch statements should only be cuddled with variables switched](doc/rules.md#switch-statements-should-only-be-cuddled-with-variables-switched)
+* [Type switch statements should only be cuddled with variables switched](doc/rules.md#type-switch-statements-should-only-be-cuddled-with-variables-switched)
