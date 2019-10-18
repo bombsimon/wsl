@@ -45,7 +45,7 @@ x = append(x, "i don't care")
 
 ```
 
-### [allow-assign-can-call](rules.md#only-cuddled-expressions-if-assigning-variable-or-using-from-line-above)
+### [allow-assign-and-call](rules.md#only-cuddled-expressions-if-assigning-variable-or-using-from-line-above)
 
 Controls if you may cuddle assignments and calls without needing an empty line
 between them.
