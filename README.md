@@ -28,7 +28,7 @@ make something configurable!
 You can do that by using:
 
 ```sh
-go get -u github.com/bombsion/wsl/cmd/...
+go get -u github.com/bombsimon/wsl/cmd/...
 ```
 
 ### By golangci-lint (CI automation)
