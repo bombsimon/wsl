@@ -1082,6 +1082,37 @@ func TestShouldAddEmptyLines(t *testing.T) {
 				defer resp.Body.Close()
 			}`),
 		},
+		{
+			description: "multiple go statements can be cuddled",
+			code: []byte(`package main
+
+			func main() {
+				t1 := NewT()
+				t2 := NewT()
+				t3 := NewT()
+
+				go t1()
+				go t2()
+				go t3()
+
+				multiCuddle1 := NewT()
+				multiCuddle2 := NewT()
+				go multiCuddle2()
+
+				multiCuddle3 := NeT()
+				go multiCuddle1()
+
+				t4 := NewT()
+				t5 := NewT()
+				go t5()
+				go t4()
+			}`),
+			expectedErrorStrings: []string{
+				"only one cuddle assignment allowed before go statement",
+				"go statements can only invoke functions assigned on line above",
+				"only one cuddle assignment allowed before go statement",
+			},
+		},
 	}
 
 	for _, tc := range cases {
