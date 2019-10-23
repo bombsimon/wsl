@@ -1113,6 +1113,30 @@ func TestShouldAddEmptyLines(t *testing.T) {
 				"only one cuddle assignment allowed before go statement",
 			},
 		},
+		{
+			description: "boilerplate",
+			code: []byte(`package main
+
+			func main() {
+				counter := 0
+				if somethingTrue {
+					counter++
+				}
+
+				counterTwo := 0
+				if somethingTrue {
+					counterTwo--
+				}
+
+				notCounter := 0
+				if somethingTrue {
+					counter--
+				}
+			}`),
+			expectedErrorStrings: []string{
+				"if statements should only be cuddled with assignments used in the if statement itself",
+			},
+		},
 	}
 
 	for _, tc := range cases {

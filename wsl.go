@@ -603,9 +603,10 @@ func (p *Processor) findLHS(node ast.Node) []string {
 		*ast.ReturnStmt, *ast.GoStmt, *ast.CaseClause,
 		*ast.CommClause, *ast.CallExpr, *ast.UnaryExpr,
 		*ast.BranchStmt, *ast.TypeSpec, *ast.ChanType,
-		*ast.DeferStmt, *ast.TypeAssertExpr, *ast.IncDecStmt,
-		*ast.RangeStmt:
-		// Nothing to add to LHS
+		*ast.DeferStmt, *ast.TypeAssertExpr, *ast.RangeStmt:
+	// Nothing to add to LHS
+	case *ast.IncDecStmt:
+		return p.findLHS(t.X)
 	case *ast.Ident:
 		return []string{t.Name}
 	case *ast.AssignStmt:
