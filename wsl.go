@@ -477,6 +477,10 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 				}
 			}
 		case *ast.GoStmt:
+			if _, ok := previousStatement.(*ast.GoStmt); ok {
+				continue
+			}
+
 			if moreThanOneStatementAbove() {
 				p.addError(t.Pos(), "only one cuddle assignment allowed before go statement")
 
