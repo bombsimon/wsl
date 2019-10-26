@@ -1137,6 +1137,66 @@ func TestShouldAddEmptyLines(t *testing.T) {
 				"if statements should only be cuddled with assignments used in the if statement itself",
 			},
 		},
+		{
+			description: "ensure blocks are found and checked for errors",
+			code: []byte(`package main
+
+				func main() {
+					var foo string
+
+					x := func() {
+						var err error
+						foo = "1"
+					}()
+
+					x := func() {
+						var err error
+						foo = "1"
+					}
+
+					func() {
+						var err error
+						foo = "1"
+					}()
+
+					func() {
+						var err error
+						foo = "1"
+					}
+
+					func() {
+						func() {
+							return func() {
+								var err error
+								foo = "1"
+							}
+						}()
+					}
+
+					var x error
+					foo, err := func() { return "", nil }
+
+					defer func() {
+						var err error
+						foo = "1"
+					}()
+
+					go func() {
+						var err error
+						foo = "1"
+					}()
+				}`),
+			expectedErrorStrings: []string{
+				"assignments should only be cuddled with other assignments",
+				"assignments should only be cuddled with other assignments",
+				"assignments should only be cuddled with other assignments",
+				"assignments should only be cuddled with other assignments",
+				"assignments should only be cuddled with other assignments",
+				"assignments should only be cuddled with other assignments",
+				"assignments should only be cuddled with other assignments",
+				"assignments should only be cuddled with other assignments",
+			},
+		},
 	}
 
 	for _, tc := range cases {

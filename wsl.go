@@ -207,14 +207,12 @@ func (p *Processor) parseBlockBody(ident *ast.Ident, block *ast.BlockStmt) {
 // nolint: gocognit
 func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 	for i, stmt := range statements {
-		// TODO: How to tell when and where func literals may exist to enforce
-		// linting.
-		if as, isAssignStmt := stmt.(*ast.AssignStmt); isAssignStmt {
-			for _, rhs := range as.Rhs {
-				if fl, isFuncLit := rhs.(*ast.FuncLit); isFuncLit {
-					p.parseBlockBody(nil, fl.Body)
-				}
-			}
+		// Start by checking if this statement is another block (other than if,
+		// for and range). This could be assignment to a function, defer or go
+		// call with an inline function or similar. If this is found we start by
+		// parsing this body block before moving on.
+		for _, stmtBlocks := range p.findBlockStmt(stmt) {
+			p.parseBlockBody(nil, stmtBlocks)
 		}
 
 		firstBodyStatement := p.firstBodyStatement(i, statements)
@@ -729,6 +727,35 @@ func (p *Processor) findRHS(node ast.Node) []string {
 	}
 
 	return rhs
+}
+
+func (p *Processor) findBlockStmt(node ast.Node) []*ast.BlockStmt {
+	var blocks []*ast.BlockStmt
+
+	switch t := node.(type) {
+	case *ast.AssignStmt:
+		for _, x := range t.Rhs {
+			blocks = append(blocks, p.findBlockStmt(x)...)
+		}
+	case *ast.CallExpr:
+		blocks = append(blocks, p.findBlockStmt(t.Fun)...)
+	case *ast.FuncLit:
+		blocks = append(blocks, t.Body)
+	case *ast.ExprStmt:
+		blocks = append(blocks, p.findBlockStmt(t.X)...)
+	case *ast.ReturnStmt:
+		for _, x := range t.Results {
+			blocks = append(blocks, p.findBlockStmt(x)...)
+		}
+	case *ast.DeferStmt:
+		blocks = append(blocks, p.findBlockStmt(t.Call)...)
+	case *ast.GoStmt:
+		blocks = append(blocks, p.findBlockStmt(t.Call)...)
+	default:
+		// spew.Dump(t)
+	}
+
+	return blocks
 }
 
 // maybeX extracts the X field from an AST node and returns it with a true value
