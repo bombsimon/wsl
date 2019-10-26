@@ -50,21 +50,11 @@ type Configuration struct {
 	//  }
 	AllowMultiLineAssignCuddle bool
 
-	// AllowCaseTrailingWhitespace will allow case blocks to end with a
-	// whitespace. Sometimes this might actually improve readability. This
-	// defaults to false but setting it to true will enable the following
-	// example:
-	//  switch {
-	//  case 1:
-	//      fmt.Println(1)
-	//
-	// case 2:
-	//     fmt.Println(2)
-	//
-	// case 3:
-	//     fmt:println(3)
-	// }
-	AllowCaseTrailingWhitespace bool
+	// If the number of lines in a case block is equal to or lager than this
+	// number, the case *must* end white a newline. If the number of line in
+	// the case is lower than this value, it *must not* end with a newline.
+	// Set it to 0 to never force newlines and 1 to always force.
+	CaseForceTrailingWhitespaceLimit int
 
 	// AllowTrailingComment will allow blocks to end with comments.
 	AllowTrailingComment bool
@@ -96,13 +86,13 @@ type Configuration struct {
 // DefaultConfig returns default configuration
 func DefaultConfig() Configuration {
 	return Configuration{
-		StrictAppend:                true,
-		AllowAssignAndCallCuddle:    true,
-		AllowMultiLineAssignCuddle:  true,
-		AllowCaseTrailingWhitespace: false,
-		AllowTrailingComment:        false,
-		AllowCuddleWithCalls:        []string{"Lock", "RLock"},
-		AllowCuddleWithRHS:          []string{"Unlock", "RUnlock"},
+		StrictAppend:                     true,
+		AllowAssignAndCallCuddle:         true,
+		AllowMultiLineAssignCuddle:       true,
+		AllowTrailingComment:             false,
+		CaseForceTrailingWhitespaceLimit: 0,
+		AllowCuddleWithCalls:             []string{"Lock", "RLock"},
+		AllowCuddleWithRHS:               []string{"Unlock", "RUnlock"},
 	}
 }
 
@@ -324,11 +314,15 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 				continue
 			}
 
-			if !atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) {
-				if !atLeastOneInListsMatch(assignedOnLineAbove, assignedFirstInBlock) {
-					p.addError(t.Pos(), "if statements should only be cuddled with assignments used in the if statement itself")
-				}
+			if atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) {
+				continue
 			}
+
+			if atLeastOneInListsMatch(assignedOnLineAbove, assignedFirstInBlock) {
+				continue
+			}
+
+			p.addError(t.Pos(), "if statements should only be cuddled with assignments used in the if statement itself")
 		case *ast.ReturnStmt:
 			if isLastStatementInBlockOfOnlyTwoLines() {
 				continue
@@ -875,7 +869,10 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 				break
 			}
 
-			allowedLinesBeforeFirstStatement += len(commentGroup.List)
+			// Support both /* multiline */ and //single line comments
+			for _, c := range commentGroup.List {
+				allowedLinesBeforeFirstStatement += len(strings.Split(c.Text, "\n"))
+			}
 		}
 	}
 
@@ -886,62 +883,120 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 		)
 	}
 
-	// If the blockEndLine is 0 we're a case clause. If we don't have any
-	// nextStatement the trailing whitespace will be handled when parsing the
-	// switch. If we do have a next statement we can see where it starts by
-	// getting it's colon position.
-	if blockEndLine == 0 {
-		if nextStatement == nil {
-			return
-		}
+	// If the blockEndLine is not 0 we're a regular block (not case).
+	if blockEndLine != 0 {
+		if p.config.AllowTrailingComment {
+			if lastComment, ok := commentMap[lastStatement]; ok {
+				var (
+					lastCommentGroup = lastComment[len(lastComment)-1]
+					lastCommentLine  = lastCommentGroup.List[len(lastCommentGroup.List)-1]
+					countNewlines    = 0
+				)
 
-		// If we allow case to end white whitespace or comment just return.
-		// TODO: Includes a false-positive where a newline before/after a
-		// comment in the case is valid but that's OK for now.
-		if p.config.AllowCaseTrailingWhitespace || p.config.AllowTrailingComment {
-			return
-		}
+				countNewlines += len(strings.Split(lastCommentLine.Text, "\n"))
 
-		switch n := nextStatement.(type) {
-		case *ast.CaseClause:
-			blockEndPos = n.Case
-		case *ast.CommClause:
-			blockEndPos = n.Case
-		default:
-			// We're not at the end of the case?
-			return
-		}
-
-		blockEndLine = p.fileSet.Position(blockEndPos).Line
-	}
-
-	if p.config.AllowTrailingComment {
-		if lastComment, ok := commentMap[lastStatement]; ok {
-			var (
-				lastCommentGroup = lastComment[len(lastComment)-1]
-				lastCommentLine  = lastCommentGroup.List[len(lastCommentGroup.List)-1]
-				countNewlines    = 0
-			)
-
-			if strings.Contains(lastCommentLine.Text, "\n") {
-				for _, x := range lastCommentLine.Text {
-					if x == '\n' {
-						countNewlines++
-					}
+				// No newlines between trailing comments and end of block.
+				if p.nodeStart(lastCommentLine)+countNewlines != blockEndLine-1 {
+					return
 				}
 			}
+		}
 
-			if p.nodeStart(lastCommentLine)+countNewlines == blockEndLine-1 {
-				return
+		if p.nodeEnd(lastStatement) != blockEndLine-1 && !isExampleFunc(ident) {
+			p.addError(blockEndPos, "block should not end with a whitespace (or comment)")
+		}
+
+		return
+	}
+
+	// If we don't have any nextStatement the trailing whitespace will be
+	// handled when parsing the switch. If we do have a next statement we can
+	// see where it starts by getting it's colon position. We set the end of the
+	// current case to the position of the next case.
+	switch n := nextStatement.(type) {
+	case *ast.CaseClause:
+		blockEndPos = n.Case
+	case *ast.CommClause:
+		blockEndPos = n.Case
+	default:
+		// No more cases (netStatement == nil)
+		return
+	}
+
+	blockEndLine = p.fileSet.Position(blockEndPos).Line - 1
+
+	var (
+		blockSize                   = blockEndLine - blockStartLine
+		hasTrailingNewlineOrComment = p.nodeEnd(lastStatement) != blockEndLine
+		caseTrailingCommentLines    int
+	)
+
+	// TODO: I don't know what comments ar bound to in cases. For regular blocks
+	// the last comment is bound to the last statement but for cases they are
+	// bound to the case clause expression. This will however get us all
+	// comments and depending on the case expression this gets tricky.
+	//
+	// To handle this I get the comment map from the current statement (the case
+	// itself) and iterate through all groups and all comment within all groups.
+	// I then get the comments after the last statement but before the next case
+	// clause and just map each line of comment that way.
+	for _, commentGroups := range commentMap {
+		for _, commentGroup := range commentGroups {
+			for _, comment := range commentGroup.List {
+				commentLine := p.fileSet.Position(comment.Pos()).Line
+
+				// Ignore comments before the last statement.
+				if commentLine <= p.nodeStart(lastStatement) {
+					continue
+				}
+
+				// Ignore comments after the end of this case.
+				if commentLine > blockEndLine {
+					continue
+				}
+
+				// This allows /* multiline */ comments with newlines as well
+				// as regular (//) ones
+				caseTrailingCommentLines += len(strings.Split(comment.Text, "\n"))
 			}
 		}
 	}
 
-	if p.nodeEnd(lastStatement) != blockEndLine-1 && !isExampleFunc(ident) {
-		p.addError(
-			blockEndPos,
-			"block should not end with a whitespace (or comment)",
-		)
+	// If the configuration never forces us to use newlines we can mix empty
+	// lines and not and need no more checks.
+	if p.config.CaseForceTrailingWhitespaceLimit == 0 {
+		// However, we must ensure that the case doesn't end with a comment
+		// if that's not allowed.
+		if !hasTrailingNewlineOrComment || caseTrailingCommentLines == 0 || p.config.AllowTrailingComment {
+			return
+		}
+
+		if caseTrailingCommentLines > 0 {
+			p.addError(lastStatement.Pos(), "case block should not end with a comment")
+		}
+
+		return
+	}
+
+	// If the block is bigger than when to start forcing and we don't have
+	// an empty line, add an error to enforce the user to add it.
+	if blockSize >= p.config.CaseForceTrailingWhitespaceLimit {
+		// IF the last statement + all comments is the ending line there's no
+		// whitespace.
+		if p.nodeEnd(lastStatement)+caseTrailingCommentLines == blockEndLine {
+			p.addError(lastStatement.Pos(), "case block should end with newline at this size")
+		}
+	}
+
+	// If we don't allow trailing comments we may never end with those.
+	if !p.config.AllowTrailingComment && caseTrailingCommentLines != 0 {
+		p.addError(lastStatement.Pos(), "case block should not end with a comment")
+	}
+
+	if blockSize < p.config.CaseForceTrailingWhitespaceLimit && hasTrailingNewlineOrComment {
+		if caseTrailingCommentLines == 0 {
+			p.addError(lastStatement.Pos(), "case block should never end with newline at this size")
+		}
 	}
 }
 
