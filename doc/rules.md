@@ -114,8 +114,7 @@ fmt.Println("x")
 ### Block should not end with a whitespace (or comment)
 
 > Can be configured, see [configuration
-documentation](configuration.md#allow-case-trailing-whitespace) ([for
-comments](configuration.md#allow-trailing-comment))
+documentation](configuration.md#allow-trailing-comment)
 
 Having an empty trailing whitespace is unnecessary and makes the block
 definition looks never-ending long. You want to let reader know that the
@@ -139,6 +138,73 @@ Move the comment to the top.
 func example(y int) string {
     // TODO: add mux function later.
     return fmt.Sprintf("x")
+}
+```
+
+---
+
+### Case block should not end with a comment
+
+> Can be configured, see [configuration
+documentation](configuration.md#allow-trailing-comment)
+
+By default, case blocks should not end with a comment just like regular blocks.
+
+```go
+switch n {
+case 1:
+    fmt.Println("one")
+    // This is noise!
+case 2:
+    fmt.Println("two")
+}
+```
+
+#### Recommended amendment
+
+```go
+switch n {
+case 1: // I wonder how this will end?
+    fmt.Println("one")
+case 2:
+    fmt.Println("two")
+}
+```
+
+---
+
+### Case block should (never) end with newline at this size
+
+> Can be configured, see [configuration
+documentation](configuration.md#force-case-trailing-whitespace)
+
+This one is disabled by default by allowing the user to mix and match trailing
+whitespaces. If you encounter this issue someone (maybe you?) set this to a non
+0 value.
+
+To improve readability WSL can force to add or remote whitespaces based on a set
+limit. See link to configuration for options.
+
+With `force-case-trailing-whitespace` set to 1 this yields an error.
+
+```go
+switch n {
+case 1:
+    fmt.Println("one")
+case 2:
+    fmt.Println("two")
+}
+```
+
+#### Recommended amendment
+
+```go
+switch n {
+case 1:
+    fmt.Println("one")
+
+case 2:
+    fmt.Println("two")
 }
 ```
 

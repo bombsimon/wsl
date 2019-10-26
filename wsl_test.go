@@ -157,7 +157,6 @@ func TestShouldRemoveEmptyLines(t *testing.T) {
 			expectedErrorStrings: []string{
 				"block should not end with a whitespace (or comment)",
 				"block should not start with a whitespace",
-				"block should not end with a whitespace",
 			},
 		},
 		{
@@ -1067,7 +1066,6 @@ func TestShouldAddEmptyLines(t *testing.T) {
 				"block should not end with a whitespace (or comment)",
 				"block should not start with a whitespace",
 				"block should not start with a whitespace",
-				"block should not end with a whitespace (or comment)",
 			},
 		},
 		{
@@ -1310,27 +1308,6 @@ func TestWithConfig(t *testing.T) {
 			expectedErrorStrings: []string{"append only allowed to cuddle with appended value"},
 		},
 		{
-			description: "allow case ending whitespace",
-			code: []byte(`package main
-
-			func main() {
-				switch {
-				case 1:
-					fmt.Println(1)
-
-				case 2:
-					fmt.Println(1)
-
-				case 3:
-					// Still not allowed to end this block with a whitespace.
-					fmt.Println(1)
-				}
-			}`),
-			customConfig: &Configuration{
-				AllowCaseTrailingWhitespace: true,
-			},
-		},
-		{
 			description: "allow cuddle var",
 			code: []byte(`package main
 
@@ -1404,6 +1381,200 @@ func TestWithConfig(t *testing.T) {
 			expectedErrorStrings: []string{
 				"block should not end with a whitespace (or comment)",
 				"block should not end with a whitespace (or comment)",
+			},
+		},
+		{
+			description: "mix allowed, comments are not",
+			code: []byte(`package main
+
+			func main() {
+				switch "x" {
+				case "a correct": // Test
+					fmt.Println("1")
+					fmt.Println("1")
+				case "a correct":
+					fmt.Println("1")
+					fmt.Println("2")
+
+				case "b correct":
+					fmt.Println("1")
+				case "b correct":
+					fmt.Println("1")
+
+				case "b bad":
+					fmt.Println("1")
+					// I'm not allowed'
+				case "b bad":
+					fmt.Println("1")
+					// I'm not allowed'
+
+				case "no false positives for if":
+					fmt.Println("checking")
+
+					// Some comment
+					if 1 < 2 {
+						// Another comment
+						if 2 > 1 {
+							fmt.Println("really sure")
+						}
+					}
+				case "end": // This is a case
+					fmt.Println("4")
+				}
+			}`),
+			customConfig: &Configuration{
+				CaseForceTrailingWhitespaceLimit: 0,
+				AllowTrailingComment:             false,
+			},
+			expectedErrorStrings: []string{
+				"case block should not end with a comment",
+				"case block should not end with a comment",
+			},
+		},
+		{
+			description: "always force newline, comments are not allowed",
+			code: []byte(`package main
+
+			func main() {
+				switch "x" {
+				case "a correct": // Test
+					fmt.Println("1")
+
+				case "a bad":
+					fmt.Println("1")
+				case "b correct":
+					fmt.Println("1")
+					fmt.Println("1")
+					fmt.Println("1")
+
+				case "b bad":
+					fmt.Println("1")
+					fmt.Println("1")
+					fmt.Println("1")
+				case "b bad":
+					fmt.Println("1")
+					// I'm not allowed'
+				case "b bad":
+					fmt.Println("1")
+					/*
+						I'm not allowed
+					*/
+				case "b bad":
+					fmt.Println("1")
+					/*
+						I'm not allowed
+					*/
+
+				case "end": // This is a case
+					fmt.Println("4")
+				}
+			}`),
+			customConfig: &Configuration{
+				CaseForceTrailingWhitespaceLimit: 1,
+				AllowTrailingComment:             false,
+			},
+			expectedErrorStrings: []string{
+				"case block should end with newline at this size",
+				"case block should end with newline at this size",
+				"case block should end with newline at this size",
+				"case block should not end with a comment",
+				"case block should end with newline at this size",
+				"case block should not end with a comment",
+				"case block should not end with a comment",
+			},
+		},
+		{
+			description: "mix allowed, comments allowed",
+			code: []byte(`package main
+
+			func main() {
+				switch "x" {
+				case "a correct": // Test
+					fmt.Println("1")
+
+				case "a correct":
+					fmt.Println("1")
+					// This is OK
+				case "b correct":
+					fmt.Println("1")
+					fmt.Println("1")
+					fmt.Println("1")
+					// This is OK
+
+				case "b bad":
+					fmt.Println("1")
+					fmt.Println("1")
+					fmt.Println("1")
+					// This is OK
+				case "b bad":
+					fmt.Println("1")
+					fmt.Println("1")
+					fmt.Println("1")
+					/*
+						This multiline
+						is OK
+					*/
+				case "end": // This is a case
+					fmt.Println("4")
+				}
+			}`),
+			customConfig: &Configuration{
+				CaseForceTrailingWhitespaceLimit: 0,
+				AllowTrailingComment:             true,
+			},
+		},
+		{
+			description: "only allow newline at 3 lines, comment's allowed",
+			code: []byte(`package main
+
+			func main() {
+				switch "x" {
+				case "a correct": // Test
+					fmt.Println("1")
+				case "a bad": // This is too short for a newline
+					fmt.Println("1")
+
+				case "b correct":
+					fmt.Println("1")
+					fmt.Println("1")
+					fmt.Println("1")
+
+				case "b bad":
+					fmt.Println("1")
+					fmt.Println("1")
+					fmt.Println("1")
+				case "b correct":
+					fmt.Println("1")
+					fmt.Println("1")
+					fmt.Println("1")
+					// This is OK
+
+				case "b bad":
+					fmt.Println("1")
+					fmt.Println("1")
+					fmt.Println("1")
+					// This is not OK, no whitespace
+				case "b bad":
+					fmt.Println("1")
+					fmt.Println("1")
+					fmt.Println("1")
+					/*
+						This is not OK
+						Multiline but now whitespace
+					*/
+				case "end": // This is a case
+					fmt.Println("4")
+				}
+			}`),
+			customConfig: &Configuration{
+				CaseForceTrailingWhitespaceLimit: 3,
+				AllowTrailingComment:             true,
+			},
+			expectedErrorStrings: []string{
+				"case block should never end with newline at this size",
+				"case block should end with newline at this size",
+				"case block should end with newline at this size",
+				"case block should end with newline at this size",
 			},
 		},
 	}

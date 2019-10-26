@@ -71,33 +71,57 @@ x = AssignAgain()
 x.CallAgain()
 ```
 
-### [allow-multiline-assign](rules.md#only-cuddled-expressions-if-assigning-variable-or-using-from-line-above)
+### [force-case-trailing-whitespace](rules.md#case-block-should-(never)-end-with-newline-at-this-size)
 
-Controls if you may cuddle assignments even if they span over multiple lines.
+If you **always** want to end a case block with a newline, this should be
+set to 1. If you **never** want to allow a block to end with a newline, this
+could be set to a large number (9999). If you want to be able to mix and match
+and set this to whatever suits the person the best, set this to 0.
 
-> Default value: true
+This can be combined with
+[allow-trailing-comment](configuration.md#allow-trailing-comment) so that a
+block must have a newline after the comment.
 
-Supported when true:
+> Default value: 0 (allow both)
+
+Supported when set to 0:
 
 ```go
-assignment := fmt.Sprintf(
-    "%s%s",
-    "I span over", "multiple lines"
-)
-assignmentTwo := "and yet I may be cuddled"
-assignmentThree := "this is fine"
+switch n {
+case 1:
+    fmt.Println("newline")
+
+case 2:
+    fmt.Println("no newline")
+case 3:
+    fmt.Println("Many")
+    fmt.Println("lines")
+    fmt.Println("without")
+    fmt.Println("newlinew")
+case 4:
+    fmt.Println("done"9)
+}
 ```
 
-Required when false:
+Required when set to 1:
 
 ```go
-assignment := fmt.Sprintf(
-    "%s%s",
-    "I span over", "multiple lines"
-)
+switch n {
+case 1:
+    fmt.Println("newline")
 
-assignmentTwo := "so I cannot be cuddled"
-assignmentThree := "this is fine"
+case 2:
+    fmt.Println("also newline")
+
+case 3:
+    fmt.Println("Many")
+    fmt.Println("lines")
+    fmt.Println("WITH")
+    fmt.Println("newline")
+
+case 4:
+    fmt.Println("done"9)
+}
 ```
 
 ### [allow-cuddle-declarations](rules.md#declarations-should-never-be-cuddled)
