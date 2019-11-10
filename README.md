@@ -96,6 +96,7 @@ feel free to raise an [issue](https://github.com/bombsimon/wsl/issues/new).
 * [Assignments should only be cuddled with other assignments](doc/rules.md#assignments-should-only-be-cuddled-with-other-assignments)
 * [Block should not end with a whitespace (or comment)](doc/rules.md#block-should-not-end-with-a-whitespace-or-comment)
 * [Block should not start with a whitespace](doc/rules.md#block-should-not-start-with-a-whitespace)
+* [Case block should end with newline at this size](doc/rules.md#case-block-should-end-with-newline-at-this-size)
 * [Branch statements should not be cuddled if block has more than two lines](doc/rules.md#branch-statements-should-not-be-cuddled-if-block-has-more-than-two-lines)
 * [Declarations should never be cuddled](doc/rules.md#declarations-should-never-be-cuddled)
 * [Defer statements should only be cuddled with expressions on same variable](doc/rules.md#defer-statements-should-only-be-cuddled-with-expressions-on-same-variable)
