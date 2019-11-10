@@ -71,18 +71,43 @@ x = AssignAgain()
 x.CallAgain()
 ```
 
-### [force-case-trailing-whitespace](rules.md#case-block-should-(never)-end-with-newline-at-this-size)
+### [allow-multiline-assign](rules.md#only-cuddled-expressions-if-assigning-variable-or-using-from-line-above)
 
-If you **always** want to end a case block with a newline, this should be
-set to 1. If you **never** want to allow a block to end with a newline, this
-could be set to a large number (9999). If you want to be able to mix and match
-and set this to whatever suits the person the best, set this to 0.
+Controls if you may cuddle assignments even if they span over multiple lines.
 
-This can be combined with
-[allow-trailing-comment](configuration.md#allow-trailing-comment) so that a
-block must have a newline after the comment.
+> Default value: true
 
-> Default value: 0 (allow both)
+Supported when true:
+
+```go
+assignment := fmt.Sprintf(
+    "%s%s",
+    "I span over", "multiple lines"
+)
+assignmentTwo := "and yet I may be cuddled"
+assignmentThree := "this is fine"
+```
+
+Required when false:
+
+```go
+assignment := fmt.Sprintf(
+    "%s%s",
+    "I span over", "multiple lines"
+)
+
+assignmentTwo := "so I cannot be cuddled"
+assignmentThree := "this is fine"
+```
+
+### [force-case-trailing-whitespace](rules.md#case-block-should-end-with-newline-at-this-size)
+
+Can be set to force trailing newlines at the end of case blocks to improve
+readability. If the number of lines (including comments) in a case block exceeds
+this number a linter error will be yielded if the case does not end with a
+newline.
+
+> Default value: 0 (never force)
 
 Supported when set to 0:
 
@@ -99,26 +124,23 @@ case 3:
     fmt.Println("without")
     fmt.Println("newlinew")
 case 4:
-    fmt.Println("done"9)
+    fmt.Println("done")
 }
 ```
 
-Required when set to 1:
+Required when set to 2:
 
 ```go
 switch n {
 case 1:
-    fmt.Println("newline")
+    fmt.Println("must have")
+    fmt.Println("empty whitespace")
 
 case 2:
-    fmt.Println("also newline")
+    fmt.Println("might have empty whitespace")
 
 case 3:
-    fmt.Println("Many")
-    fmt.Println("lines")
-    fmt.Println("WITH")
-    fmt.Println("newline")
-
+    fmt.Println("might skip empty whitespace")
 case 4:
     fmt.Println("done"9)
 }

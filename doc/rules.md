@@ -143,47 +143,13 @@ func example(y int) string {
 
 ---
 
-### Case block should not end with a comment
-
-> Can be configured, see [configuration
-documentation](configuration.md#allow-trailing-comment)
-
-By default, case blocks should not end with a comment just like regular blocks.
-
-```go
-switch n {
-case 1:
-    fmt.Println("one")
-    // This is noise!
-case 2:
-    fmt.Println("two")
-}
-```
-
-#### Recommended amendment
-
-```go
-switch n {
-case 1: // I wonder how this will end?
-    fmt.Println("one")
-case 2:
-    fmt.Println("two")
-}
-```
-
----
-
-### Case block should (never) end with newline at this size
+### Case block should end with newline at this size
 
 > Can be configured, see [configuration
 documentation](configuration.md#force-case-trailing-whitespace)
 
-This one is disabled by default by allowing the user to mix and match trailing
-whitespaces. If you encounter this issue someone (maybe you?) set this to a non
-0 value.
-
-To improve readability WSL can force to add or remote whitespaces based on a set
-limit. See link to configuration for options.
+To improve readability WSL can force to add whitespaces based on a set limit.
+See link to configuration for options.
 
 With `force-case-trailing-whitespace` set to 1 this yields an error.
 
@@ -935,17 +901,6 @@ func IsNotZero(i int) string {
     return i != 0
 }
 ```
-
----
-
-### Stmt type not implemented
-
-Congratulations! You had found an unforseenable future detection. This hit
-simply means the detection is not implemented.
-
-#### Recommended amendment
-
-Raise an [issue](https://github.com/bombsimon/wsl/issues/new).
 
 ---
 

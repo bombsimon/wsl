@@ -1384,7 +1384,7 @@ func TestWithConfig(t *testing.T) {
 			},
 		},
 		{
-			description: "mix allowed, comments are not",
+			description: "case blocks can end with or without newlines and comments",
 			code: []byte(`package main
 
 			func main() {
@@ -1426,112 +1426,16 @@ func TestWithConfig(t *testing.T) {
 				CaseForceTrailingWhitespaceLimit: 0,
 				AllowTrailingComment:             false,
 			},
-			expectedErrorStrings: []string{
-				"case block should not end with a comment",
-				"case block should not end with a comment",
-			},
 		},
 		{
-			description: "always force newline, comments are not allowed",
+			description: "enforce newline at size 3",
 			code: []byte(`package main
 
 			func main() {
 				switch "x" {
 				case "a correct": // Test
 					fmt.Println("1")
-
-				case "a bad":
-					fmt.Println("1")
-				case "b correct":
-					fmt.Println("1")
-					fmt.Println("1")
-					fmt.Println("1")
-
-				case "b bad":
-					fmt.Println("1")
-					fmt.Println("1")
-					fmt.Println("1")
-				case "b bad":
-					fmt.Println("1")
-					// I'm not allowed'
-				case "b bad":
-					fmt.Println("1")
-					/*
-						I'm not allowed
-					*/
-				case "b bad":
-					fmt.Println("1")
-					/*
-						I'm not allowed
-					*/
-
-				case "end": // This is a case
-					fmt.Println("4")
-				}
-			}`),
-			customConfig: &Configuration{
-				CaseForceTrailingWhitespaceLimit: 1,
-				AllowTrailingComment:             false,
-			},
-			expectedErrorStrings: []string{
-				"case block should end with newline at this size",
-				"case block should end with newline at this size",
-				"case block should end with newline at this size",
-				"case block should not end with a comment",
-				"case block should end with newline at this size",
-				"case block should not end with a comment",
-				"case block should not end with a comment",
-			},
-		},
-		{
-			description: "mix allowed, comments allowed",
-			code: []byte(`package main
-
-			func main() {
-				switch "x" {
-				case "a correct": // Test
-					fmt.Println("1")
-
-				case "a correct":
-					fmt.Println("1")
-					// This is OK
-				case "b correct":
-					fmt.Println("1")
-					fmt.Println("1")
-					fmt.Println("1")
-					// This is OK
-
-				case "b bad":
-					fmt.Println("1")
-					fmt.Println("1")
-					fmt.Println("1")
-					// This is OK
-				case "b bad":
-					fmt.Println("1")
-					fmt.Println("1")
-					fmt.Println("1")
-					/*
-						This multiline
-						is OK
-					*/
-				case "end": // This is a case
-					fmt.Println("4")
-				}
-			}`),
-			customConfig: &Configuration{
-				CaseForceTrailingWhitespaceLimit: 0,
-				AllowTrailingComment:             true,
-			},
-		},
-		{
-			description: "only allow newline at 3 lines, comment's allowed",
-			code: []byte(`package main
-
-			func main() {
-				switch "x" {
-				case "a correct": // Test
-					fmt.Println("1")
-				case "a bad": // This is too short for a newline
+				case "a ok":
 					fmt.Println("1")
 
 				case "b correct":
@@ -1554,13 +1458,13 @@ func TestWithConfig(t *testing.T) {
 					fmt.Println("1")
 					fmt.Println("1")
 					// This is not OK, no whitespace
-				case "b bad":
+				case "b ok":
 					fmt.Println("1")
 					fmt.Println("1")
 					fmt.Println("1")
 					/*
 						This is not OK
-						Multiline but now whitespace
+						Multiline but no whitespace
 					*/
 				case "end": // This is a case
 					fmt.Println("4")
@@ -1571,7 +1475,6 @@ func TestWithConfig(t *testing.T) {
 				AllowTrailingComment:             true,
 			},
 			expectedErrorStrings: []string{
-				"case block should never end with newline at this size",
 				"case block should end with newline at this size",
 				"case block should end with newline at this size",
 				"case block should end with newline at this size",

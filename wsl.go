@@ -51,9 +51,7 @@ type Configuration struct {
 	AllowMultiLineAssignCuddle bool
 
 	// If the number of lines in a case block is equal to or lager than this
-	// number, the case *must* end white a newline. If the number of line in
-	// the case is lower than this value, it *must not* end with a newline.
-	// Set it to 0 to never force newlines and 1 to always force.
+	// number, the case *must* end white a newline.
 	CaseForceTrailingWhitespaceLimit int
 
 	// AllowTrailingComment will allow blocks to end with comments.
@@ -745,8 +743,6 @@ func (p *Processor) findBlockStmt(node ast.Node) []*ast.BlockStmt {
 		blocks = append(blocks, p.findBlockStmt(t.Call)...)
 	case *ast.GoStmt:
 		blocks = append(blocks, p.findBlockStmt(t.Call)...)
-	default:
-		// spew.Dump(t)
 	}
 
 	return blocks
@@ -919,21 +915,20 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 	case *ast.CommClause:
 		blockEndPos = n.Case
 	default:
-		// No more cases (netStatement == nil)
+		// No more cases
 		return
 	}
 
 	blockEndLine = p.fileSet.Position(blockEndPos).Line - 1
 
 	var (
-		blockSize                   = blockEndLine - blockStartLine
-		hasTrailingNewlineOrComment = p.nodeEnd(lastStatement) != blockEndLine
-		caseTrailingCommentLines    int
+		blockSize                = blockEndLine - blockStartLine
+		caseTrailingCommentLines int
 	)
 
-	// TODO: I don't know what comments ar bound to in cases. For regular blocks
-	// the last comment is bound to the last statement but for cases they are
-	// bound to the case clause expression. This will however get us all
+	// TODO: I don't know what comments are bound to in cases. For regular
+	// blocks the last comment is bound to the last statement but for cases
+	// they are bound to the case clause expression. This will however get us all
 	// comments and depending on the case expression this gets tricky.
 	//
 	// To handle this I get the comment map from the current statement (the case
@@ -962,40 +957,13 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 		}
 	}
 
-	// If the configuration never forces us to use newlines we can mix empty
-	// lines and not and need no more checks.
-	if p.config.CaseForceTrailingWhitespaceLimit == 0 {
-		// However, we must ensure that the case doesn't end with a comment
-		// if that's not allowed.
-		if !hasTrailingNewlineOrComment || caseTrailingCommentLines == 0 || p.config.AllowTrailingComment {
-			return
-		}
+	hasTrailingWhitespace := p.nodeEnd(lastStatement)+caseTrailingCommentLines != blockEndLine
 
-		if caseTrailingCommentLines > 0 {
-			p.addError(lastStatement.Pos(), "case block should not end with a comment")
-		}
-
-		return
-	}
-
-	// If the block is bigger than when to start forcing and we don't have
-	// an empty line, add an error to enforce the user to add it.
-	if blockSize >= p.config.CaseForceTrailingWhitespaceLimit {
-		// IF the last statement + all comments is the ending line there's no
-		// whitespace.
-		if p.nodeEnd(lastStatement)+caseTrailingCommentLines == blockEndLine {
+	// If the force trailing limit is configured and we don't end with a newline.
+	if p.config.CaseForceTrailingWhitespaceLimit > 0 && !hasTrailingWhitespace {
+		// Check if the block size is too big to miss the newline.
+		if blockSize >= p.config.CaseForceTrailingWhitespaceLimit {
 			p.addError(lastStatement.Pos(), "case block should end with newline at this size")
-		}
-	}
-
-	// If we don't allow trailing comments we may never end with those.
-	if !p.config.AllowTrailingComment && caseTrailingCommentLines != 0 {
-		p.addError(lastStatement.Pos(), "case block should not end with a comment")
-	}
-
-	if blockSize < p.config.CaseForceTrailingWhitespaceLimit && hasTrailingNewlineOrComment {
-		if caseTrailingCommentLines == 0 {
-			p.addError(lastStatement.Pos(), "case block should never end with newline at this size")
 		}
 	}
 }
