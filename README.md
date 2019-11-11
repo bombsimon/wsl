@@ -53,7 +53,7 @@ $ wsl [flags] </path/to/package/...>
 
 $ wsl ./main.go
 $ wsl --no-test ./main.go
-$ wsl -allow-declaration ./main.go
+$ wsl --allow-cuddle-declarations ./main.go
 $ wsl --no-test --allow-cuddle-declaration ./main.go
 $ wsl --no-test --allow-trailing-comment ./myProject/...
 ```
@@ -120,6 +120,5 @@ feel free to raise an [issue](https://github.com/bombsimon/wsl/issues/new).
 * [Only one cuddle assignment allowed before type switch statement](doc/rules.md#only-one-cuddle-assignment-allowed-before-type-switch-statement)
 * [Ranges should only be cuddled with assignments used in the iteration](doc/rules.md#ranges-should-only-be-cuddled-with-assignments-used-in-the-iteration)
 * [Return statements should not be cuddled if block has more than two lines](doc/rules.md#return-statements-should-not-be-cuddled-if-block-has-more-than-two-lines)
-* [Stmt type not implemented](doc/rules.md#stmt-type-not-implemented)
 * [Switch statements should only be cuddled with variables switched](doc/rules.md#switch-statements-should-only-be-cuddled-with-variables-switched)
 * [Type switch statements should only be cuddled with variables switched](doc/rules.md#type-switch-statements-should-only-be-cuddled-with-variables-switched)
