@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/bombsimon/wsl"
+	"github.com/bombsimon/wsl/v2"
 )
 
 // nolint: gocognit
