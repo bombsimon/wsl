@@ -79,6 +79,10 @@ type Configuration struct {
 	//  allow := thisAssignment()
 	//  mu.Unlock()
 	AllowCuddleWithRHS []string
+
+	// Backwards compatible filed due to failed release versioning of WSL. This
+	// is a no-op field. See https://github.com/bombsimon/wsl/issues/60
+	AllowCaseTrailingWhitespace bool
 }
 
 // DefaultConfig returns default configuration
