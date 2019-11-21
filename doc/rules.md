@@ -897,7 +897,7 @@ func PlusFifteenAsString(y int) string {
     return fmt.Sprintf("%s", y)
 }
 
-func IsNotZero(i int) string {
+func IsNotZero(i int) bool {
     return i != 0
 }
 ```
