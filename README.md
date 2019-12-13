@@ -70,7 +70,7 @@ test files, use `-n` or `--no-test`.
 The recommended command is:
 
 ```sh
-golangci-lint --disable-all --enable wsl
+golangci-lint run --disable-all --enable wsl
 ```
 
 For more information, please refer to
