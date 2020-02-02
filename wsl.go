@@ -79,6 +79,23 @@ type Configuration struct {
 	//  allow := thisAssignment()
 	//  mu.Unlock()
 	AllowCuddleWithRHS []string
+
+	// MustCuddleErrCheckAndAssign will cause an error when an If statement that
+	// checks an error variable doesn't cuddle with the assignment of that variable.
+	// This defaults to false but setting it to true will cause the following
+	// to generate an error:
+	//
+	// err := ProduceError()
+	//
+	// if err != nil {
+	//     return err
+	// }
+	MustCuddleErrCheckAndAssign bool
+
+	// When MustCuddleErrCheckAndAssign is enabled this is a list of names
+	// used for error variables to check for in the conditional.
+	// Defaults to just "err"
+	ErrorVariableNames []string
 }
 
 // DefaultConfig returns default configuration
@@ -91,6 +108,8 @@ func DefaultConfig() Configuration {
 		CaseForceTrailingWhitespaceLimit: 0,
 		AllowCuddleWithCalls:             []string{"Lock", "RLock"},
 		AllowCuddleWithRHS:               []string{"Unlock", "RUnlock"},
+		MustCuddleErrCheckAndAssign:      false,
+		ErrorVariableNames:               []string{"err"},
 	}
 }
 
@@ -212,12 +231,6 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 
 		previousStatement := statements[i-1]
 
-		// If the last statement didn't end one line above the current statement
-		// we know we're not cuddled so just move on.
-		if p.nodeEnd(previousStatement) != p.nodeStart(stmt)-1 {
-			continue
-		}
-
 		// We know we're cuddled, extract assigned variables on the line above
 		// which is the only thing we allow cuddling with. If the assignment is
 		// made over multiple lines we should not allow cuddling.
@@ -257,8 +270,15 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			leftHandSide                = p.findLHS(stmt)
 			rightHandSide               = p.findRHS(stmt)
 			rightAndLeftHandSide        = append(leftHandSide, rightHandSide...)
+			checkingNilErr              = p.isCheckingErrAgainstNil(stmt, rightAndLeftHandSide)
+			cuddledWithLastStmt         = p.nodeEnd(previousStatement) == p.nodeStart(stmt)-1
+			enforceErrCuddling          = p.config.MustCuddleErrCheckAndAssign && checkingNilErr
 			calledOrAssignedOnLineAbove = append(calledOnLineAbove, assignedOnLineAbove...)
 		)
+
+		if !cuddledWithLastStmt && !enforceErrCuddling {
+			continue
+		}
 
 		// If we called some kind of lock on the line above we allow cuddling
 		// anything.
@@ -309,6 +329,11 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 
 			if moreThanOneStatementAbove() {
 				p.addError(t.Pos(), "only one cuddle assignment allowed before if statement")
+				continue
+			}
+
+			if enforceErrCuddling && atLeastOneInListsMatch(calledOrAssignedOnLineAbove, p.config.ErrorVariableNames) {
+				p.addError(stmt.Pos(), "if statements that check an error must be cuddled with the statement that assigned the error")
 				continue
 			}
 
@@ -966,6 +991,19 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 			p.addError(lastStatement.Pos(), "case block should end with newline at this size")
 		}
 	}
+}
+
+func (p *Processor) isCheckingErrAgainstNil(stmt ast.Stmt, rightAndLeftHandSide []string) bool {
+	if _, isIf := stmt.(*ast.IfStmt); !isIf {
+		return false
+	}
+
+	errCheckArgs := append(p.config.ErrorVariableNames, "nil")
+	if !atLeastOneInListsMatch(rightAndLeftHandSide, errCheckArgs) {
+		return false
+	}
+
+	return true
 }
 
 func isExampleFunc(ident *ast.Ident) bool {
