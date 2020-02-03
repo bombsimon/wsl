@@ -1480,6 +1480,143 @@ func TestWithConfig(t *testing.T) {
 				"case block should end with newline at this size",
 			},
 		},
+		{
+			description:         "must cuddle error checks with the error assignment",
+			customConfig: &Configuration{
+				MustCuddleErrCheckAndAssign:      true,
+				ErrorVariableNames:               []string{"err"},
+			},
+			code: []byte(`package main
+
+			import "errors"
+
+			func main() {
+				err := errors.New("bad thing")
+
+				if err != nil {
+					fmt.Println("I'm OK")
+				}
+			}`),
+			expectedErrorStrings: []string{"if statements that check an error must be cuddled with the statement that assigned the error"},
+		},
+		{
+			description:         "must cuddle error checks with the error assignment multivalue",
+			customConfig: &Configuration{
+				AllowMultiLineAssignCuddle:       true,
+				MustCuddleErrCheckAndAssign:      true,
+				ErrorVariableNames:               []string{"err"},
+			},
+			code: []byte(`package main
+
+			import "errors"
+
+			func main() {
+				b, err := FSByte(useLocal, name)
+
+				if err != nil {
+					panic(err)
+				}
+			}`),
+			expectedErrorStrings: []string{"if statements that check an error must be cuddled with the statement that assigned the error"},
+		},
+		{
+			description:         "must cuddle error checks with the error assignment only on assignment",
+			customConfig: &Configuration{
+				MustCuddleErrCheckAndAssign:      true,
+				ErrorVariableNames:               []string{"err"},
+			},
+			code: []byte(`package main
+
+			import "errors"
+
+			func main() {
+				var (
+					err error
+					once sync.Once
+				)
+
+				once.Do(func() {
+					err = ProduceError()
+				})
+			
+				if err != nil {
+					return nil, err
+				}
+			}`),
+			expectedErrorStrings: []string{},
+		},
+		{
+			description:         "must cuddle error checks with the error assignment multivalue NoError",
+			customConfig: &Configuration{
+				AllowMultiLineAssignCuddle:       true,
+				MustCuddleErrCheckAndAssign:      true,
+				ErrorVariableNames:               []string{"err"},
+			},
+			code: []byte(`package main
+
+			import "errors"
+
+			func main() {
+				b, err := FSByte(useLocal, name)
+				if err != nil {
+					panic(err)
+				}
+			}`),
+			expectedErrorStrings: []string{},
+		},
+		{
+			description:         "must cuddle error checks with the error assignment known err",
+			customConfig: &Configuration{
+				AllowMultiLineAssignCuddle:       true,
+				MustCuddleErrCheckAndAssign:      true,
+				ErrorVariableNames:               []string{"err"},
+			},
+			code: []byte(`package main
+
+			import "errors"
+
+			func main() {
+				result, err := FetchSomething()
+
+				if err == sql.ErrNoRows {
+					return []Model{}
+				}
+			}`),
+			expectedErrorStrings: []string{"if statements that check an error must be cuddled with the statement that assigned the error"},
+		},
+		{
+			description:         "err-check cuddle enforcement doesn't generate false-positives.",
+			customConfig: &Configuration{
+				AllowMultiLineAssignCuddle:       true,
+				MustCuddleErrCheckAndAssign:      true,
+				ErrorVariableNames:               []string{"err"},
+			},
+			code: []byte(`package main
+
+			import "errors"
+
+			func main() {
+				result, err := FetchSomething()
+				if err == sql.ErrNoRows {
+					return []Model{}
+				}
+
+				foo := generateFoo()
+				if foo == "bar" {
+ 				    handleBar()
+                }
+
+				var baz []string
+
+				err = loadStuff(&baz)
+				if err != nil{
+					return nil
+				}
+
+				return baz
+			}`),
+			expectedErrorStrings: []string{},
+		},
 	}
 
 	for _, tc := range cases {

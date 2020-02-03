@@ -79,6 +79,23 @@ type Configuration struct {
 	//  allow := thisAssignment()
 	//  mu.Unlock()
 	AllowCuddleWithRHS []string
+
+	// MustCuddleErrCheckAndAssign will cause an error when an If statement that
+	// checks an error variable doesn't cuddle with the assignment of that variable.
+	// This defaults to false but setting it to true will cause the following
+	// to generate an error:
+	//
+	// err := ProduceError()
+	//
+	// if err != nil {
+	//     return err
+	// }
+	MustCuddleErrCheckAndAssign bool
+
+	// When MustCuddleErrCheckAndAssign is enabled this is a list of names
+	// used for error variables to check for in the conditional.
+	// Defaults to just "err"
+	ErrorVariableNames []string
 }
 
 // DefaultConfig returns default configuration
@@ -91,6 +108,8 @@ func DefaultConfig() Configuration {
 		CaseForceTrailingWhitespaceLimit: 0,
 		AllowCuddleWithCalls:             []string{"Lock", "RLock"},
 		AllowCuddleWithRHS:               []string{"Unlock", "RUnlock"},
+		MustCuddleErrCheckAndAssign:      false,
+		ErrorVariableNames:               []string{"err"},
 	}
 }
 
@@ -211,14 +230,15 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 		}
 
 		previousStatement := statements[i-1]
+		cuddledWithLastStmt := p.nodeEnd(previousStatement) == p.nodeStart(stmt)-1
 
-		// If the last statement didn't end one line above the current statement
-		// we know we're not cuddled so just move on.
-		if p.nodeEnd(previousStatement) != p.nodeStart(stmt)-1 {
+		// If we're not cuddled and we don't need to enforce err-check cuddling
+		// then we can bail out here
+		if !cuddledWithLastStmt && !p.config.MustCuddleErrCheckAndAssign {
 			continue
 		}
 
-		// We know we're cuddled, extract assigned variables on the line above
+		// Extract assigned variables on the line above
 		// which is the only thing we allow cuddling with. If the assignment is
 		// made over multiple lines we should not allow cuddling.
 		var assignedOnLineAbove []string
@@ -228,18 +248,18 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 		var calledOnLineAbove []string
 
 		// Check if the previous statement spans over multiple lines.
-		var isMultiLineAssignment = p.nodeStart(previousStatement) != p.nodeStart(stmt)-1
+		var cuddledWithMultiLineAssignment = cuddledWithLastStmt && p.nodeStart(previousStatement) != p.nodeStart(stmt)-1
 
 		// Ensure previous line is not a multi line assignment and if not get
 		// rightAndLeftHandSide assigned variables.
-		if !isMultiLineAssignment {
+		if !cuddledWithMultiLineAssignment {
 			assignedOnLineAbove = p.findLHS(previousStatement)
 			calledOnLineAbove = p.findRHS(previousStatement)
 		}
 
 		// If previous assignment is multi line and we allow it, fetch
 		// assignments (but only assignments).
-		if isMultiLineAssignment && p.config.AllowMultiLineAssignCuddle {
+		if cuddledWithMultiLineAssignment && p.config.AllowMultiLineAssignCuddle {
 			if _, ok := previousStatement.(*ast.AssignStmt); ok {
 				assignedOnLineAbove = p.findLHS(previousStatement)
 			}
@@ -300,8 +320,28 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			return false
 		}
 
+		// If it's not an if statement and we're not cuddled move on. The only
+		// reason we need to keep going for if statements is to check if we
+		// should be cuddled with an error check.
+		if _, ok := stmt.(*ast.IfStmt); !ok {
+			if !cuddledWithLastStmt {
+				continue
+			}
+		}
+
 		switch t := stmt.(type) {
 		case *ast.IfStmt:
+			if !cuddledWithLastStmt {
+				checkingErr := atLeastOneInListsMatch(rightAndLeftHandSide, p.config.ErrorVariableNames)
+				if checkingErr {
+					if atLeastOneInListsMatch(assignedOnLineAbove, p.config.ErrorVariableNames) {
+						p.addError(t.Pos(), "if statements that check an error must be cuddled with the statement that assigned the error")
+					}
+				}
+
+				continue
+			}
+
 			if len(assignedOnLineAbove) == 0 {
 				p.addError(t.Pos(), "if statements should only be cuddled with assignments")
 				continue

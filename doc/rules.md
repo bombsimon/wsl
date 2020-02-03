@@ -983,3 +983,31 @@ switch inSwitch.(type) {
 // cases
 }
 ```
+
+---
+
+### If statements that check an error must be cuddled with the statement that assigned the error
+
+> Can be configured, see [configuration
+documentation](configuration.md#enforce-err-cuddling)
+
+When an `if` statement checks a variable named `err`, which was assigned on the line above, it should be cuddled with that assignment. This makes clear the relationship between the error check and the call that may have resulted in an error.
+
+```go
+err := ErrorProducingFunc()
+
+if err != nil {
+    return err
+}
+```
+
+#### Recommended amendment
+
+Remove the empty line between the assignment and the error check.
+
+```go
+err := ErrorProducingFunc()
+if err != nil {
+    return err
+}
+```
