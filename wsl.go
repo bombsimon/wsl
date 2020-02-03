@@ -271,7 +271,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			leftHandSide                = p.findLHS(stmt)
 			rightHandSide               = p.findRHS(stmt)
 			rightAndLeftHandSide        = append(leftHandSide, rightHandSide...)
-			checkingNilErr              = p.isCheckingErrAgainstNil(stmt, rightAndLeftHandSide)
+			checkingNilErr              = p.isCheckingErrAgainstNil(stmt, leftHandSide, rightHandSide)
 			calledOrAssignedOnLineAbove = append(calledOnLineAbove, assignedOnLineAbove...)
 			enforceErrCuddling          = p.config.MustCuddleErrCheckAndAssign && checkingNilErr
 		)
@@ -997,13 +997,14 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 	}
 }
 
-func (p *Processor) isCheckingErrAgainstNil(stmt ast.Stmt, rightAndLeftHandSide []string) bool {
+func (p *Processor) isCheckingErrAgainstNil(stmt ast.Stmt, lhs []string, rhs []string) bool {
 	if _, isIf := stmt.(*ast.IfStmt); !isIf {
 		return false
 	}
 
 	errCheckArgs := append(p.config.ErrorVariableNames, "nil")
-	if !atLeastOneInListsMatch(rightAndLeftHandSide, errCheckArgs) {
+	if !atLeastOneInListsMatch(lhs, errCheckArgs) &&
+		!atLeastOneInListsMatch(rhs, errCheckArgs) {
 		return false
 	}
 
