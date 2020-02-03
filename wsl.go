@@ -320,12 +320,23 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			return false
 		}
 
+		// If it's not an if statement and we're not cuddled move on. The only
+		// reason we need to keep going for if statements is to check if we
+		// should be cuddled with an error check.
+		if _, ok := stmt.(*ast.IfStmt); !ok {
+			if !cuddledWithLastStmt {
+				continue
+			}
+		}
+
 		switch t := stmt.(type) {
 		case *ast.IfStmt:
-			checkingErr := atLeastOneInListsMatch(rightAndLeftHandSide, p.config.ErrorVariableNames)
-			if !cuddledWithLastStmt && checkingErr {
-				if atLeastOneInListsMatch(assignedOnLineAbove, p.config.ErrorVariableNames) {
-					p.addError(t.Pos(), "if statements that check an error must be cuddled with the statement that assigned the error")
+			if !cuddledWithLastStmt {
+				checkingErr := atLeastOneInListsMatch(rightAndLeftHandSide, p.config.ErrorVariableNames)
+				if checkingErr {
+					if atLeastOneInListsMatch(assignedOnLineAbove, p.config.ErrorVariableNames) {
+						p.addError(t.Pos(), "if statements that check an error must be cuddled with the statement that assigned the error")
+					}
 				}
 
 				continue
@@ -399,13 +410,9 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 		case *ast.ExprStmt:
 			switch previousStatement.(type) {
 			case *ast.DeclStmt, *ast.ReturnStmt:
-				if cuddledWithLastStmt {
-					p.addError(t.Pos(), "expressions should not be cuddled with declarations or returns")
-				}
+				p.addError(t.Pos(), "expressions should not be cuddled with declarations or returns")
 			case *ast.IfStmt, *ast.RangeStmt, *ast.SwitchStmt:
-				if cuddledWithLastStmt {
-					p.addError(t.Pos(), "expressions should not be cuddled with blocks")
-				}
+				p.addError(t.Pos(), "expressions should not be cuddled with blocks")
 			}
 
 			// If the expression is called on a type or variable used or
