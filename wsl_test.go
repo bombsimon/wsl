@@ -200,7 +200,6 @@ func TestShouldRemoveEmptyLines(t *testing.T) {
 				}
 			}`),
 		},
-
 	}
 
 	for _, tc := range cases {
