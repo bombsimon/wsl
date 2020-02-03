@@ -85,7 +85,6 @@ func TestShouldRemoveEmptyLines(t *testing.T) {
 	cases := []struct {
 		description          string
 		code                 []byte
-		enforceErrorCuddles  bool
 		expectedErrorStrings []string
 	}{
 		{
@@ -201,46 +200,12 @@ func TestShouldRemoveEmptyLines(t *testing.T) {
 				}
 			}`),
 		},
-		{
-			description:         "must cuddle error checks with the error assignment",
-			enforceErrorCuddles: true,
-			code: []byte(`package main
 
-			import "errors"
-
-			func main() {
-				err := errors.New("bad thing")
-
-				if err != nil {
-					fmt.Println("I'm OK")
-				}
-			}`),
-			expectedErrorStrings: []string{"if statements that check an error must be cuddled with the statement that assigned the error"},
-		},
-		{
-			description:         "must cuddle error checks with the error assignment multivalue",
-			enforceErrorCuddles: true,
-			code: []byte(`package main
-
-			import "errors"
-
-			func main() {
-				thing, err := BuildThing()
-
-				if err != nil {
-					fmt.Println("I'm OK")
-				}
-			}`),
-			expectedErrorStrings: []string{"if statements that check an error must be cuddled with the statement that assigned the error"},
-		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.description, func(t *testing.T) {
 			p := NewProcessor()
-			if tc.enforceErrorCuddles {
-				p.config.MustCuddleErrCheckAndAssign = true
-			}
 			p.process("unit-test", tc.code)
 
 			require.Len(t, p.result, len(tc.expectedErrorStrings), "correct amount of errors found")
@@ -1515,6 +1480,100 @@ func TestWithConfig(t *testing.T) {
 				"case block should end with newline at this size",
 				"case block should end with newline at this size",
 			},
+		},
+		{
+			description:         "must cuddle error checks with the error assignment",
+			customConfig: &Configuration{
+				StrictAppend:                     true,
+				AllowAssignAndCallCuddle:         true,
+				AllowMultiLineAssignCuddle:       true,
+				MustCuddleErrCheckAndAssign:      true,
+				ErrorVariableNames:               []string{"err"},
+			},
+			code: []byte(`package main
+
+			import "errors"
+
+			func main() {
+				err := errors.New("bad thing")
+
+				if err != nil {
+					fmt.Println("I'm OK")
+				}
+			}`),
+			expectedErrorStrings: []string{"if statements that check an error must be cuddled with the statement that assigned the error"},
+		},
+		{
+			description:         "must cuddle error checks with the error assignment multivalue",
+			customConfig: &Configuration{
+				StrictAppend:                     true,
+				AllowAssignAndCallCuddle:         true,
+				AllowMultiLineAssignCuddle:       true,
+				MustCuddleErrCheckAndAssign:      true,
+				ErrorVariableNames:               []string{"err"},
+			},
+			code: []byte(`package main
+
+			import "errors"
+
+			func main() {
+				b, err := FSByte(useLocal, name)
+
+				if err != nil {
+					panic(err)
+				}
+			}`),
+			expectedErrorStrings: []string{"if statements that check an error must be cuddled with the statement that assigned the error"},
+		},
+		{
+			description:         "must cuddle error checks with the error assignment only on assignment",
+			customConfig: &Configuration{
+				StrictAppend:                     true,
+				AllowAssignAndCallCuddle:         true,
+				AllowMultiLineAssignCuddle:       true,
+				MustCuddleErrCheckAndAssign:      true,
+				ErrorVariableNames:               []string{"err"},
+			},
+			code: []byte(`package main
+
+			import "errors"
+
+			func main() {
+				var (
+					err error
+					once sync.Once
+				)
+
+				once.Do(func() {
+					err = ProduceError()
+				})
+			
+				if err != nil {
+					return nil, err
+				}
+			}`),
+			expectedErrorStrings: []string{},
+		},
+		{
+			description:         "must cuddle error checks with the error assignment multivalue NoError",
+			customConfig: &Configuration{
+				StrictAppend:                     true,
+				AllowAssignAndCallCuddle:         true,
+				AllowMultiLineAssignCuddle:       true,
+				MustCuddleErrCheckAndAssign:      true,
+				ErrorVariableNames:               []string{"err"},
+			},
+			code: []byte(`package main
+
+			import "errors"
+
+			func main() {
+				b, err := FSByte(useLocal, name)
+				if err != nil {
+					panic(err)
+				}
+			}`),
+			expectedErrorStrings: []string{},
 		},
 	}
 

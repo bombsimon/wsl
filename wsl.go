@@ -272,8 +272,8 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			rightAndLeftHandSide        = append(leftHandSide, rightHandSide...)
 			checkingNilErr              = p.isCheckingErrAgainstNil(stmt, rightAndLeftHandSide)
 			cuddledWithLastStmt         = p.nodeEnd(previousStatement) == p.nodeStart(stmt)-1
-			enforceErrCuddling          = p.config.MustCuddleErrCheckAndAssign && checkingNilErr
 			calledOrAssignedOnLineAbove = append(calledOnLineAbove, assignedOnLineAbove...)
+			enforceErrCuddling          = p.config.MustCuddleErrCheckAndAssign && checkingNilErr
 		)
 
 		if !cuddledWithLastStmt && !enforceErrCuddling {
@@ -322,6 +322,13 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 
 		switch t := stmt.(type) {
 		case *ast.IfStmt:
+			if !cuddledWithLastStmt && enforceErrCuddling {
+				if atLeastOneInListsMatch(assignedOnLineAbove, p.config.ErrorVariableNames) {
+					p.addError(stmt.Pos(), "if statements that check an error must be cuddled with the statement that assigned the error")
+				}
+				continue
+			}
+
 			if len(assignedOnLineAbove) == 0 {
 				p.addError(t.Pos(), "if statements should only be cuddled with assignments")
 				continue
@@ -329,11 +336,6 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 
 			if moreThanOneStatementAbove() {
 				p.addError(t.Pos(), "only one cuddle assignment allowed before if statement")
-				continue
-			}
-
-			if enforceErrCuddling && atLeastOneInListsMatch(calledOrAssignedOnLineAbove, p.config.ErrorVariableNames) {
-				p.addError(stmt.Pos(), "if statements that check an error must be cuddled with the statement that assigned the error")
 				continue
 			}
 
