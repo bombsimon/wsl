@@ -1484,9 +1484,6 @@ func TestWithConfig(t *testing.T) {
 		{
 			description:         "must cuddle error checks with the error assignment",
 			customConfig: &Configuration{
-				StrictAppend:                     true,
-				AllowAssignAndCallCuddle:         true,
-				AllowMultiLineAssignCuddle:       true,
 				MustCuddleErrCheckAndAssign:      true,
 				ErrorVariableNames:               []string{"err"},
 			},
@@ -1506,8 +1503,6 @@ func TestWithConfig(t *testing.T) {
 		{
 			description:         "must cuddle error checks with the error assignment multivalue",
 			customConfig: &Configuration{
-				StrictAppend:                     true,
-				AllowAssignAndCallCuddle:         true,
 				AllowMultiLineAssignCuddle:       true,
 				MustCuddleErrCheckAndAssign:      true,
 				ErrorVariableNames:               []string{"err"},
@@ -1528,9 +1523,6 @@ func TestWithConfig(t *testing.T) {
 		{
 			description:         "must cuddle error checks with the error assignment only on assignment",
 			customConfig: &Configuration{
-				StrictAppend:                     true,
-				AllowAssignAndCallCuddle:         true,
-				AllowMultiLineAssignCuddle:       true,
 				MustCuddleErrCheckAndAssign:      true,
 				ErrorVariableNames:               []string{"err"},
 			},
@@ -1557,8 +1549,6 @@ func TestWithConfig(t *testing.T) {
 		{
 			description:         "must cuddle error checks with the error assignment multivalue NoError",
 			customConfig: &Configuration{
-				StrictAppend:                     true,
-				AllowAssignAndCallCuddle:         true,
 				AllowMultiLineAssignCuddle:       true,
 				MustCuddleErrCheckAndAssign:      true,
 				ErrorVariableNames:               []string{"err"},

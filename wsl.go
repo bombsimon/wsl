@@ -230,6 +230,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 		}
 
 		previousStatement := statements[i-1]
+		cuddledWithLastStmt := p.nodeEnd(previousStatement) == p.nodeStart(stmt)-1
 
 		// We know we're cuddled, extract assigned variables on the line above
 		// which is the only thing we allow cuddling with. If the assignment is
@@ -241,7 +242,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 		var calledOnLineAbove []string
 
 		// Check if the previous statement spans over multiple lines.
-		var isMultiLineAssignment = p.nodeStart(previousStatement) != p.nodeStart(stmt)-1
+		var isMultiLineAssignment = cuddledWithLastStmt && p.nodeStart(previousStatement) != p.nodeStart(stmt)-1
 
 		// Ensure previous line is not a multi line assignment and if not get
 		// rightAndLeftHandSide assigned variables.
@@ -271,7 +272,6 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			rightHandSide               = p.findRHS(stmt)
 			rightAndLeftHandSide        = append(leftHandSide, rightHandSide...)
 			checkingNilErr              = p.isCheckingErrAgainstNil(stmt, rightAndLeftHandSide)
-			cuddledWithLastStmt         = p.nodeEnd(previousStatement) == p.nodeStart(stmt)-1
 			calledOrAssignedOnLineAbove = append(calledOnLineAbove, assignedOnLineAbove...)
 			enforceErrCuddling          = p.config.MustCuddleErrCheckAndAssign && checkingNilErr
 		)
