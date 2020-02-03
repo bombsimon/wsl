@@ -232,7 +232,8 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 		previousStatement := statements[i-1]
 		cuddledWithLastStmt := p.nodeEnd(previousStatement) == p.nodeStart(stmt)-1
 
-		// If we're not cuddled and we don't need to enforce error cuddling then we're done.
+		// If we're not cuddled and we don't need to enforce err-check cuddling
+		// then we can bail out here
 		if !cuddledWithLastStmt && !p.config.MustCuddleErrCheckAndAssign {
 			continue
 		}
@@ -276,16 +277,8 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			leftHandSide                = p.findLHS(stmt)
 			rightHandSide               = p.findRHS(stmt)
 			rightAndLeftHandSide        = append(leftHandSide, rightHandSide...)
-			checkingNilErr              = p.isCheckingErrAgainstNil(stmt, rightAndLeftHandSide)
 			calledOrAssignedOnLineAbove = append(calledOnLineAbove, assignedOnLineAbove...)
-			enforceErrCuddling          = p.config.MustCuddleErrCheckAndAssign && checkingNilErr
 		)
-
-		// If we're not cuddled and we don't need to enforce err-check cuddling
-		// then we can bail out here
-		if !cuddledWithLastStmt && !enforceErrCuddling {
-			continue
-		}
 
 		// If we called some kind of lock on the line above we allow cuddling
 		// anything.
@@ -329,7 +322,8 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 
 		switch t := stmt.(type) {
 		case *ast.IfStmt:
-			if !cuddledWithLastStmt && enforceErrCuddling {
+			checkingErr := atLeastOneInListsMatch(rightAndLeftHandSide, p.config.ErrorVariableNames)
+			if !cuddledWithLastStmt && checkingErr {
 				if atLeastOneInListsMatch(assignedOnLineAbove, p.config.ErrorVariableNames) {
 					p.addError(t.Pos(), "if statements that check an error must be cuddled with the statement that assigned the error")
 				}
@@ -405,9 +399,13 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 		case *ast.ExprStmt:
 			switch previousStatement.(type) {
 			case *ast.DeclStmt, *ast.ReturnStmt:
-				p.addError(t.Pos(), "expressions should not be cuddled with declarations or returns")
+				if cuddledWithLastStmt {
+					p.addError(t.Pos(), "expressions should not be cuddled with declarations or returns")
+				}
 			case *ast.IfStmt, *ast.RangeStmt, *ast.SwitchStmt:
-				p.addError(t.Pos(), "expressions should not be cuddled with blocks")
+				if cuddledWithLastStmt {
+					p.addError(t.Pos(), "expressions should not be cuddled with blocks")
+				}
 			}
 
 			// If the expression is called on a type or variable used or
@@ -1001,19 +999,6 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 			p.addError(lastStatement.Pos(), "case block should end with newline at this size")
 		}
 	}
-}
-
-func (p *Processor) isCheckingErrAgainstNil(stmt ast.Stmt, rightAndLeftHandSide []string) bool {
-	if _, isIf := stmt.(*ast.IfStmt); !isIf {
-		return false
-	}
-
-	errCheckArgs := append(p.config.ErrorVariableNames)
-	if !atLeastOneInListsMatch(rightAndLeftHandSide, errCheckArgs) {
-		return false
-	}
-
-	return true
 }
 
 func isExampleFunc(ident *ast.Ident) bool {
