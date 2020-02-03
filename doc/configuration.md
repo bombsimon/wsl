@@ -238,3 +238,28 @@ if 1 == 1 {
     */
 }
 ```
+
+### [enforce-err-cuddling](rules.md#if-statements-that-check-an-error-must-be-cuddled-with-the-statement-that-assigned-the-error)
+
+Enforces that an `if` statement checking an error variable is cuddled with the line that assigned that error variable.
+
+> Default value: false
+
+Supported when false:
+
+```go
+err := ErrorProducingFunc()
+
+if err != nil {
+    return err
+}
+```
+
+Required when true:
+
+```go
+err := ErrorProducingFunc()
+if err != nil {
+    return err
+}
+```
