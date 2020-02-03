@@ -1584,6 +1584,39 @@ func TestWithConfig(t *testing.T) {
 			}`),
 			expectedErrorStrings: []string{"if statements that check an error must be cuddled with the statement that assigned the error"},
 		},
+		{
+			description:         "err-check cuddle enforcement doesn't generate false-positives.",
+			customConfig: &Configuration{
+				AllowMultiLineAssignCuddle:       true,
+				MustCuddleErrCheckAndAssign:      true,
+				ErrorVariableNames:               []string{"err"},
+			},
+			code: []byte(`package main
+
+			import "errors"
+
+			func main() {
+				result, err := FetchSomething()
+				if err == sql.ErrNoRows {
+					return []Model{}
+				}
+
+				foo := generateFoo()
+				if foo == "bar" {
+ 				    handleBar()
+                }
+
+				var baz []string
+
+				err = loadStuff(&baz)
+				if err != nil{
+					return nil
+				}
+
+				return baz
+			}`),
+			expectedErrorStrings: []string{},
+		},
 	}
 
 	for _, tc := range cases {
