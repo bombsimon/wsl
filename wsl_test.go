@@ -97,7 +97,7 @@ func TestShouldRemoveEmptyLines(t *testing.T) {
 
 				}
 			}`),
-			expectedErrorStrings: []string{"block should not start with a whitespace", "block should not end with a whitespace (or comment)"},
+			expectedErrorStrings: []string{"block should not start with a whitespace", reasonBlockEndsWithWS},
 		},
 		{
 			description: "whitespaces parsed correct even with comments (whitespace found)",
@@ -111,7 +111,7 @@ func TestShouldRemoveEmptyLines(t *testing.T) {
 					// trailing comment, still too much whitespace
 				}
 			}`),
-			expectedErrorStrings: []string{"block should not start with a whitespace", "block should not end with a whitespace (or comment)"},
+			expectedErrorStrings: []string{"block should not start with a whitespace", reasonBlockEndsWithWS},
 		},
 		{
 			description: "whitespaces parsed correct even with comments (whitespace NOT found)",
@@ -155,7 +155,7 @@ func TestShouldRemoveEmptyLines(t *testing.T) {
 				}
 			}`),
 			expectedErrorStrings: []string{
-				"block should not end with a whitespace (or comment)",
+				reasonBlockEndsWithWS,
 				"block should not start with a whitespace",
 			},
 		},
@@ -184,7 +184,7 @@ func TestShouldRemoveEmptyLines(t *testing.T) {
 				}
 				var a = false
 			}`),
-			expectedErrorStrings: []string{"declarations should never be cuddled"},
+			expectedErrorStrings: []string{reasonNeverCuddleDeclare},
 		},
 		{
 			description: "nested if statements should not be seen as cuddled",
@@ -268,7 +268,7 @@ func TestShouldAddEmptyLines(t *testing.T) {
 					fmt.Println("I'm OK")
 				}
 			}`),
-			expectedErrorStrings: []string{"if statements should only be cuddled with assignments used in the if statement itself"},
+			expectedErrorStrings: []string{reasonOnlyCuddleWithUsedAssign},
 		},
 		{
 			description: "cannot cuddled with other things than assignments",
@@ -282,7 +282,7 @@ func TestShouldAddEmptyLines(t *testing.T) {
 					fmt.Println("I'm OK")
 				}
 			}`),
-			expectedErrorStrings: []string{"if statements should only be cuddled with assignments"},
+			expectedErrorStrings: []string{reasonOnlyCuddleIfWithAssign},
 		},
 		{
 			description: "if statement with multiple assignments above and multiple conditions",
@@ -301,7 +301,7 @@ func TestShouldAddEmptyLines(t *testing.T) {
 					return true
 				}
 			}`),
-			expectedErrorStrings: []string{"only one cuddle assignment allowed before if statement", "if statements should only be cuddled with assignments used in the if statement itself"},
+			expectedErrorStrings: []string{"only one cuddle assignment allowed before if statement", reasonOnlyCuddleWithUsedAssign},
 		},
 		{
 			description: "if statement with multiple assignments, at least one used",
@@ -329,7 +329,7 @@ func TestShouldAddEmptyLines(t *testing.T) {
 				}
 				return
 			}`),
-			expectedErrorStrings: []string{"return statements should not be cuddled if block has more than two lines"},
+			expectedErrorStrings: []string{reasonOnlyCuddle2LineReturn},
 		},
 		{
 			description: "assignments should only be cuddled with assignments (negative)",
@@ -341,7 +341,7 @@ func TestShouldAddEmptyLines(t *testing.T) {
 				}
 				foo := true
 			}`),
-			expectedErrorStrings: []string{"assignments should only be cuddled with other assignments"},
+			expectedErrorStrings: []string{reasonAssignsCuddleAssign},
 		},
 		{
 			description: "assignments should only be cuddled with assignments",
@@ -365,7 +365,7 @@ func TestShouldAddEmptyLines(t *testing.T) {
 
 				return
 			}`),
-			expectedErrorStrings: []string{"expressions should not be cuddled with declarations or returns"},
+			expectedErrorStrings: []string{reasonExpressionCuddledWithDeclOrRet},
 		},
 		{
 			description: "expressions can be cuddlede with assignments",
@@ -390,7 +390,7 @@ func TestShouldAddEmptyLines(t *testing.T) {
 					fmt.Println(i)
 				}
 			}`),
-			expectedErrorStrings: []string{"ranges should only be cuddled with assignments used in the iteration"},
+			expectedErrorStrings: []string{reasonRangeCuddledWithoutUse},
 		},
 		{
 			description: "ranges can be cuddled if iteration is of assignment above",
@@ -445,7 +445,7 @@ func TestShouldAddEmptyLines(t *testing.T) {
 					x = append(x, i)
 				}
 			}`),
-			expectedErrorStrings: []string{"ranges should only be cuddled with assignments used in the iteration"},
+			expectedErrorStrings: []string{reasonRangeCuddledWithoutUse},
 		},
 		{
 			description: "can cuddle only one assignment",
@@ -534,9 +534,9 @@ func TestShouldAddEmptyLines(t *testing.T) {
 				defer thingTwo.Close()
 			}`),
 			expectedErrorStrings: []string{
-				"assignments should only be cuddled with other assignments",
-				"only one cuddle assignment allowed before defer statement",
-				"only one cuddle assignment allowed before defer statement",
+				reasonAssignsCuddleAssign,
+				reasonOneCuddleBeforeDefer,
+				reasonOneCuddleBeforeDefer,
 			},
 		},
 		{
@@ -558,7 +558,7 @@ func TestShouldAddEmptyLines(t *testing.T) {
 				}()
 			}`),
 			expectedErrorStrings: []string{
-				"defer statements should only be cuddled with expressions on same variable",
+				reasonDeferCuddledWithOtherVar,
 			},
 		},
 		{
@@ -617,7 +617,7 @@ func TestShouldAddEmptyLines(t *testing.T) {
 					}
 				}
 			}`),
-			expectedErrorStrings: []string{"for statement without condition should never be cuddled"},
+			expectedErrorStrings: []string{reasonForWithoutCondition},
 		},
 		{
 			description: "support usage if chained",
@@ -644,8 +644,8 @@ func TestShouldAddEmptyLines(t *testing.T) {
 				}()
 			}`),
 			expectedErrorStrings: []string{
-				"go statements can only invoke functions assigned on line above",
-				"go statements can only invoke functions assigned on line above",
+				reasonGoFuncWithoutAssign,
+				reasonGoFuncWithoutAssign,
 			},
 		},
 		{
@@ -691,8 +691,8 @@ func TestShouldAddEmptyLines(t *testing.T) {
 				}
 			}`),
 			expectedErrorStrings: []string{
-				"switch statements should only be cuddled with variables switched",
-				"anonymous switch statements should never be cuddled",
+				reasonSwitchCuddledWithoutUse,
+				reasonAnonSwitchCuddled,
 			},
 		},
 		{
@@ -730,7 +730,7 @@ func TestShouldAddEmptyLines(t *testing.T) {
 				}
 			}`),
 			expectedErrorStrings: []string{
-				"type switch statements should only be cuddled with variables switched",
+				reasonTypeSwitchCuddledWithoutUse,
 			},
 		},
 		{
@@ -750,7 +750,7 @@ func TestShouldAddEmptyLines(t *testing.T) {
 				bar := "baz"
 				someList = append(someList, "notBar")
 			}`),
-			expectedErrorStrings: []string{"append only allowed to cuddle with appended value"},
+			expectedErrorStrings: []string{reasonAppendCuddledWithoutUse},
 		},
 		{
 			description: "cuddle expressions to assignments",
@@ -765,7 +765,7 @@ func TestShouldAddEmptyLines(t *testing.T) {
 				foo := true
 				someFunc(false)
 			}`),
-			expectedErrorStrings: []string{"only cuddled expressions if assigning variable or using from line above"},
+			expectedErrorStrings: []string{reasonExprCuddlingNonAssignedVar},
 		},
 		{
 			description: "channels and select, no false positives",
@@ -884,7 +884,7 @@ func TestShouldAddEmptyLines(t *testing.T) {
 				whatever := SoThisIsOK(biz)
 			}`),
 			expectedErrorStrings: []string{
-				"append only allowed to cuddle with appended value",
+				reasonAppendCuddledWithoutUse,
 			},
 		},
 		{
@@ -920,8 +920,8 @@ func TestShouldAddEmptyLines(t *testing.T) {
 			}`),
 			expectedErrorStrings: []string{
 				"block should not start with a whitespace",
-				"block should not end with a whitespace (or comment)",
-				"if statements should only be cuddled with assignments used in the if statement itself",
+				reasonBlockEndsWithWS,
+				reasonOnlyCuddleWithUsedAssign,
 			},
 		},
 		{
@@ -972,7 +972,7 @@ func TestShouldAddEmptyLines(t *testing.T) {
 				x.Calling()
 			}`),
 			expectedErrorStrings: []string{
-				"expressions should not be cuddled with blocks",
+				reasonExpressionCuddledWithBlock,
 			},
 		},
 		{
@@ -1024,8 +1024,8 @@ func TestShouldAddEmptyLines(t *testing.T) {
 				}
 			}`),
 			expectedErrorStrings: []string{
-				"if statements should only be cuddled with assignments used in the if statement itself",
-				"if statements should only be cuddled with assignments used in the if statement itself",
+				reasonOnlyCuddleWithUsedAssign,
+				reasonOnlyCuddleWithUsedAssign,
 			},
 		},
 		{
@@ -1063,9 +1063,9 @@ func TestShouldAddEmptyLines(t *testing.T) {
 				}
 			}`),
 			expectedErrorStrings: []string{
-				"block should not end with a whitespace (or comment)",
-				"block should not start with a whitespace",
-				"block should not start with a whitespace",
+				reasonBlockEndsWithWS,
+				reasonBlockStartsWithWS,
+				reasonBlockStartsWithWS,
 			},
 		},
 		{
@@ -1106,9 +1106,9 @@ func TestShouldAddEmptyLines(t *testing.T) {
 				go t4()
 			}`),
 			expectedErrorStrings: []string{
-				"only one cuddle assignment allowed before go statement",
-				"go statements can only invoke functions assigned on line above",
-				"only one cuddle assignment allowed before go statement",
+				reasonOneCuddleBeforeGo,
+				reasonGoFuncWithoutAssign,
+				reasonOneCuddleBeforeGo,
 			},
 		},
 		{
@@ -1132,7 +1132,7 @@ func TestShouldAddEmptyLines(t *testing.T) {
 				}
 			}`),
 			expectedErrorStrings: []string{
-				"if statements should only be cuddled with assignments used in the if statement itself",
+				reasonOnlyCuddleWithUsedAssign,
 			},
 		},
 		{
@@ -1185,14 +1185,14 @@ func TestShouldAddEmptyLines(t *testing.T) {
 					}()
 				}`),
 			expectedErrorStrings: []string{
-				"assignments should only be cuddled with other assignments",
-				"assignments should only be cuddled with other assignments",
-				"assignments should only be cuddled with other assignments",
-				"assignments should only be cuddled with other assignments",
-				"assignments should only be cuddled with other assignments",
-				"assignments should only be cuddled with other assignments",
-				"assignments should only be cuddled with other assignments",
-				"assignments should only be cuddled with other assignments",
+				reasonAssignsCuddleAssign,
+				reasonAssignsCuddleAssign,
+				reasonAssignsCuddleAssign,
+				reasonAssignsCuddleAssign,
+				reasonAssignsCuddleAssign,
+				reasonAssignsCuddleAssign,
+				reasonAssignsCuddleAssign,
+				reasonAssignsCuddleAssign,
 			},
 		},
 	}
@@ -1256,7 +1256,7 @@ func TestWithConfig(t *testing.T) {
 			customConfig: &Configuration{
 				AllowMultiLineAssignCuddle: false,
 			},
-			expectedErrorStrings: []string{"if statements should only be cuddled with assignments"},
+			expectedErrorStrings: []string{reasonOnlyCuddleIfWithAssign},
 		},
 		{
 			description: "multi line assignment not ok when disabled",
@@ -1285,7 +1285,7 @@ func TestWithConfig(t *testing.T) {
 			customConfig: &Configuration{
 				AllowMultiLineAssignCuddle: true,
 			},
-			expectedErrorStrings: []string{"if statements should only be cuddled with assignments used in the if statement itself"},
+			expectedErrorStrings: []string{reasonOnlyCuddleWithUsedAssign},
 		},
 		{
 			description: "strict append",
@@ -1305,7 +1305,7 @@ func TestWithConfig(t *testing.T) {
 			customConfig: &Configuration{
 				StrictAppend: true,
 			},
-			expectedErrorStrings: []string{"append only allowed to cuddle with appended value"},
+			expectedErrorStrings: []string{reasonAppendCuddledWithoutUse},
 		},
 		{
 			description: "allow cuddle var",
@@ -1379,8 +1379,8 @@ func TestWithConfig(t *testing.T) {
 				AllowTrailingComment: true,
 			},
 			expectedErrorStrings: []string{
-				"block should not end with a whitespace (or comment)",
-				"block should not end with a whitespace (or comment)",
+				reasonBlockEndsWithWS,
+				reasonBlockEndsWithWS,
 			},
 		},
 		{
@@ -1475,16 +1475,16 @@ func TestWithConfig(t *testing.T) {
 				AllowTrailingComment:             true,
 			},
 			expectedErrorStrings: []string{
-				"case block should end with newline at this size",
-				"case block should end with newline at this size",
-				"case block should end with newline at this size",
+				reasonCaseBlockTooCuddly,
+				reasonCaseBlockTooCuddly,
+				reasonCaseBlockTooCuddly,
 			},
 		},
 		{
-			description:         "must cuddle error checks with the error assignment",
+			description: "must cuddle error checks with the error assignment",
 			customConfig: &Configuration{
-				MustCuddleErrCheckAndAssign:      true,
-				ErrorVariableNames:               []string{"err"},
+				MustCuddleErrCheckAndAssign: true,
+				ErrorVariableNames:          []string{"err"},
 			},
 			code: []byte(`package main
 
@@ -1497,14 +1497,14 @@ func TestWithConfig(t *testing.T) {
 					fmt.Println("I'm OK")
 				}
 			}`),
-			expectedErrorStrings: []string{"if statements that check an error must be cuddled with the statement that assigned the error"},
+			expectedErrorStrings: []string{reasonMustCuddleErrCheck},
 		},
 		{
-			description:         "must cuddle error checks with the error assignment multivalue",
+			description: "must cuddle error checks with the error assignment multivalue",
 			customConfig: &Configuration{
-				AllowMultiLineAssignCuddle:       true,
-				MustCuddleErrCheckAndAssign:      true,
-				ErrorVariableNames:               []string{"err"},
+				AllowMultiLineAssignCuddle:  true,
+				MustCuddleErrCheckAndAssign: true,
+				ErrorVariableNames:          []string{"err"},
 			},
 			code: []byte(`package main
 
@@ -1517,13 +1517,13 @@ func TestWithConfig(t *testing.T) {
 					panic(err)
 				}
 			}`),
-			expectedErrorStrings: []string{"if statements that check an error must be cuddled with the statement that assigned the error"},
+			expectedErrorStrings: []string{reasonMustCuddleErrCheck},
 		},
 		{
-			description:         "must cuddle error checks with the error assignment only on assignment",
+			description: "must cuddle error checks with the error assignment only on assignment",
 			customConfig: &Configuration{
-				MustCuddleErrCheckAndAssign:      true,
-				ErrorVariableNames:               []string{"err"},
+				MustCuddleErrCheckAndAssign: true,
+				ErrorVariableNames:          []string{"err"},
 			},
 			code: []byte(`package main
 
@@ -1546,11 +1546,11 @@ func TestWithConfig(t *testing.T) {
 			expectedErrorStrings: []string{},
 		},
 		{
-			description:         "must cuddle error checks with the error assignment multivalue NoError",
+			description: "must cuddle error checks with the error assignment multivalue NoError",
 			customConfig: &Configuration{
-				AllowMultiLineAssignCuddle:       true,
-				MustCuddleErrCheckAndAssign:      true,
-				ErrorVariableNames:               []string{"err"},
+				AllowMultiLineAssignCuddle:  true,
+				MustCuddleErrCheckAndAssign: true,
+				ErrorVariableNames:          []string{"err"},
 			},
 			code: []byte(`package main
 
@@ -1565,11 +1565,11 @@ func TestWithConfig(t *testing.T) {
 			expectedErrorStrings: []string{},
 		},
 		{
-			description:         "must cuddle error checks with the error assignment known err",
+			description: "must cuddle error checks with the error assignment known err",
 			customConfig: &Configuration{
-				AllowMultiLineAssignCuddle:       true,
-				MustCuddleErrCheckAndAssign:      true,
-				ErrorVariableNames:               []string{"err"},
+				AllowMultiLineAssignCuddle:  true,
+				MustCuddleErrCheckAndAssign: true,
+				ErrorVariableNames:          []string{"err"},
 			},
 			code: []byte(`package main
 
@@ -1582,14 +1582,14 @@ func TestWithConfig(t *testing.T) {
 					return []Model{}
 				}
 			}`),
-			expectedErrorStrings: []string{"if statements that check an error must be cuddled with the statement that assigned the error"},
+			expectedErrorStrings: []string{reasonMustCuddleErrCheck},
 		},
 		{
-			description:         "err-check cuddle enforcement doesn't generate false-positives.",
+			description: "err-check cuddle enforcement doesn't generate false-positives.",
 			customConfig: &Configuration{
-				AllowMultiLineAssignCuddle:       true,
-				MustCuddleErrCheckAndAssign:      true,
-				ErrorVariableNames:               []string{"err"},
+				AllowMultiLineAssignCuddle:  true,
+				MustCuddleErrCheckAndAssign: true,
+				ErrorVariableNames:          []string{"err"},
 			},
 			code: []byte(`package main
 

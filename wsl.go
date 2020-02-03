@@ -10,6 +10,49 @@ import (
 	"strings"
 )
 
+// Error reason strings
+const (
+	reasonMustCuddleErrCheck             = "if statements that check an error must be cuddled with the statement that assigned the error"
+	reasonOnlyCuddleIfWithAssign         = "if statements should only be cuddled with assignments"
+	reasonOnlyOneCuddle                  = "only one cuddle assignment allowed before if statement"
+	reasonOnlyCuddleWithUsedAssign       = "if statements should only be cuddled with assignments used in the if statement itself"
+	reasonOnlyCuddle2LineReturn          = "return statements should not be cuddled if block has more than two lines"
+	reasonMultiLineBranchCuddle          = "branch statements should not be cuddled if block has more than two lines"
+	reasonAppendCuddledWithoutUse        = "append only allowed to cuddle with appended value"
+	reasonAssignsCuddleAssign            = "assignments should only be cuddled with other assignments"
+	reasonNeverCuddleDeclare             = "declarations should never be cuddled"
+	reasonExpressionCuddledWithDeclOrRet = "expressions should not be cuddled with declarations or returns"
+	reasonExpressionCuddledWithBlock     = "expressions should not be cuddled with blocks"
+	reasonExprCuddlingNonAssignedVar     = "only cuddled expressions if assigning variable or using from line above"
+	reasonOneCuddleBeforeRange           = "only one cuddle assignment allowed before range statement"
+	reasonRangeCuddledWithoutUse         = "ranges should only be cuddled with assignments used in the iteration"
+	reasonOneCuddleBeforeDefer           = "only one cuddle assignment allowed before defer statement"
+	reasonDeferCuddledWithOtherVar       = "defer statements should only be cuddled with expressions on same variable"
+	reasonForWithoutCondition            = "for statement without condition should never be cuddled"
+	reasonForWithMoreThanOneCuddle       = "only one cuddle assignment allowed before for statement"
+	reasonForCuddledAssignWithoutUse     = "for statements should only be cuddled with assignments used in the iteration"
+	reasonOneCuddleBeforeGo              = "only one cuddle assignment allowed before go statement"
+	reasonGoFuncWithoutAssign            = "go statements can only invoke functions assigned on line above"
+	reasonSwitchManyCuddles              = "only one cuddle assignment allowed before switch statement"
+	reasonAnonSwitchCuddled              = "anonymous switch statements should never be cuddled"
+	reasonSwitchCuddledWithoutUse        = "switch statements should only be cuddled with variables switched"
+	reasonTypeSwitchTooCuddled           = "only one cuddle assignment allowed before type switch statement"
+	reasonTypeSwitchCuddledWithoutUse    = "type switch statements should only be cuddled with variables switched"
+	reasonBlockStartsWithWS              = "block should not start with a whitespace"
+	reasonBlockEndsWithWS                = "block should not end with a whitespace (or comment)"
+	reasonCaseBlockTooCuddly             = "case block should end with newline at this size"
+)
+
+// Warning strings
+const (
+	warnTypeNotImplement           = "type not implemented"
+	warnStmtNotImplemented         = "stmt type not implemented"
+	warnBodyStmtTypeNotImplemented = "body statement type not implemented "
+	warnWSNodeTypeNotImplemented   = "whitespace node type not implemented "
+	warnUnknownLHS                 = "UNKNOWN LHS"
+	warnUnknownRHS                 = "UNKNOWN RHS"
+)
+
 type Configuration struct {
 	// StrictAppend will do strict checking when assigning from append (x =
 	// append(x, y)). If this is set to true the append call must append either
@@ -189,7 +232,7 @@ func (p *Processor) process(filename string, data []byte) {
 			// `go fmt` will handle proper spacing for GenDecl such as imports,
 			// constants etc.
 		default:
-			p.addWarning("type not implemented", d.Pos(), v)
+			p.addWarning(warnTypeNotImplement, d.Pos(), v)
 		}
 	}
 }
@@ -335,7 +378,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 				checkingErr := atLeastOneInListsMatch(rightAndLeftHandSide, p.config.ErrorVariableNames)
 				if checkingErr {
 					if atLeastOneInListsMatch(assignedOnLineAbove, p.config.ErrorVariableNames) {
-						p.addError(t.Pos(), "if statements that check an error must be cuddled with the statement that assigned the error")
+						p.addError(t.Pos(), reasonMustCuddleErrCheck)
 					}
 				}
 
@@ -343,12 +386,12 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 
 			if len(assignedOnLineAbove) == 0 {
-				p.addError(t.Pos(), "if statements should only be cuddled with assignments")
+				p.addError(t.Pos(), reasonOnlyCuddleIfWithAssign)
 				continue
 			}
 
 			if moreThanOneStatementAbove() {
-				p.addError(t.Pos(), "only one cuddle assignment allowed before if statement")
+				p.addError(t.Pos(), reasonOnlyOneCuddle)
 				continue
 			}
 
@@ -360,26 +403,26 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 				continue
 			}
 
-			p.addError(t.Pos(), "if statements should only be cuddled with assignments used in the if statement itself")
+			p.addError(t.Pos(), reasonOnlyCuddleWithUsedAssign)
 		case *ast.ReturnStmt:
 			if isLastStatementInBlockOfOnlyTwoLines() {
 				continue
 			}
 
-			p.addError(t.Pos(), "return statements should not be cuddled if block has more than two lines")
+			p.addError(t.Pos(), reasonOnlyCuddle2LineReturn)
 		case *ast.BranchStmt:
 			if isLastStatementInBlockOfOnlyTwoLines() {
 				continue
 			}
 
-			p.addError(t.Pos(), "branch statements should not be cuddled if block has more than two lines")
+			p.addError(t.Pos(), reasonMultiLineBranchCuddle)
 		case *ast.AssignStmt:
 			// append is usually an assignment but should not be allowed to be
 			// cuddled with anything not appended.
 			if len(rightHandSide) > 0 && rightHandSide[len(rightHandSide)-1] == "append" {
 				if p.config.StrictAppend {
 					if !atLeastOneInListsMatch(calledOrAssignedOnLineAbove, rightHandSide) {
-						p.addError(t.Pos(), "append only allowed to cuddle with appended value")
+						p.addError(t.Pos(), reasonAppendCuddledWithoutUse)
 					}
 				}
 
@@ -402,17 +445,17 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 				}
 			}
 
-			p.addError(t.Pos(), "assignments should only be cuddled with other assignments")
+			p.addError(t.Pos(), reasonAssignsCuddleAssign)
 		case *ast.DeclStmt:
 			if !p.config.AllowCuddleDeclaration {
-				p.addError(t.Pos(), "declarations should never be cuddled")
+				p.addError(t.Pos(), reasonNeverCuddleDeclare)
 			}
 		case *ast.ExprStmt:
 			switch previousStatement.(type) {
 			case *ast.DeclStmt, *ast.ReturnStmt:
-				p.addError(t.Pos(), "expressions should not be cuddled with declarations or returns")
+				p.addError(t.Pos(), reasonExpressionCuddledWithDeclOrRet)
 			case *ast.IfStmt, *ast.RangeStmt, *ast.SwitchStmt:
-				p.addError(t.Pos(), "expressions should not be cuddled with blocks")
+				p.addError(t.Pos(), reasonExpressionCuddledWithBlock)
 			}
 
 			// If the expression is called on a type or variable used or
@@ -430,17 +473,17 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			// If we assigned variables on the line above but didn't use them in
 			// this expression there should probably be a newline between them.
 			if len(assignedOnLineAbove) > 0 && !atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) {
-				p.addError(t.Pos(), "only cuddled expressions if assigning variable or using from line above")
+				p.addError(t.Pos(), reasonExprCuddlingNonAssignedVar)
 			}
 		case *ast.RangeStmt:
 			if moreThanOneStatementAbove() {
-				p.addError(t.Pos(), "only one cuddle assignment allowed before range statement")
+				p.addError(t.Pos(), reasonOneCuddleBeforeRange)
 				continue
 			}
 
 			if !atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) {
 				if !atLeastOneInListsMatch(assignedOnLineAbove, assignedFirstInBlock) {
-					p.addError(t.Pos(), "ranges should only be cuddled with assignments used in the iteration")
+					p.addError(t.Pos(), reasonRangeCuddledWithoutUse)
 				}
 			}
 		case *ast.DeferStmt:
@@ -469,7 +512,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 
 			if moreThanOneStatementAbove() {
-				p.addError(t.Pos(), "only one cuddle assignment allowed before defer statement")
+				p.addError(t.Pos(), reasonOneCuddleBeforeDefer)
 
 				continue
 			}
@@ -483,17 +526,17 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 
 			if !atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) {
-				p.addError(t.Pos(), "defer statements should only be cuddled with expressions on same variable")
+				p.addError(t.Pos(), reasonDeferCuddledWithOtherVar)
 			}
 		case *ast.ForStmt:
 			if len(rightAndLeftHandSide) == 0 {
-				p.addError(t.Pos(), "for statement without condition should never be cuddled")
+				p.addError(t.Pos(), reasonForWithoutCondition)
 
 				continue
 			}
 
 			if moreThanOneStatementAbove() {
-				p.addError(t.Pos(), "only one cuddle assignment allowed before for statement")
+				p.addError(t.Pos(), reasonForWithMoreThanOneCuddle)
 
 				continue
 			}
@@ -503,7 +546,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			// first line in the block for details.
 			if !atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) {
 				if !atLeastOneInListsMatch(assignedOnLineAbove, assignedFirstInBlock) {
-					p.addError(t.Pos(), "for statements should only be cuddled with assignments used in the iteration")
+					p.addError(t.Pos(), reasonForCuddledAssignWithoutUse)
 				}
 			}
 		case *ast.GoStmt:
@@ -512,31 +555,31 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 
 			if moreThanOneStatementAbove() {
-				p.addError(t.Pos(), "only one cuddle assignment allowed before go statement")
+				p.addError(t.Pos(), reasonOneCuddleBeforeGo)
 
 				continue
 			}
 
 			if !atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) {
-				p.addError(t.Pos(), "go statements can only invoke functions assigned on line above")
+				p.addError(t.Pos(), reasonGoFuncWithoutAssign)
 			}
 		case *ast.SwitchStmt:
 			if moreThanOneStatementAbove() {
-				p.addError(t.Pos(), "only one cuddle assignment allowed before switch statement")
+				p.addError(t.Pos(), reasonSwitchManyCuddles)
 
 				continue
 			}
 
 			if !atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) {
 				if len(rightAndLeftHandSide) == 0 {
-					p.addError(t.Pos(), "anonymous switch statements should never be cuddled")
+					p.addError(t.Pos(), reasonAnonSwitchCuddled)
 				} else {
-					p.addError(t.Pos(), "switch statements should only be cuddled with variables switched")
+					p.addError(t.Pos(), reasonSwitchCuddledWithoutUse)
 				}
 			}
 		case *ast.TypeSwitchStmt:
 			if moreThanOneStatementAbove() {
-				p.addError(t.Pos(), "only one cuddle assignment allowed before type switch statement")
+				p.addError(t.Pos(), reasonTypeSwitchTooCuddled)
 
 				continue
 			}
@@ -546,7 +589,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 				// Allow type assertion on variables used in the first case
 				// immediately.
 				if !atLeastOneInListsMatch(assignedOnLineAbove, assignedFirstInBlock) {
-					p.addError(t.Pos(), "type switch statements should only be cuddled with variables switched")
+					p.addError(t.Pos(), reasonTypeSwitchCuddledWithoutUse)
 				}
 			}
 		case *ast.CaseClause, *ast.CommClause:
@@ -554,7 +597,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			// whitespaces within the block. There's nothing in the case itself
 			// that may be cuddled.
 		default:
-			p.addWarning("stmt type not implemented", t.Pos(), t)
+			p.addWarning(warnStmtNotImplemented, t.Pos(), t)
 		}
 	}
 }
@@ -612,7 +655,7 @@ func (p *Processor) firstBodyStatement(i int, allStmt []ast.Stmt) ast.Node {
 		p.parseBlockStatements(statementBodyContent)
 	default:
 		p.addWarning(
-			"body statement type not implemented ",
+			warnBodyStmtTypeNotImplemented,
 			stmt.Pos(), statementBodyContent,
 		)
 	}
@@ -673,7 +716,7 @@ func (p *Processor) findLHS(node ast.Node) []string {
 			return p.findLHS(x)
 		}
 
-		p.addWarning("UNKNOWN LHS", t.Pos(), t)
+		p.addWarning(warnUnknownLHS, t.Pos(), t)
 	}
 
 	return lhs
@@ -755,7 +798,7 @@ func (p *Processor) findRHS(node ast.Node) []string {
 			return p.findRHS(x)
 		}
 
-		p.addWarning("UNKNOWN RHS", t.Pos(), t)
+		p.addWarning(warnUnknownRHS, t.Pos(), t)
 	}
 
 	return rhs
@@ -865,7 +908,7 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 		blockStatements = t.Body
 		blockStartPos = t.Colon
 	default:
-		p.addWarning("whitespace node type not implemented ", stmt.Pos(), stmt)
+		p.addWarning(warnWSNodeTypeNotImplemented, stmt.Pos(), stmt)
 
 		return
 	}
@@ -915,7 +958,7 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 	if p.nodeStart(firstStatement) != blockStartLine+allowedLinesBeforeFirstStatement {
 		p.addError(
 			blockStartPos,
-			"block should not start with a whitespace",
+			reasonBlockStartsWithWS,
 		)
 	}
 
@@ -939,7 +982,7 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 		}
 
 		if p.nodeEnd(lastStatement) != blockEndLine-1 && !isExampleFunc(ident) {
-			p.addError(blockEndPos, "block should not end with a whitespace (or comment)")
+			p.addError(blockEndPos, reasonBlockEndsWithWS)
 		}
 
 		return
@@ -1003,7 +1046,7 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 	if p.config.CaseForceTrailingWhitespaceLimit > 0 && !hasTrailingWhitespace {
 		// Check if the block size is too big to miss the newline.
 		if blockSize >= p.config.CaseForceTrailingWhitespaceLimit {
-			p.addError(lastStatement.Pos(), "case block should end with newline at this size")
+			p.addError(lastStatement.Pos(), reasonCaseBlockTooCuddly)
 		}
 	}
 }
