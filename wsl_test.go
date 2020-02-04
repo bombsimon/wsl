@@ -1613,6 +1613,10 @@ func TestWithConfig(t *testing.T) {
 					return nil
 				}
 
+				if err := ProduceError(); err != nil {
+					return err
+				}
+
 				return baz
 			}`),
 			expectedErrorStrings: []string{},
