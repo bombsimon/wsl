@@ -375,16 +375,13 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 		switch t := stmt.(type) {
 		case *ast.IfStmt:
 			checkingErrInitializedInline := func() bool {
-				if t.Init != nil {
-					// Variables were initialized inline in the if statement
-					// Let's make sure it's the err just to be safe
-					initLHS := p.findLHS(t.Init)
-					if atLeastOneInListsMatch(initLHS, p.config.ErrorVariableNames) {
-						// Err var was initialized and checked, no issue.
-						return true
-					}
+				if t.Init == nil {
+					return false
 				}
-				return false
+
+				// Variables were initialized inline in the if statement
+				// Let's make sure it's the err just to be safe
+				return atLeastOneInListsMatch(p.findLHS(t.Init), p.config.ErrorVariableNames)
 			}
 
 			if !cuddledWithLastStmt {
