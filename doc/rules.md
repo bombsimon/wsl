@@ -709,7 +709,7 @@ purposes. One bad example is:
 ```go
 listA := GetA()
 listB := GetB()
-for _, v := range lsitB {
+for _, v := range listB {
     fmt.Println(v)
 }
 ```
@@ -719,16 +719,15 @@ for _, v := range lsitB {
 Give an empty line before `range` statement:
 
 ```go
-func example(y []int) []string {
 listA := GetA()
 listB := GetB()
 
-for _, v := range lsitB {
+for _, v := range listB {
     fmt.Println(v)
 }
 
 listC := GetC()
-for _, v := range lsitC {
+for _, v := range listC {
     fmt.Println(v)
 }
 ```
