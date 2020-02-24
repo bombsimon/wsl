@@ -3,7 +3,6 @@ package wsl
 import (
 	"fmt"
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"os"
 	"reflect"
@@ -11,6 +10,28 @@ import (
 )
 
 // Error reason strings.
+type ErrorType int
+
+const (
+	WhitespaceShouldAdd ErrorType = iota
+	WhitespaceShouldRemoveBeginning
+	WhitespaceShouldRemoveEnd
+)
+
+func (e ErrorType) String() string {
+	switch e {
+	case WhitespaceShouldAdd:
+		return "should add whitesapce here"
+	case WhitespaceShouldRemoveBeginning:
+		return "should remove whitespace in beginning of block"
+	case WhitespaceShouldRemoveEnd:
+		return "should remove whitespace in end of block"
+	}
+
+	return ""
+}
+
+// Error reason strings
 const (
 	reasonMustCuddleErrCheck             = "if statements that check an error must be cuddled with the statement that assigned the error"
 	reasonOnlyCuddleIfWithAssign         = "if statements should only be cuddled with assignments"
@@ -54,6 +75,7 @@ const (
 	warnUnknownRHS                 = "UNKNOWN RHS"
 )
 
+// Configuration represents configurable settingds for the linter.
 type Configuration struct {
 	// StrictAppend will do strict checking when assigning from append (x =
 	// append(x, y)). If this is set to true the append call must append either
@@ -106,20 +128,10 @@ type Configuration struct {
 
 	// If the number of lines in a case block is equal to or lager than this
 	// number, the case *must* end white a newline.
-	ForceCaseTrailingWhitespaceLimit int
+	CaseForceTrailingWhitespaceLimit int
 
 	// AllowTrailingComment will allow blocks to end with comments.
 	AllowTrailingComment bool
-
-	// AllowSeparatedLeadingComment will allow multiple comments in the
-	// beginning of a block separated with newline. Example:
-	//  func () {
-	//		// Comment one
-	//
-	//		// Comment two
-	// 		fmt.Println("x")
-	//  }
-	AllowSeparatedLeadingComment bool
 
 	// AllowCuddleDeclaration will allow multiple var/declaration statements to
 	// be cuddled. This defaults to false but setting it to true will enable the
@@ -144,7 +156,7 @@ type Configuration struct {
 	//  mu.Unlock()
 	AllowCuddleWithRHS []string
 
-	// ForceCuddleErrCheckAndAssign will cause an error when an If statement that
+	// MustCuddleErrCheckAndAssign will cause an error when an If statement that
 	// checks an error variable doesn't cuddle with the assignment of that variable.
 	// This defaults to false but setting it to true will cause the following
 	// to generate an error:
@@ -154,9 +166,9 @@ type Configuration struct {
 	// if err != nil {
 	//     return err
 	// }
-	ForceCuddleErrCheckAndAssign bool
+	MustCuddleErrCheckAndAssign bool
 
-	// When ForceCuddleErrCheckAndAssign is enabled this is a list of names
+	// When MustCuddleErrCheckAndAssign is enabled this is a list of names
 	// used for error variables to check for in the conditional.
 	// Defaults to just "err"
 	ErrorVariableNames []string
@@ -196,38 +208,43 @@ func DefaultConfig() Configuration {
 
 // Result represents the result of one error.
 type Result struct {
-	FileName   string
-	LineNumber int
-	Position   token.Position
-	Reason     string
-}
-
-// String returns the filename, line number and reason of a Result.
-func (r *Result) String() string {
-	return fmt.Sprintf("%s:%d: %s", r.FileName, r.LineNumber, r.Reason)
+	Node   ast.Node
+	Reason string
+	Type   ErrorType
 }
 
 type Processor struct {
 	config   Configuration
-	result   []Result
-	warnings []string
-	fileSet  *token.FileSet
 	file     *ast.File
+	fileSet  *token.FileSet
+	Result   []Result
+	Warnings []string
 }
 
-// NewProcessor will create a Processor.
-//
-//nolint:gocritic // It's fine to copy config struct
-func NewProcessorWithConfig(cfg Configuration) *Processor {
+// NewProcessorWithConfig will create a Processor with the passed configuration.
+func NewProcessorWithConfig(file *ast.File, fileSet *token.FileSet, cfg Configuration) *Processor {
 	return &Processor{
-		result: []Result{},
-		config: cfg,
+		config:  cfg,
+		file:    file,
+		fileSet: fileSet,
 	}
 }
 
 // NewProcessor will create a Processor.
-func NewProcessor() *Processor {
-	return NewProcessorWithConfig(DefaultConfig())
+func NewProcessor(file *ast.File, fileSet *token.FileSet) *Processor {
+	return NewProcessorWithConfig(
+		file, fileSet,
+		Configuration{
+			StrictAppend:                     true,
+			AllowAssignAndCallCuddle:         true,
+			AllowMultiLineAssignCuddle:       true,
+			AllowTrailingComment:             false,
+			ForceCuddleErrCheckAndAssign:     false,
+			ForceCaseTrailingWhitespaceLimit: 0,
+			AllowCuddleWithCalls:             []string{"Lock", "RLock"},
+			AllowCuddleWithRHS:               []string{"Unlock", "RUnlock"},
+			ErrorVariableNames:               []string{"err"},
+		})
 }
 
 // ProcessFiles takes a string slice with file names (full paths) and lints
@@ -247,23 +264,7 @@ func (p *Processor) ProcessFiles(filenames []string) ([]Result, []string) {
 	return p.result, p.warnings
 }
 
-func (p *Processor) process(filename string, data []byte) {
-	fileSet := token.NewFileSet()
-	file, err := parser.ParseFile(fileSet, filename, data, parser.ParseComments)
-	// If the file is not parsable let's add a syntax error and move on.
-	if err != nil {
-		p.result = append(p.result, Result{
-			FileName:   filename,
-			LineNumber: 0,
-			Reason:     fmt.Sprintf("invalid syntax, file cannot be linted (%s)", err.Error()),
-		})
-
-		return
-	}
-
-	p.fileSet = fileSet
-	p.file = file
-
+func (p *Processor) ParseAST() {
 	for _, d := range p.file.Decls {
 		switch v := d.(type) {
 		case *ast.FuncDecl:
@@ -317,7 +318,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 
 		// If we're not cuddled and we don't need to enforce err-check cuddling
 		// then we can bail out here
-		if !cuddledWithLastStmt && !p.config.ForceCuddleErrCheckAndAssign {
+		if !cuddledWithLastStmt && !p.config.MustCuddleErrCheckAndAssign {
 			continue
 		}
 
@@ -460,7 +461,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 					}
 
 					if atLeastOneInListsMatch(assignedOnLineAbove, p.config.ErrorVariableNames) {
-						p.addError(t.Pos(), reasonMustCuddleErrCheck)
+						p.addWhitespaceError(t, reasonMustCuddleErrCheck)
 					}
 				}
 
@@ -468,12 +469,12 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 
 			if len(assignedOnLineAbove) == 0 {
-				p.addError(t.Pos(), reasonOnlyCuddleIfWithAssign)
+				p.addWhitespaceError(t, reasonOnlyCuddleIfWithAssign)
 				continue
 			}
 
 			if moreThanOneStatementAbove() {
-				p.addError(t.Pos(), reasonOnlyOneCuddle)
+				p.addWhitespaceError(t, reasonOnlyOneCuddle)
 				continue
 			}
 
@@ -485,26 +486,26 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 				continue
 			}
 
-			p.addError(t.Pos(), reasonOnlyCuddleWithUsedAssign)
+			p.addWhitespaceError(t, reasonOnlyCuddleWithUsedAssign)
 		case *ast.ReturnStmt:
 			if isLastStatementInBlockOfOnlyTwoLines() {
 				continue
 			}
 
-			p.addError(t.Pos(), reasonOnlyCuddle2LineReturn)
+			p.addWhitespaceError(t, reasonOnlyCuddle2LineReturn)
 		case *ast.BranchStmt:
 			if isLastStatementInBlockOfOnlyTwoLines() {
 				continue
 			}
 
-			p.addError(t.Pos(), reasonMultiLineBranchCuddle)
+			p.addWhitespaceError(t, reasonMultiLineBranchCuddle)
 		case *ast.AssignStmt:
 			// append is usually an assignment but should not be allowed to be
 			// cuddled with anything not appended.
 			if len(rightHandSide) > 0 && rightHandSide[len(rightHandSide)-1] == "append" {
 				if p.config.StrictAppend {
 					if !atLeastOneInListsMatch(calledOrAssignedOnLineAbove, rightHandSide) {
-						p.addError(t.Pos(), reasonAppendCuddledWithoutUse)
+						p.addWhitespaceError(t, reasonAppendCuddledWithoutUse)
 					}
 				}
 
@@ -535,10 +536,10 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 				}
 			}
 
-			p.addError(t.Pos(), reasonAssignsCuddleAssign)
+			p.addWhitespaceError(t, reasonAssignsCuddleAssign)
 		case *ast.DeclStmt:
 			if !p.config.AllowCuddleDeclaration {
-				p.addError(t.Pos(), reasonNeverCuddleDeclare)
+				p.addWhitespaceError(t, reasonNeverCuddleDeclare)
 			}
 		case *ast.ExprStmt:
 			switch previousStatement.(type) {
@@ -549,7 +550,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 
 				p.addError(t.Pos(), reasonExpressionCuddledWithDeclOrRet)
 			case *ast.IfStmt, *ast.RangeStmt, *ast.SwitchStmt:
-				p.addError(t.Pos(), reasonExpressionCuddledWithBlock)
+				p.addWhitespaceError(t, reasonExpressionCuddledWithBlock)
 			}
 
 			// If the expression is called on a type or variable used or
@@ -567,11 +568,11 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			// If we assigned variables on the line above but didn't use them in
 			// this expression there should probably be a newline between them.
 			if len(assignedOnLineAbove) > 0 && !atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) {
-				p.addError(t.Pos(), reasonExprCuddlingNonAssignedVar)
+				p.addWhitespaceError(t, reasonExprCuddlingNonAssignedVar)
 			}
 		case *ast.RangeStmt:
 			if moreThanOneStatementAbove() {
-				p.addError(t.Pos(), reasonOneCuddleBeforeRange)
+				p.addWhitespaceError(t, reasonOneCuddleBeforeRange)
 				continue
 			}
 
@@ -606,7 +607,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 
 			if moreThanOneStatementAbove() {
-				p.addError(t.Pos(), reasonOneCuddleBeforeDefer)
+				p.addWhitespaceError(t, reasonOneCuddleBeforeDefer)
 
 				continue
 			}
@@ -638,17 +639,17 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 
 			if !atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) {
-				p.addError(t.Pos(), reasonDeferCuddledWithOtherVar)
+				p.addWhitespaceError(t, reasonDeferCuddledWithOtherVar)
 			}
 		case *ast.ForStmt:
 			if len(rightAndLeftHandSide) == 0 {
-				p.addError(t.Pos(), reasonForWithoutCondition)
+				p.addWhitespaceError(t, reasonForWithoutCondition)
 
 				continue
 			}
 
 			if moreThanOneStatementAbove() {
-				p.addError(t.Pos(), reasonForWithMoreThanOneCuddle)
+				p.addWhitespaceError(t, reasonForWithMoreThanOneCuddle)
 
 				continue
 			}
@@ -667,7 +668,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 
 			if moreThanOneStatementAbove() {
-				p.addError(t.Pos(), reasonOneCuddleBeforeGo)
+				p.addWhitespaceError(t, reasonOneCuddleBeforeGo)
 
 				continue
 			}
@@ -689,25 +690,25 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 
 			if !atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) {
-				p.addError(t.Pos(), reasonGoFuncWithoutAssign)
+				p.addWhitespaceError(t, reasonGoFuncWithoutAssign)
 			}
 		case *ast.SwitchStmt:
 			if moreThanOneStatementAbove() {
-				p.addError(t.Pos(), reasonSwitchManyCuddles)
+				p.addWhitespaceError(t, reasonSwitchManyCuddles)
 
 				continue
 			}
 
 			if !atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) {
 				if len(rightAndLeftHandSide) == 0 {
-					p.addError(t.Pos(), reasonAnonSwitchCuddled)
+					p.addWhitespaceError(t, reasonAnonSwitchCuddled)
 				} else {
-					p.addError(t.Pos(), reasonSwitchCuddledWithoutUse)
+					p.addWhitespaceError(t, reasonSwitchCuddledWithoutUse)
 				}
 			}
 		case *ast.TypeSwitchStmt:
 			if moreThanOneStatementAbove() {
-				p.addError(t.Pos(), reasonTypeSwitchTooCuddled)
+				p.addWhitespaceError(t, reasonTypeSwitchTooCuddled)
 
 				continue
 			}
@@ -1064,9 +1065,8 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 	}
 
 	var (
-		firstStatement    = blockStatements[0]
-		lastStatement     = blockStatements[len(blockStatements)-1]
-		seenCommentGroups = 0
+		firstStatement = blockStatements[0]
+		lastStatement  = blockStatements[len(blockStatements)-1]
 	)
 
 	// Get the comment related to the first statement, we do allow commends in
@@ -1144,7 +1144,7 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 		}
 
 		if p.nodeEnd(lastStatement) != blockEndLine-1 && !isExampleFunc(ident) {
-			p.addError(blockEndPos, reasonBlockEndsWithWS)
+			p.addError(stmt, reasonBlockEndsWithWS, WhitespaceShouldRemoveEnd)
 		}
 
 		return
@@ -1205,10 +1205,10 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 	hasTrailingWhitespace := p.nodeEnd(lastStatement)+caseTrailingCommentLines != blockEndLine
 
 	// If the force trailing limit is configured and we don't end with a newline.
-	if p.config.ForceCaseTrailingWhitespaceLimit > 0 && !hasTrailingWhitespace {
+	if p.config.CaseForceTrailingWhitespaceLimit > 0 && !hasTrailingWhitespace {
 		// Check if the block size is too big to miss the newline.
-		if blockSize >= p.config.ForceCaseTrailingWhitespaceLimit {
-			p.addError(lastStatement.Pos(), reasonCaseBlockTooCuddly)
+		if blockSize >= p.config.CaseForceTrailingWhitespaceLimit {
+			p.addWhitespaceError(lastStatement, reasonCaseBlockTooCuddly)
 		}
 	}
 }
@@ -1242,23 +1242,24 @@ func isEmptyLabeledStmt(node ast.Node) bool {
 	return empty
 }
 
+func (p *Processor) addWhitespaceError(node ast.Node, reason string) {
+	p.addError(node, reason, WhitespaceShouldAdd)
+}
+
 // Add an error for the file and line number for the current token.Pos with the
 // given reason.
-func (p *Processor) addError(pos token.Pos, reason string) {
-	position := p.fileSet.Position(pos)
-
-	p.result = append(p.result, Result{
-		FileName:   position.Filename,
-		LineNumber: position.Line,
-		Position:   position,
-		Reason:     reason,
+func (p *Processor) addError(node ast.Node, reason string, errType ErrorType) {
+	p.Result = append(p.Result, Result{
+		Node:   node,
+		Reason: reason,
+		Type:   errType,
 	})
 }
 
 func (p *Processor) addWarning(w string, pos token.Pos, t interface{}) {
 	position := p.fileSet.Position(pos)
 
-	p.warnings = append(p.warnings,
+	p.Warnings = append(p.Warnings,
 		fmt.Sprintf("%s:%d: %s (%T)", position.Filename, position.Line, w, t),
 	)
 }
