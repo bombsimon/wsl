@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
-	"os"
 	"reflect"
 	"strings"
 )
@@ -128,10 +127,24 @@ type Configuration struct {
 
 	// If the number of lines in a case block is equal to or lager than this
 	// number, the case *must* end white a newline.
+	ForceCaseTrailingWhitespaceLimit int
+
+	// If the number of lines in a case block is equal to or lager than this
+	// number, the case *must* end white a newline.
 	CaseForceTrailingWhitespaceLimit int
 
 	// AllowTrailingComment will allow blocks to end with comments.
 	AllowTrailingComment bool
+
+	// AllowSeparatedLeadingComment will allow multiple comments in the
+	// beginning of a block separated with newline. Example:
+	//  func () {
+	//		// Comment one
+	//
+	//		// Comment two
+	// 		fmt.Println("x")
+	//  }
+	AllowSeparatedLeadingComment bool
 
 	// AllowCuddleDeclaration will allow multiple var/declaration statements to
 	// be cuddled. This defaults to false but setting it to true will enable the
@@ -156,7 +169,7 @@ type Configuration struct {
 	//  mu.Unlock()
 	AllowCuddleWithRHS []string
 
-	// MustCuddleErrCheckAndAssign will cause an error when an If statement that
+	// ForceCuddleErrCheckAndAssign will cause an error when an If statement that
 	// checks an error variable doesn't cuddle with the assignment of that variable.
 	// This defaults to false but setting it to true will cause the following
 	// to generate an error:
@@ -166,7 +179,7 @@ type Configuration struct {
 	// if err != nil {
 	//     return err
 	// }
-	MustCuddleErrCheckAndAssign bool
+	ForceCuddleErrCheckAndAssign bool
 
 	// When MustCuddleErrCheckAndAssign is enabled this is a list of names
 	// used for error variables to check for in the conditional.
@@ -210,6 +223,7 @@ func DefaultConfig() Configuration {
 type Result struct {
 	Node   ast.Node
 	Reason string
+	NoFix  bool
 	Type   ErrorType
 }
 
@@ -245,23 +259,6 @@ func NewProcessor(file *ast.File, fileSet *token.FileSet) *Processor {
 			AllowCuddleWithRHS:               []string{"Unlock", "RUnlock"},
 			ErrorVariableNames:               []string{"err"},
 		})
-}
-
-// ProcessFiles takes a string slice with file names (full paths) and lints
-// them.
-//
-//nolint:gocritic // Don't want named returns
-func (p *Processor) ProcessFiles(filenames []string) ([]Result, []string) {
-	for _, filename := range filenames {
-		data, err := os.ReadFile(filename)
-		if err != nil {
-			panic(err)
-		}
-
-		p.process(filename, data)
-	}
-
-	return p.result, p.warnings
 }
 
 func (p *Processor) ParseAST() {
@@ -318,7 +315,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 
 		// If we're not cuddled and we don't need to enforce err-check cuddling
 		// then we can bail out here
-		if !cuddledWithLastStmt && !p.config.MustCuddleErrCheckAndAssign {
+		if !cuddledWithLastStmt && !p.config.ForceCuddleErrCheckAndAssign {
 			continue
 		}
 
@@ -474,7 +471,23 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 
 			if moreThanOneStatementAbove() {
-				p.addWhitespaceError(t, reasonOnlyOneCuddle)
+				switch statements[i-2].(type) {
+				case *ast.AssignStmt:
+					p.addWhitespaceError(t, reasonOnlyOneCuddle)
+				default:
+					if atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) {
+						p.addWhitespaceErrorNoFix(t, reasonOnlyOneCuddle)
+						continue
+					}
+
+					if atLeastOneInListsMatch(assignedOnLineAbove, assignedFirstInBlock) {
+						p.addWhitespaceErrorNoFix(t, reasonOnlyOneCuddle)
+						continue
+					}
+
+					p.addWhitespaceError(t, reasonOnlyOneCuddle)
+				}
+
 				continue
 			}
 
@@ -1144,7 +1157,7 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 		}
 
 		if p.nodeEnd(lastStatement) != blockEndLine-1 && !isExampleFunc(ident) {
-			p.addError(stmt, reasonBlockEndsWithWS, WhitespaceShouldRemoveEnd)
+			p.addError(stmt, reasonBlockEndsWithWS, WhitespaceShouldRemoveEnd, false)
 		}
 
 		return
@@ -1243,15 +1256,20 @@ func isEmptyLabeledStmt(node ast.Node) bool {
 }
 
 func (p *Processor) addWhitespaceError(node ast.Node, reason string) {
-	p.addError(node, reason, WhitespaceShouldAdd)
+	p.addError(node, reason, WhitespaceShouldAdd, false)
+}
+
+func (p *Processor) addWhitespaceErrorNoFix(node ast.Node, reason string) {
+	p.addError(node, reason, WhitespaceShouldAdd, true)
 }
 
 // Add an error for the file and line number for the current token.Pos with the
 // given reason.
-func (p *Processor) addError(node ast.Node, reason string, errType ErrorType) {
+func (p *Processor) addError(node ast.Node, reason string, errType ErrorType, noFix bool) {
 	p.Result = append(p.Result, Result{
 		Node:   node,
 		Reason: reason,
+		NoFix:  noFix,
 		Type:   errType,
 	})
 }

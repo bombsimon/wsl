@@ -22,9 +22,10 @@ func run(pass *analysis.Pass) (interface{}, error) {
 
 		for _, v := range processor.Result {
 			var (
-				pos     token.Pos
-				end     token.Pos
-				newText []byte
+				pos       token.Pos
+				end       token.Pos
+				newText   []byte
+				textEdits []analysis.TextEdit
 			)
 
 			switch v.Type {
@@ -37,20 +38,24 @@ func run(pass *analysis.Pass) (interface{}, error) {
 				continue
 			}
 
+			if !v.NoFix {
+				textEdits = []analysis.TextEdit{
+					{
+						Pos:     pos,
+						End:     end,
+						NewText: newText,
+					},
+				}
+			}
+
 			d := analysis.Diagnostic{
 				Pos:      v.Node.Pos(),
 				Category: "",
 				Message:  v.Reason,
 				SuggestedFixes: []analysis.SuggestedFix{
 					{
-						Message: v.Type.String(),
-						TextEdits: []analysis.TextEdit{
-							{
-								Pos:     pos,
-								End:     end,
-								NewText: newText,
-							},
-						},
+						Message:   v.Type.String(),
+						TextEdits: textEdits,
 					},
 				},
 			}

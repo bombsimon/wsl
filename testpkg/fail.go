@@ -1,11 +1,26 @@
 package testpkg
 
-import "fmt"
-
 func ThisFuncFails() {
-	one := 1
-	two := 2     // Some comment
-	if two > 3 { // More comment
-		fmt.Println(one)
+	if false {
+		return
 	}
+	_, err := maybeErr()
+	if err != nil {
+		return
+	}
+
+	if true {
+		return
+	}
+	_, x := maybeErr()
+	if err != nil {
+		return
+	}
+
+	if x != nil {
+	}
+}
+
+func maybeErr() (int, error) {
+	return 0, nil
 }
