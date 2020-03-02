@@ -1621,6 +1621,59 @@ func TestWithConfig(t *testing.T) {
 			}`),
 			expectedErrorStrings: []string{},
 		},
+		{
+			description: "allow separated leading comment",
+			customConfig: &Configuration{
+				AllowSeparatedLeadingComment: true,
+			},
+			code: []byte(`package main
+
+			func main() {
+				// These blocks should not generate error
+				func () {
+					// Comment
+
+					// Comment
+					fmt.Println("Hello, World")
+				}
+
+				func () {
+					/*
+						Multiline
+					*/
+
+					/*
+						Multiline
+					*/
+					fmt.Println("Hello, World")
+				}
+
+				func () {
+					/*
+						Multiline
+					*/
+
+					// Comment
+					fmt.Println("Hello, World")
+				}
+
+				func () {
+					// Comment
+
+					/*
+						Multiline
+					*/
+					fmt.Println("Hello, World")
+				}
+
+				func () { // Comment
+					/*
+						Multiline
+					*/
+					fmt.Println("Hello, World")
+				}
+			}`),
+		},
 	}
 
 	for _, tc := range cases {
