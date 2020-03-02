@@ -100,6 +100,16 @@ type Configuration struct {
 	// AllowTrailingComment will allow blocks to end with comments.
 	AllowTrailingComment bool
 
+	// AllowSeparatedLeadingComment will allow multiple comments in the
+	// beginning of a block separated with newline. Example:
+	//  func () {
+	//		// Comment one
+	//
+	//		// Comment two
+	// 		fmt.Println("x")
+	//  }
+	AllowSeparatedLeadingComment bool
+
 	// AllowCuddleDeclaration will allow multiple var/declaration statements to
 	// be cuddled. This defaults to false but setting it to true will enable the
 	// following example:
@@ -941,8 +951,9 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 	}
 
 	var (
-		firstStatement = blockStatements[0]
-		lastStatement  = blockStatements[len(blockStatements)-1]
+		firstStatement    = blockStatements[0]
+		lastStatement     = blockStatements[len(blockStatements)-1]
+		seenCommentGroups = 0
 	)
 
 	// Get the comment related to the first statement, we do allow commends in
@@ -962,10 +973,21 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 				break
 			}
 
+			// We store number of seen comment groups because we allow multiple
+			// groups with a newline between them.
+			seenCommentGroups++
+
 			// Support both /* multiline */ and //single line comments
 			for _, c := range commentGroup.List {
 				allowedLinesBeforeFirstStatement += len(strings.Split(c.Text, "\n"))
 			}
+		}
+	}
+
+	// If we have multiple groups, add support for newline between each group.
+	if p.config.AllowSeparatedLeadingComment {
+		if seenCommentGroups > 1 {
+			allowedLinesBeforeFirstStatement += seenCommentGroups - 1
 		}
 	}
 
