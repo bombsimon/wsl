@@ -1077,8 +1077,9 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 	}
 
 	var (
-		firstStatement = blockStatements[0]
-		lastStatement  = blockStatements[len(blockStatements)-1]
+		firstStatement    = blockStatements[0]
+		lastStatement     = blockStatements[len(blockStatements)-1]
+		seenCommentGroups = 0
 	)
 
 	// Get the comment related to the first statement, we do allow commends in
