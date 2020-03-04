@@ -158,6 +158,7 @@ func DefaultConfig() Configuration {
 		AllowAssignAndCallCuddle:         true,
 		AllowMultiLineAssignCuddle:       true,
 		AllowTrailingComment:             false,
+		AllowSeparatedLeadingComment:     false,
 		CaseForceTrailingWhitespaceLimit: 0,
 		AllowCuddleWithCalls:             []string{"Lock", "RLock"},
 		AllowCuddleWithRHS:               []string{"Unlock", "RUnlock"},
