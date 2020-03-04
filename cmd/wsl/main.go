@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/bombsimon/wsl/v2"
+	"github.com/bombsimon/wsl/v3"
 )
 
 // nolint: gocognit
@@ -36,8 +36,8 @@ func main() {
 	flag.BoolVar(&config.AllowCuddleDeclaration, "allow-cuddle-declarations", false, "Allow declarations to be cuddled")
 	flag.BoolVar(&config.AllowTrailingComment, "allow-trailing-comment", false, "Allow blocks to end with a comment")
 	flag.BoolVar(&config.AllowSeparatedLeadingComment, "allow-separated-leading-comment", false, "Allow empty newlines in leading comments")
-	flag.BoolVar(&config.MustCuddleErrCheckAndAssign, "enforce-err-cuddling", false, "Enforce cuddling of error checks with error var assignment")
-	flag.IntVar(&config.CaseForceTrailingWhitespaceLimit, "force-case-trailing-whitespace", 0, "Force newlines for case blocks > this number.")
+	flag.BoolVar(&config.ForceCuddleErrCheckAndAssign, "force-err-cuddling", false, "Force cuddling of error checks with error var assignment")
+	flag.IntVar(&config.ForceCaseTrailingWhitespaceLimit, "force-case-trailing-whitespace", 0, "Force newlines for case blocks > this number.")
 
 	flag.Parse()
 

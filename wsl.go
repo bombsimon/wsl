@@ -95,7 +95,7 @@ type Configuration struct {
 
 	// If the number of lines in a case block is equal to or lager than this
 	// number, the case *must* end white a newline.
-	CaseForceTrailingWhitespaceLimit int
+	ForceCaseTrailingWhitespaceLimit int
 
 	// AllowTrailingComment will allow blocks to end with comments.
 	AllowTrailingComment bool
@@ -133,7 +133,7 @@ type Configuration struct {
 	//  mu.Unlock()
 	AllowCuddleWithRHS []string
 
-	// MustCuddleErrCheckAndAssign will cause an error when an If statement that
+	// ForceCuddleErrCheckAndAssign will cause an error when an If statement that
 	// checks an error variable doesn't cuddle with the assignment of that variable.
 	// This defaults to false but setting it to true will cause the following
 	// to generate an error:
@@ -143,9 +143,9 @@ type Configuration struct {
 	// if err != nil {
 	//     return err
 	// }
-	MustCuddleErrCheckAndAssign bool
+	ForceCuddleErrCheckAndAssign bool
 
-	// When MustCuddleErrCheckAndAssign is enabled this is a list of names
+	// When ForceCuddleErrCheckAndAssign is enabled this is a list of names
 	// used for error variables to check for in the conditional.
 	// Defaults to just "err"
 	ErrorVariableNames []string
@@ -159,10 +159,10 @@ func DefaultConfig() Configuration {
 		AllowMultiLineAssignCuddle:       true,
 		AllowTrailingComment:             false,
 		AllowSeparatedLeadingComment:     false,
-		CaseForceTrailingWhitespaceLimit: 0,
+		ForceCuddleErrCheckAndAssign:     false,
+		ForceCaseTrailingWhitespaceLimit: 0,
 		AllowCuddleWithCalls:             []string{"Lock", "RLock"},
 		AllowCuddleWithRHS:               []string{"Unlock", "RUnlock"},
-		MustCuddleErrCheckAndAssign:      false,
 		ErrorVariableNames:               []string{"err"},
 	}
 }
@@ -288,7 +288,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 
 		// If we're not cuddled and we don't need to enforce err-check cuddling
 		// then we can bail out here
-		if !cuddledWithLastStmt && !p.config.MustCuddleErrCheckAndAssign {
+		if !cuddledWithLastStmt && !p.config.ForceCuddleErrCheckAndAssign {
 			continue
 		}
 
@@ -1080,9 +1080,9 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 	hasTrailingWhitespace := p.nodeEnd(lastStatement)+caseTrailingCommentLines != blockEndLine
 
 	// If the force trailing limit is configured and we don't end with a newline.
-	if p.config.CaseForceTrailingWhitespaceLimit > 0 && !hasTrailingWhitespace {
+	if p.config.ForceCaseTrailingWhitespaceLimit > 0 && !hasTrailingWhitespace {
 		// Check if the block size is too big to miss the newline.
-		if blockSize >= p.config.CaseForceTrailingWhitespaceLimit {
+		if blockSize >= p.config.ForceCaseTrailingWhitespaceLimit {
 			p.addError(lastStatement.Pos(), reasonCaseBlockTooCuddly)
 		}
 	}
