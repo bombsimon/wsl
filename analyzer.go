@@ -22,8 +22,8 @@ var config = Configuration{
 	AllowAssignAndCallCuddle:         true,
 	AllowMultiLineAssignCuddle:       true,
 	AllowTrailingComment:             false,
-	MustCuddleErrCheckAndAssign:      false,
-	CaseForceTrailingWhitespaceLimit: 0,
+	ForceCuddleErrCheckAndAssign:     false,
+	ForceCaseTrailingWhitespaceLimit: 0,
 	AllowCuddleWithCalls:             []string{"Lock", "RLock"},
 	AllowCuddleWithRHS:               []string{"Unlock", "RUnlock"},
 	ErrorVariableNames:               []string{"err"},
@@ -32,7 +32,7 @@ var config = Configuration{
 func flags() flag.FlagSet {
 	flags := flag.NewFlagSet("", flag.ExitOnError)
 
-	flags.IntVar(&config.CaseForceTrailingWhitespaceLimit, "force-case-trailing-whitespace", 0, "Force newlines for case blocks > this number.")
+	flags.IntVar(&config.ForceCaseTrailingWhitespaceLimit, "force-case-trailing-whitespace", 0, "Force newlines for case blocks > this number.")
 
 	return *flags
 }
