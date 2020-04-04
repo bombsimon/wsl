@@ -3,7 +3,7 @@ package testpkg
 import "fmt"
 
 func FailCaseTrailing() {
-	switch 1 == 1 {
+	switch 1 == 2 {
 	case true:
 		fmt.Println("true")
 		// Error?
@@ -13,7 +13,7 @@ func FailCaseTrailing() {
 		fmt.Println("multitalented")
 		// First Line
 		// Second Line
-	case false && false:
+	case true != false:
 		fmt.Println("multitalented")
 		/*
 			This is
