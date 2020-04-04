@@ -1,6 +1,7 @@
 package wsl
 
 import (
+	"flag"
 	"go/token"
 
 	"golang.org/x/tools/go/analysis"
@@ -11,13 +12,34 @@ import (
 var Analyzer = &analysis.Analyzer{
 	Name:             "wsl",
 	Doc:              "add or remove empty lines",
+	Flags:            flags(),
 	Run:              run,
 	RunDespiteErrors: true,
 }
 
+var config = Configuration{
+	StrictAppend:                     true,
+	AllowAssignAndCallCuddle:         true,
+	AllowMultiLineAssignCuddle:       true,
+	AllowTrailingComment:             false,
+	MustCuddleErrCheckAndAssign:      false,
+	CaseForceTrailingWhitespaceLimit: 0,
+	AllowCuddleWithCalls:             []string{"Lock", "RLock"},
+	AllowCuddleWithRHS:               []string{"Unlock", "RUnlock"},
+	ErrorVariableNames:               []string{"err"},
+}
+
+func flags() flag.FlagSet {
+	flags := flag.NewFlagSet("", flag.ExitOnError)
+
+	flags.IntVar(&config.CaseForceTrailingWhitespaceLimit, "force-case-trailing-whitespace", 0, "Force newlines for case blocks > this number.")
+
+	return *flags
+}
+
 func run(pass *analysis.Pass) (interface{}, error) {
 	for _, file := range pass.Files {
-		processor := NewProcessor(file, pass.Fset)
+		processor := NewProcessorWithConfig(file, pass.Fset, config)
 		processor.ParseAST()
 
 		for _, v := range processor.Result {
@@ -29,9 +51,13 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			)
 
 			switch v.Type {
-			case WhitespaceShouldAdd:
+			case WhitespaceShouldAddBefore:
 				pos = v.Node.Pos()
 				end = v.Node.Pos()
+				newText = []byte("\n")
+			case WhitespaceShouldAddAfter:
+				pos = v.Node.End()
+				end = v.Node.End()
 				newText = []byte("\n")
 			default:
 				// TODO

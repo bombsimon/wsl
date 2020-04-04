@@ -12,15 +12,18 @@ import (
 type ErrorType int
 
 const (
-	WhitespaceShouldAdd ErrorType = iota
+	WhitespaceShouldAddBefore ErrorType = iota
+	WhitespaceShouldAddAfter
 	WhitespaceShouldRemoveBeginning
 	WhitespaceShouldRemoveEnd
 )
 
 func (e ErrorType) String() string {
 	switch e {
-	case WhitespaceShouldAdd:
-		return "should add whitesapce here"
+	case WhitespaceShouldAddBefore:
+		return "should add whitesapce before this statement"
+	case WhitespaceShouldAddAfter:
+		return "should add whitesapce after this statement"
 	case WhitespaceShouldRemoveBeginning:
 		return "should remove whitespace in beginning of block"
 	case WhitespaceShouldRemoveEnd:
@@ -458,7 +461,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 					}
 
 					if atLeastOneInListsMatch(assignedOnLineAbove, p.config.ErrorVariableNames) {
-						p.addWhitespaceError(t, reasonMustCuddleErrCheck)
+						p.addWhitespaceBeforeError(t, reasonMustCuddleErrCheck)
 					}
 				}
 
@@ -466,26 +469,26 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 
 			if len(assignedOnLineAbove) == 0 {
-				p.addWhitespaceError(t, reasonOnlyCuddleIfWithAssign)
+				p.addWhitespaceBeforeError(t, reasonOnlyCuddleIfWithAssign)
 				continue
 			}
 
 			if moreThanOneStatementAbove() {
 				switch statements[i-2].(type) {
 				case *ast.AssignStmt:
-					p.addWhitespaceError(t, reasonOnlyOneCuddle)
+					p.addWhitespaceBeforeError(t, reasonOnlyOneCuddle)
 				default:
 					if atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) {
-						p.addWhitespaceErrorNoFix(t, reasonOnlyOneCuddle)
+						p.addWhitespaceBeforeErrorNoFix(t, reasonOnlyOneCuddle)
 						continue
 					}
 
 					if atLeastOneInListsMatch(assignedOnLineAbove, assignedFirstInBlock) {
-						p.addWhitespaceErrorNoFix(t, reasonOnlyOneCuddle)
+						p.addWhitespaceBeforeErrorNoFix(t, reasonOnlyOneCuddle)
 						continue
 					}
 
-					p.addWhitespaceError(t, reasonOnlyOneCuddle)
+					p.addWhitespaceBeforeError(t, reasonOnlyOneCuddle)
 				}
 
 				continue
@@ -499,26 +502,26 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 				continue
 			}
 
-			p.addWhitespaceError(t, reasonOnlyCuddleWithUsedAssign)
+			p.addWhitespaceBeforeError(t, reasonOnlyCuddleWithUsedAssign)
 		case *ast.ReturnStmt:
 			if isLastStatementInBlockOfOnlyTwoLines() {
 				continue
 			}
 
-			p.addWhitespaceError(t, reasonOnlyCuddle2LineReturn)
+			p.addWhitespaceBeforeError(t, reasonOnlyCuddle2LineReturn)
 		case *ast.BranchStmt:
 			if isLastStatementInBlockOfOnlyTwoLines() {
 				continue
 			}
 
-			p.addWhitespaceError(t, reasonMultiLineBranchCuddle)
+			p.addWhitespaceBeforeError(t, reasonMultiLineBranchCuddle)
 		case *ast.AssignStmt:
 			// append is usually an assignment but should not be allowed to be
 			// cuddled with anything not appended.
 			if len(rightHandSide) > 0 && rightHandSide[len(rightHandSide)-1] == "append" {
 				if p.config.StrictAppend {
 					if !atLeastOneInListsMatch(calledOrAssignedOnLineAbove, rightHandSide) {
-						p.addWhitespaceError(t, reasonAppendCuddledWithoutUse)
+						p.addWhitespaceBeforeError(t, reasonAppendCuddledWithoutUse)
 					}
 				}
 
@@ -549,21 +552,17 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 				}
 			}
 
-			p.addWhitespaceError(t, reasonAssignsCuddleAssign)
+			p.addWhitespaceBeforeError(t, reasonAssignsCuddleAssign)
 		case *ast.DeclStmt:
 			if !p.config.AllowCuddleDeclaration {
-				p.addWhitespaceError(t, reasonNeverCuddleDeclare)
+				p.addWhitespaceBeforeError(t, reasonNeverCuddleDeclare)
 			}
 		case *ast.ExprStmt:
 			switch previousStatement.(type) {
 			case *ast.DeclStmt, *ast.ReturnStmt:
-				if p.config.AllowAssignAndCallCuddle && p.config.AllowCuddleDeclaration {
-					continue
-				}
-
-				p.addError(t.Pos(), reasonExpressionCuddledWithDeclOrRet)
+				p.addWhitespaceBeforeError(t, reasonExpressionCuddledWithDeclOrRet)
 			case *ast.IfStmt, *ast.RangeStmt, *ast.SwitchStmt:
-				p.addWhitespaceError(t, reasonExpressionCuddledWithBlock)
+				p.addWhitespaceBeforeError(t, reasonExpressionCuddledWithBlock)
 			}
 
 			// If the expression is called on a type or variable used or
@@ -581,17 +580,17 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			// If we assigned variables on the line above but didn't use them in
 			// this expression there should probably be a newline between them.
 			if len(assignedOnLineAbove) > 0 && !atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) {
-				p.addWhitespaceError(t, reasonExprCuddlingNonAssignedVar)
+				p.addWhitespaceBeforeError(t, reasonExprCuddlingNonAssignedVar)
 			}
 		case *ast.RangeStmt:
 			if moreThanOneStatementAbove() {
-				p.addWhitespaceError(t, reasonOneCuddleBeforeRange)
+				p.addWhitespaceBeforeError(t, reasonOneCuddleBeforeRange)
 				continue
 			}
 
 			if !atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) {
-				if !atLeastOneInListsMatch(assignedOnLineAbove, calledOrAssignedFirstInBlock) {
-					p.addError(t.Pos(), reasonRangeCuddledWithoutUse)
+				if !atLeastOneInListsMatch(assignedOnLineAbove, assignedFirstInBlock) {
+					p.addWhitespaceBeforeError(t, reasonRangeCuddledWithoutUse)
 				}
 			}
 		case *ast.DeferStmt:
@@ -620,7 +619,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 
 			if moreThanOneStatementAbove() {
-				p.addWhitespaceError(t, reasonOneCuddleBeforeDefer)
+				p.addWhitespaceBeforeError(t, reasonOneCuddleBeforeDefer)
 
 				continue
 			}
@@ -652,17 +651,17 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 
 			if !atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) {
-				p.addWhitespaceError(t, reasonDeferCuddledWithOtherVar)
+				p.addWhitespaceBeforeError(t, reasonDeferCuddledWithOtherVar)
 			}
 		case *ast.ForStmt:
 			if len(rightAndLeftHandSide) == 0 {
-				p.addWhitespaceError(t, reasonForWithoutCondition)
+				p.addWhitespaceBeforeError(t, reasonForWithoutCondition)
 
 				continue
 			}
 
 			if moreThanOneStatementAbove() {
-				p.addWhitespaceError(t, reasonForWithMoreThanOneCuddle)
+				p.addWhitespaceBeforeError(t, reasonForWithMoreThanOneCuddle)
 
 				continue
 			}
@@ -671,8 +670,8 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			// comments regarding variable usages on the line before or as the
 			// first line in the block for details.
 			if !atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) {
-				if !atLeastOneInListsMatch(assignedOnLineAbove, calledOrAssignedFirstInBlock) {
-					p.addError(t.Pos(), reasonForCuddledAssignWithoutUse)
+				if !atLeastOneInListsMatch(assignedOnLineAbove, assignedFirstInBlock) {
+					p.addWhitespaceBeforeError(t, reasonForCuddledAssignWithoutUse)
 				}
 			}
 		case *ast.GoStmt:
@@ -681,7 +680,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 
 			if moreThanOneStatementAbove() {
-				p.addWhitespaceError(t, reasonOneCuddleBeforeGo)
+				p.addWhitespaceBeforeError(t, reasonOneCuddleBeforeGo)
 
 				continue
 			}
@@ -703,25 +702,25 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 
 			if !atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) {
-				p.addWhitespaceError(t, reasonGoFuncWithoutAssign)
+				p.addWhitespaceBeforeError(t, reasonGoFuncWithoutAssign)
 			}
 		case *ast.SwitchStmt:
 			if moreThanOneStatementAbove() {
-				p.addWhitespaceError(t, reasonSwitchManyCuddles)
+				p.addWhitespaceBeforeError(t, reasonSwitchManyCuddles)
 
 				continue
 			}
 
 			if !atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) {
 				if len(rightAndLeftHandSide) == 0 {
-					p.addWhitespaceError(t, reasonAnonSwitchCuddled)
+					p.addWhitespaceBeforeError(t, reasonAnonSwitchCuddled)
 				} else {
-					p.addWhitespaceError(t, reasonSwitchCuddledWithoutUse)
+					p.addWhitespaceBeforeError(t, reasonSwitchCuddledWithoutUse)
 				}
 			}
 		case *ast.TypeSwitchStmt:
 			if moreThanOneStatementAbove() {
-				p.addWhitespaceError(t, reasonTypeSwitchTooCuddled)
+				p.addWhitespaceBeforeError(t, reasonTypeSwitchTooCuddled)
 
 				continue
 			}
@@ -730,8 +729,8 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			if !atLeastOneInListsMatch(rightHandSide, assignedOnLineAbove) {
 				// Allow type assertion on variables used in the first case
 				// immediately.
-				if !atLeastOneInListsMatch(assignedOnLineAbove, calledOrAssignedFirstInBlock) {
-					p.addError(t.Pos(), reasonTypeSwitchCuddledWithoutUse)
+				if !atLeastOneInListsMatch(assignedOnLineAbove, assignedFirstInBlock) {
+					p.addWhitespaceBeforeError(t, reasonTypeSwitchCuddledWithoutUse)
 				}
 			}
 		case *ast.CaseClause, *ast.CommClause:
@@ -1193,10 +1192,19 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 	// itself) and iterate through all groups and all comment within all groups.
 	// I then get the comments after the last statement but before the next case
 	// clause and just map each line of comment that way.
+	var lastComment ast.Node
+
 	for _, commentGroups := range commentMap {
 		for _, commentGroup := range commentGroups {
 			for _, comment := range commentGroup.List {
 				commentLine := p.fileSet.Position(comment.Pos()).Line
+
+				// If the comment is on the same line as the last statement we
+				// need to store it in case we're about to add a newline.
+				if commentLine == p.nodeStart(lastStatement) {
+					lastComment = comment
+					continue
+				}
 
 				// Ignore comments before the last statement.
 				if commentLine <= p.nodeStart(lastStatement) {
@@ -1211,6 +1219,9 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 				// This allows /* multiline */ comments with newlines as well
 				// as regular (//) ones
 				caseTrailingCommentLines += len(strings.Split(comment.Text, "\n"))
+
+				// Set last comment so we know where to add newline
+				lastComment = comment
 			}
 		}
 	}
@@ -1221,7 +1232,11 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 	if p.config.CaseForceTrailingWhitespaceLimit > 0 && !hasTrailingWhitespace {
 		// Check if the block size is too big to miss the newline.
 		if blockSize >= p.config.CaseForceTrailingWhitespaceLimit {
-			p.addWhitespaceError(lastStatement, reasonCaseBlockTooCuddly)
+			if lastComment != nil {
+				p.addWhitespaceAfterError(lastComment, reasonCaseBlockTooCuddly)
+			} else {
+				p.addWhitespaceAfterError(lastStatement, reasonCaseBlockTooCuddly)
+			}
 		}
 	}
 }
@@ -1255,12 +1270,16 @@ func isEmptyLabeledStmt(node ast.Node) bool {
 	return empty
 }
 
-func (p *Processor) addWhitespaceError(node ast.Node, reason string) {
-	p.addError(node, reason, WhitespaceShouldAdd, false)
+func (p *Processor) addWhitespaceBeforeError(node ast.Node, reason string) {
+	p.addError(node, reason, WhitespaceShouldAddBefore, false)
 }
 
-func (p *Processor) addWhitespaceErrorNoFix(node ast.Node, reason string) {
-	p.addError(node, reason, WhitespaceShouldAdd, true)
+func (p *Processor) addWhitespaceAfterError(node ast.Node, reason string) {
+	p.addError(node, reason, WhitespaceShouldAddAfter, false)
+}
+
+func (p *Processor) addWhitespaceBeforeErrorNoFix(node ast.Node, reason string) {
+	p.addError(node, reason, WhitespaceShouldAddBefore, true)
 }
 
 // Add an error for the file and line number for the current token.Pos with the
