@@ -1674,6 +1674,50 @@ func TestWithConfig(t *testing.T) {
 				}
 			}`),
 		},
+		{
+			description: "only warn about cuddling errors if it's an expression above",
+			customConfig: &Configuration{
+				ForceCuddleErrCheckAndAssign: true,
+				ErrorVariableNames:           []string{"err"},
+			},
+			code: []byte(`package main
+
+			var ErrSomething error
+
+			func validateErr(err error) {
+				if err == nil {
+					return
+				}
+
+				if errors.Is(err, ErrSomething) {
+					return
+				}
+
+				// Should be valid since the if actually is cuddled so the error
+				// check assumes something right is going on here. If
+				// anotherThingToCheck wasn't used in the if statement we would
+				// get a regular if cuddle error.
+				anotherThingToCheck := someFunc()
+				if multiCheck(anotherThingToCheck, err) {
+					fmt.Println("this must be OK, err is not assigned above")
+				}
+
+				notUsedInNextIf := someFunc()
+
+				if multiCheck(anotherThingToCheck, err) {
+					fmt.Println("this should not warn, we didn't assign err above")
+				}
+
+				// This fails under the cuddle if rule.
+				if err != nil {
+					return
+				}
+				if !errors.Is(err, ErrSomething) {
+					return
+				}
+			}`),
+			expectedErrorStrings: []string{reasonOnlyCuddleIfWithAssign},
+		},
 	}
 
 	for _, tc := range cases {
