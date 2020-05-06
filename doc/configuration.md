@@ -7,7 +7,7 @@ you're using `golangci-lint` the `golangci.yaml` configuration should look like
 this:
 
 ```yaml
-linter-settings:
+linters-settings:
   wsl:
     allow-cuddle-declarations: true
 ```
