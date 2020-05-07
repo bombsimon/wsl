@@ -2,6 +2,8 @@ package wsl
 
 import (
 	"fmt"
+	"go/parser"
+	"go/token"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,13 +16,6 @@ func TestGenericHandling(t *testing.T) {
 		code                 []byte
 		expectedErrorStrings []string
 	}{
-		{
-			description: "a file must start with package declaration",
-			code: []byte(`func a() {
-				fmt.Println("this is function a")
-			}`),
-			expectedErrorStrings: []string{"invalid syntax, file cannot be linted"},
-		},
 		{
 			description: "comments are ignored, ignore this crappy code",
 			code: []byte(`package main
@@ -69,13 +64,16 @@ func TestGenericHandling(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.description, func(t *testing.T) {
-			p := NewProcessor()
-			p.process("unit-test", tc.code)
+			fileSet := token.NewFileSet()
+			file, _ := parser.ParseFile(fileSet, "unit-test", tc.code, parser.ParseComments)
 
-			require.Len(t, p.result, len(tc.expectedErrorStrings), "correct amount of errors found")
+			p := NewProcessor(file, fileSet)
+			p.ParseAST()
+
+			require.Len(t, p.Result, len(tc.expectedErrorStrings), "correct amount of errors found")
 
 			for i := range tc.expectedErrorStrings {
-				assert.Contains(t, p.result[i].Reason, tc.expectedErrorStrings[i], "expected error found")
+				assert.Contains(t, p.Result[i].Reason, tc.expectedErrorStrings[i], "expected error found")
 			}
 		})
 	}
@@ -204,13 +202,16 @@ func TestShouldRemoveEmptyLines(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.description, func(t *testing.T) {
-			p := NewProcessor()
-			p.process("unit-test", tc.code)
+			fileSet := token.NewFileSet()
+			file, _ := parser.ParseFile(fileSet, "unit-test", tc.code, parser.ParseComments)
 
-			require.Len(t, p.result, len(tc.expectedErrorStrings), "correct amount of errors found")
+			p := NewProcessor(file, fileSet)
+			p.ParseAST()
+
+			require.Len(t, p.Result, len(tc.expectedErrorStrings), "correct amount of errors found")
 
 			for i := range tc.expectedErrorStrings {
-				assert.Contains(t, p.result[i].Reason, tc.expectedErrorStrings[i], "expected error found")
+				assert.Contains(t, p.Result[i].Reason, tc.expectedErrorStrings[i], "expected error found")
 			}
 		})
 	}
@@ -1203,13 +1204,16 @@ func TestShouldAddEmptyLines(t *testing.T) {
 				t.Skip("not implemented")
 			}
 
-			p := NewProcessor()
-			p.process("unit-test", tc.code)
+			fileSet := token.NewFileSet()
+			file, _ := parser.ParseFile(fileSet, "unit-test", tc.code, parser.ParseComments)
 
-			require.Len(t, p.result, len(tc.expectedErrorStrings), "correct amount of errors found")
+			p := NewProcessor(file, fileSet)
+			p.ParseAST()
+
+			require.Len(t, p.Result, len(tc.expectedErrorStrings), "correct amount of errors found")
 
 			for i := range tc.expectedErrorStrings {
-				assert.Contains(t, p.result[i].Reason, tc.expectedErrorStrings[i], "expected error found")
+				assert.Contains(t, p.Result[i].Reason, tc.expectedErrorStrings[i], "expected error found")
 			}
 		})
 	}
@@ -1722,16 +1726,21 @@ func TestWithConfig(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.description, func(t *testing.T) {
-			p := NewProcessor()
+			fileSet := token.NewFileSet()
+			file, _ := parser.ParseFile(fileSet, "unit-test", tc.code, parser.ParseComments)
+
+			p := NewProcessor(file, fileSet)
+
 			if tc.customConfig != nil {
-				p = NewProcessorWithConfig(*tc.customConfig)
+				p = NewProcessorWithConfig(file, fileSet, *tc.customConfig)
 			}
 
-			p.process("unit-test", tc.code)
-			require.Len(t, p.result, len(tc.expectedErrorStrings), "correct amount of errors found")
+			p.ParseAST()
+
+			require.Len(t, p.Result, len(tc.expectedErrorStrings), "correct amount of errors found")
 
 			for i := range tc.expectedErrorStrings {
-				assert.Contains(t, p.result[i].Reason, tc.expectedErrorStrings[i], "expected error found")
+				assert.Contains(t, p.Result[i].Reason, tc.expectedErrorStrings[i], "expected error found")
 			}
 		})
 	}
@@ -1760,23 +1769,27 @@ func TestTODO(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.description, func(t *testing.T) {
-			p := NewProcessor()
+			fileSet := token.NewFileSet()
+			file, _ := parser.ParseFile(fileSet, "unit-test", tc.code, parser.ParseComments)
+
+			p := NewProcessor(file, fileSet)
+
 			if tc.customConfig != nil {
-				p = NewProcessorWithConfig(*tc.customConfig)
+				p = NewProcessorWithConfig(file, fileSet, *tc.customConfig)
 			}
 
-			p.process("unit-test", tc.code)
+			p.ParseAST()
 
-			t.Logf("WARNINGS: %s", p.warnings)
+			t.Logf("WARNINGS: %s", p.Warnings)
 
-			for _, r := range p.result {
-				fmt.Println(r.String())
+			for _, r := range p.Result {
+				fmt.Println(r.Node, r.Reason)
 			}
 
-			require.Len(t, p.result, len(tc.expectedErrorStrings), "correct amount of errors found")
+			require.Len(t, p.Result, len(tc.expectedErrorStrings), "correct amount of errors found")
 
 			for i := range tc.expectedErrorStrings {
-				assert.Contains(t, p.result[i].Reason, tc.expectedErrorStrings[i], "expected error found")
+				assert.Contains(t, p.Result[i].Reason, tc.expectedErrorStrings[i], "expected error found")
 			}
 		})
 	}
