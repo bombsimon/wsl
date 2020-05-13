@@ -295,11 +295,17 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 		}
 
 		previousStatement := statements[i-1]
+		previousStatementIsMultiline := p.nodeStart(previousStatement) != p.nodeEnd(previousStatement)
 		cuddledWithLastStmt := p.nodeEnd(previousStatement) == p.nodeStart(stmt)-1
 
 		// If we're not cuddled and we don't need to enforce err-check cuddling
 		// then we can bail out here
 		if !cuddledWithLastStmt && !p.config.ForceCuddleErrCheckAndAssign {
+			continue
+		}
+
+		// We don't force error cuddling for multilines. (#86)
+		if p.config.ForceCuddleErrCheckAndAssign && previousStatementIsMultiline && !cuddledWithLastStmt {
 			continue
 		}
 
