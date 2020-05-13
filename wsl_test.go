@@ -1622,6 +1622,30 @@ func TestWithConfig(t *testing.T) {
 			expectedErrorStrings: []string{},
 		},
 		{
+			description: "err-check cuddle enforcement multiline",
+			customConfig: &Configuration{
+				AllowAssignAndCallCuddle:     false,
+				ForceCuddleErrCheckAndAssign: true,
+				ErrorVariableNames:           []string{"err"},
+			},
+			code: []byte(`package main
+
+			import "errors"
+
+			func main() {
+				err := db.
+					Where("foo = ?", bar).
+					Preload("More").
+					Find(&x).
+					Error
+
+				if err != nil {
+					panic(err)
+				}
+			}`),
+			expectedErrorStrings: []string{},
+		},
+		{
 			description: "allow separated leading comment",
 			customConfig: &Configuration{
 				AllowSeparatedLeadingComment: true,
