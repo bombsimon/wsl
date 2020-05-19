@@ -81,6 +81,16 @@ type Configuration struct {
 	//  x = AnotherAssign()
 	AllowAssignAndCallCuddle bool
 
+	// AllowAssignAndCallCuddle allows assignments to be cuddled with anything.
+	// Example supported with this set to true:
+	//  if x == 1 {
+	//  	x = 0
+	//  }
+	//  z := x + 2
+	// 	fmt.Println("x")
+	//  y := "x"
+	AllowAssignAndAnythingCuddle bool
+
 	// AllowMultiLineAssignCuddle allows cuddling to assignments even if they
 	// span over multiple lines. This defaults to true which allows the
 	// following example:
@@ -467,6 +477,10 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 
 			if _, ok := previousStatement.(*ast.AssignStmt); ok {
+				continue
+			}
+
+			if p.config.AllowAssignAndAnythingCuddle {
 				continue
 			}
 

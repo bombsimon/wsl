@@ -71,6 +71,39 @@ x = AssignAgain()
 x.CallAgain()
 ```
 
+### [allow-assign-and-anything](rules.md#assignments-should-only-be-cuddled-with-other-assignments)
+
+Controls if you may cuddle assignments and anything without needing an empty line
+between them.
+
+> Default value: false
+
+Supported when true:
+
+```go
+if x == 1 {
+    x = 0
+}
+z := x + 2
+
+fmt.Println("x")
+y := "x"
+```
+
+Required when false:
+
+```go
+if x == 1 {
+    x = 0
+}
+
+z := x + 2
+
+fmt.Println("x")
+
+y := "x"
+```
+
 ### [allow-multiline-assign](rules.md#only-cuddled-expressions-if-assigning-variable-or-using-from-line-above)
 
 Controls if you may cuddle assignments even if they span over multiple lines.
