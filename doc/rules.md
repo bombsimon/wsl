@@ -671,6 +671,9 @@ go assignTwo()
 
 ### Only one cuddle assignment allowed before if statement
 
+> Can be configured, see 
+[configuration documentation](configuration.md#allow-if-and-anything-cuddle)
+
 If block should only be cuddled with 1 related assignment. If you have more
 than 1 assignment(s), they should have more space between them for clarity
 purposes. One bad example is:

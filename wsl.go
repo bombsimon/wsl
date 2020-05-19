@@ -143,6 +143,16 @@ type Configuration struct {
 	//  mu.Unlock()
 	AllowCuddleWithRHS []string
 
+	// AllowIfAndAnythingCuddle allows if statements to be cuddled with anything.
+	// Example supported with this set to true:
+	//  if x == 1 {
+	//  	x = 0
+	//  }
+	//  if y == 1 {
+	//  	y = 0
+	//  }
+	AllowIfAndAnythingCuddle bool
+
 	// ForceCuddleErrCheckAndAssign will cause an error when an If statement that
 	// checks an error variable doesn't cuddle with the assignment of that variable.
 	// This defaults to false but setting it to true will cause the following
@@ -170,6 +180,7 @@ func DefaultConfig() Configuration {
 		AllowMultiLineAssignCuddle:       true,
 		AllowTrailingComment:             false,
 		AllowSeparatedLeadingComment:     false,
+		AllowIfAndAnythingCuddle:         false,
 		ForceCuddleErrCheckAndAssign:     false,
 		ForceCaseTrailingWhitespaceLimit: 0,
 		AllowCuddleWithCalls:             []string{"Lock", "RLock"},
@@ -430,6 +441,10 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 					}
 				}
 
+				continue
+			}
+
+			if p.config.AllowIfAndAnythingCuddle {
 				continue
 			}
 

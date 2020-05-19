@@ -133,6 +133,38 @@ assignmentTwo := "so I cannot be cuddled"
 assignmentThree := "this is fine"
 ```
 
+### [allow-if-and-anything-cuddle](rules.md#only-one-cuddle-assignment-allowed-before-if-statement)
+
+Controls if you may cuddle multiple statements before if statement.
+
+> Default value: false
+
+Supported when true:
+
+```go
+z := 10
+if x == 1 {
+    x = 0
+}
+if y == 1 {
+    y = 1
+}
+```
+
+Required when false:
+
+```go
+z := 10
+
+if x == 1 {
+    x = 0
+}
+
+if y == 1 {
+    y = 1
+}
+```
+
 ### [force-case-trailing-whitespace](rules.md#case-block-should-end-with-newline-at-this-size)
 
 Can be set to force trailing newlines at the end of case blocks to improve
