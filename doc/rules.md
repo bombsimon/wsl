@@ -80,6 +80,9 @@ x = append(x, useMe))
 
 ### Assignments should only be cuddled with other assignments
 
+> Can be configured, see [configuration
+documentation](configuration.md#allow-assign-and-anything)
+
 Assignments should either be grouped together or have some space between whoever
 else before it. One bad example is `z` and `y` in such case:
 
