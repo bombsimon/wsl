@@ -166,6 +166,7 @@ func DefaultConfig() Configuration {
 	return Configuration{
 		StrictAppend:                     true,
 		AllowAssignAndCallCuddle:         true,
+		AllowAssignAndAnythingCuddle:     false,
 		AllowMultiLineAssignCuddle:       true,
 		AllowTrailingComment:             false,
 		AllowSeparatedLeadingComment:     false,
