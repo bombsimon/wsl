@@ -1749,6 +1749,7 @@ func TestWithConfig(t *testing.T) {
 			func main() {
 				var first = 1
 				var second = 2
+				third := 3
 
 				var config Configuration
 				if err := conf.Load(config); err != nil {
