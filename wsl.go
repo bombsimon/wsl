@@ -485,6 +485,10 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 				continue
 			}
 
+			if _, ok := previousStatement.(*ast.DeclStmt); ok && p.config.AllowCuddleDeclaration {
+				continue
+			}
+
 			// If the assignment is from a type or variable called on the line
 			// above we can allow it by setting AllowAssignAndCallCuddle to
 			// true.
@@ -505,6 +509,10 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 		case *ast.ExprStmt:
 			switch previousStatement.(type) {
 			case *ast.DeclStmt, *ast.ReturnStmt:
+				if p.config.AllowAssignAndCallCuddle && p.config.AllowCuddleDeclaration {
+					continue
+				}
+
 				p.addError(t.Pos(), reasonExpressionCuddledWithDeclOrRet)
 			case *ast.IfStmt, *ast.RangeStmt, *ast.SwitchStmt:
 				p.addError(t.Pos(), reasonExpressionCuddledWithBlock)

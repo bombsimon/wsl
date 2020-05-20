@@ -1718,6 +1718,55 @@ func TestWithConfig(t *testing.T) {
 			}`),
 			expectedErrorStrings: []string{reasonOnlyCuddleIfWithAssign},
 		},
+		{
+			description: "allow cuddling of declaration (#83)",
+			code: []byte(`package main
+
+			func main() {
+				var first = 1
+				var second = 2
+
+				var config Configuration
+				if err := conf.Load(config); err != nil {
+					panic(err)
+				}
+
+				var config Configuration
+				conf.Load(&config)
+
+				var config Configuration
+				err = json.Unmarshal(body, &config)
+
+				var notUsed bool
+				err = json.Unmarshal(body, &something)
+
+				var x = 1
+				if x > 0 {
+					// ...
+				}
+
+				// This one fails because we're not using y in the if statement.
+				var y = 1
+				if first > 0 {
+					// ...
+				}
+
+				// This one fails because we cuddled too many
+				var z = 1
+				var zz = 2
+				if zz > z {
+					// ...
+				}
+			}`),
+			customConfig: &Configuration{
+				AllowAssignAndCallCuddle: true,
+				AllowCuddleDeclaration:   true,
+			},
+			expectedErrorStrings: []string{
+				reasonOnlyCuddleWithUsedAssign,
+				reasonOnlyOneCuddle,
+			},
+		},
 	}
 
 	for _, tc := range cases {
