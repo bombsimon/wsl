@@ -39,7 +39,7 @@ const (
 	reasonTypeSwitchTooCuddled           = "only one cuddle assignment allowed before type switch statement"
 	reasonTypeSwitchCuddledWithoutUse    = "type switch statements should only be cuddled with variables switched"
 	reasonBlockStartsWithWS              = "block should not start with a whitespace"
-	reasonBlockEndsWithWS                = "block should not end with a whitespace (or comment)"
+	reasonBlockEndsWithWS                = "block should not end with a whitespace (or comment or label)"
 	reasonCaseBlockTooCuddly             = "case block should end with newline at this size"
 )
 
