@@ -94,7 +94,7 @@ feel free to raise an [issue](https://github.com/bombsimon/wsl/issues/new).
 * [Anonymous switch statements should never be cuddled](doc/rules.md#anonymous-switch-statements-should-never-be-cuddled)
 * [Append only allowed to cuddle with appended value](doc/rules.md#append-only-allowed-to-cuddle-with-appended-value)
 * [Assignments should only be cuddled with other assignments](doc/rules.md#assignments-should-only-be-cuddled-with-other-assignments)
-* [Block should not end with a whitespace (or comment)](doc/rules.md#block-should-not-end-with-a-whitespace-or-comment)
+* [Block should not end with a whitespace (or comment or label)](doc/rules.md#block-should-not-end-with-a-whitespace-or-comment-or-label)
 * [Block should not start with a whitespace](doc/rules.md#block-should-not-start-with-a-whitespace)
 * [Case block should end with newline at this size](doc/rules.md#case-block-should-end-with-newline-at-this-size)
 * [Branch statements should not be cuddled if block has more than two lines](doc/rules.md#branch-statements-should-not-be-cuddled-if-block-has-more-than-two-lines)
