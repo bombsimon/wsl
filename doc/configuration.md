@@ -204,7 +204,7 @@ var (
 )
 ```
 
-### [allow-case-trailing-whitespace](rules.md#block-should-not-end-with-a-whitespace-or-comment)
+### [allow-case-trailing-whitespace](rules.md#block-should-not-end-with-a-whitespace-or-comment-or-label)
 
 Controls if you may end case statements with a whitespace. This option is
 independent of other blocks and was introduced to improve readability for
@@ -240,7 +240,7 @@ case 3:
 }
 ```
 
-### [allow-trailing-comment](rules.md#block-should-not-end-with-a-whitespace-or-comment)
+### [allow-trailing-comment](rules.md#block-should-not-end-with-a-whitespace-or-comment-or-label)
 
 Controls if blocks can end with comments. This is not encouraged sine it's
 usually code smell but might be useful do improve understanding or learning
