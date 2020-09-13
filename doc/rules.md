@@ -114,7 +114,7 @@ fmt.Println("x")
 
 ---
 
-### Block should not end with a whitespace (or comment)
+### Block should not end with a whitespace (or comment or label)
 
 > Can be configured, see [configuration
 documentation](configuration.md#allow-trailing-comment)
@@ -143,6 +143,8 @@ func example(y int) string {
     return fmt.Sprintf("x")
 }
 ```
+
+For a label at the end of a block, see https://github.com/bombsimon/wsl/issues/92.
 
 ---
 
