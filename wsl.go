@@ -1138,7 +1138,24 @@ func (p *Processor) nodeStart(node ast.Node) int {
 }
 
 func (p *Processor) nodeEnd(node ast.Node) int {
-	return p.fileSet.Position(node.End()).Line
+	var line = p.fileSet.Position(node.End()).Line
+
+	if isEmptyLabeledStmt(node) {
+		return line - 1
+	}
+
+	return line
+}
+
+func isEmptyLabeledStmt(node ast.Node) bool {
+	v, ok := node.(*ast.LabeledStmt)
+	if !ok {
+		return false
+	}
+
+	_, empty := v.Stmt.(*ast.EmptyStmt)
+
+	return empty
 }
 
 // Add an error for the file and line number for the current token.Pos with the

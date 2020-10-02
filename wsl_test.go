@@ -65,6 +65,14 @@ func TestGenericHandling(t *testing.T) {
 				s := func() error { return nil }
 			}`),
 		},
+		{
+			description: "no false positives for empty labels",
+			code: []byte(`package main
+			func main() {
+				goto end;
+				end:
+			}`),
+		},
 	}
 
 	for _, tc := range cases {
