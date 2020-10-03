@@ -1141,7 +1141,7 @@ func (p *Processor) nodeEnd(node ast.Node) int {
 	var line = p.fileSet.Position(node.End()).Line
 
 	if isEmptyLabeledStmt(node) {
-		return line - 1
+		return p.fileSet.Position(node.Pos()).Line
 	}
 
 	return line

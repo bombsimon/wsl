@@ -66,7 +66,7 @@ func TestGenericHandling(t *testing.T) {
 			}`),
 		},
 		{
-			description: "no false positives for empty labels",
+			description: "no false positives for empty labeled blocks",
 			code: []byte(`package main
 			func main() {
 				goto end;
@@ -207,6 +207,18 @@ func TestShouldRemoveEmptyLines(t *testing.T) {
 					}
 				}
 			}`),
+		},
+		{
+			description: "whitespaces parsed correctly in labeled blocks",
+			code: []byte(`package main
+			func main() {
+				goto end
+				end:
+
+			}`),
+			expectedErrorStrings: []string{
+				reasonBlockEndsWithWS,
+			},
 		},
 	}
 
