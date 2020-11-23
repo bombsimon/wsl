@@ -338,10 +338,10 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 
 		// We could potentially have a block which require us to check the first
 		// argument before ruling out an allowed cuddle.
-		var assignedFirstInBlock []string
+		var calledOrAssignedFirstInBlock []string
 
 		if firstBodyStatement != nil {
-			assignedFirstInBlock = p.findLHS(firstBodyStatement)
+			calledOrAssignedFirstInBlock = append(p.findLHS(firstBodyStatement), p.findRHS(firstBodyStatement)...)
 		}
 
 		var (
@@ -453,7 +453,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 				continue
 			}
 
-			if atLeastOneInListsMatch(assignedOnLineAbove, assignedFirstInBlock) {
+			if atLeastOneInListsMatch(assignedOnLineAbove, calledOrAssignedFirstInBlock) {
 				continue
 			}
 
@@ -548,7 +548,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 
 			if !atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) {
-				if !atLeastOneInListsMatch(assignedOnLineAbove, assignedFirstInBlock) {
+				if !atLeastOneInListsMatch(assignedOnLineAbove, calledOrAssignedFirstInBlock) {
 					p.addError(t.Pos(), reasonRangeCuddledWithoutUse)
 				}
 			}
@@ -591,6 +591,24 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 				continue
 			}
 
+			// Allow use to cuddled defer func literals with usages on line
+			// abouve. Example:
+			// b := getB()
+			// defer func() {
+			//     makesSenseToUse(b)
+			// }()
+			if c, ok := t.Call.Fun.(*ast.FuncLit); ok {
+				funcLitFirstStmt := append(p.findLHS(c.Body), p.findRHS(c.Body)...)
+
+				if atLeastOneInListsMatch(assignedOnLineAbove, funcLitFirstStmt) {
+					continue
+				}
+			}
+
+			if atLeastOneInListsMatch(assignedOnLineAbove, calledOrAssignedFirstInBlock) {
+				continue
+			}
+
 			if !atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) {
 				p.addError(t.Pos(), reasonDeferCuddledWithOtherVar)
 			}
@@ -611,7 +629,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			// comments regarding variable usages on the line before or as the
 			// first line in the block for details.
 			if !atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) {
-				if !atLeastOneInListsMatch(assignedOnLineAbove, assignedFirstInBlock) {
+				if !atLeastOneInListsMatch(assignedOnLineAbove, calledOrAssignedFirstInBlock) {
 					p.addError(t.Pos(), reasonForCuddledAssignWithoutUse)
 				}
 			}
@@ -654,7 +672,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			if !atLeastOneInListsMatch(rightHandSide, assignedOnLineAbove) {
 				// Allow type assertion on variables used in the first case
 				// immediately.
-				if !atLeastOneInListsMatch(assignedOnLineAbove, assignedFirstInBlock) {
+				if !atLeastOneInListsMatch(assignedOnLineAbove, calledOrAssignedFirstInBlock) {
 					p.addError(t.Pos(), reasonTypeSwitchCuddledWithoutUse)
 				}
 			}
