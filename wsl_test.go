@@ -1215,6 +1215,22 @@ func TestShouldAddEmptyLines(t *testing.T) {
 				reasonAssignsCuddleAssign,
 			},
 		},
+		{
+			description: "should allow defer func literals just like any block",
+			code: []byte(`package main
+
+			func main() {
+				tx := BeginTx(db)
+				defer func() {
+					EndTx(tx, err)
+				}()
+
+				i := 100
+				defer func() {
+					i = 0
+				}()
+			}`),
+		},
 	}
 
 	for _, tc := range cases {
