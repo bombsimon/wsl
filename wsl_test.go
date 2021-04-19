@@ -1833,19 +1833,19 @@ func TestWithConfig(t *testing.T) {
 			code: []byte(`package main
 
 			func main() {
-                // OK
+				// OK
 				a := 1
-                b := 2
+				b := 2
 
-                // should fail
+				// should fail
 				c := 3
-                b = 2
+				b = 2
 
-                // should fail 
-                err := DoSomething()
-                if err != nil {
-                    b = 4
-                }
+				// should fail 
+				err := DoSomething()
+				if err != nil {
+					b = 4
+				}
 			}`),
 			customConfig: &Configuration{
 				AllowAssignAndAnythingCuddle:    true,
