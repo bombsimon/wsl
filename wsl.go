@@ -41,6 +41,7 @@ const (
 	reasonBlockStartsWithWS              = "block should not start with a whitespace"
 	reasonBlockEndsWithWS                = "block should not end with a whitespace (or comment)"
 	reasonCaseBlockTooCuddly             = "case block should end with newline at this size"
+	reasonShortDeclNotExclusive          = "short declaration should cuddle only with other short declarations"
 )
 
 // Warning strings
@@ -159,6 +160,20 @@ type Configuration struct {
 	// used for error variables to check for in the conditional.
 	// Defaults to just "err"
 	ErrorVariableNames []string
+
+	// ForceExclusiveShortDeclarations will cause an error if a short declaration
+	// (:=) cuddles with anything other than another short declaration. For example
+	//
+	// a := 2
+	// b := 3
+	//
+	// is allowed, but
+	//
+	// a := 2
+	// b = 3
+	//
+	// is not allowed. This logic overrides ForceCuddleErrCheckAndAssign among others.
+	ForceExclusiveShortDeclarations bool
 }
 
 // DefaultConfig returns default configuration
@@ -171,6 +186,7 @@ func DefaultConfig() Configuration {
 		AllowTrailingComment:             false,
 		AllowSeparatedLeadingComment:     false,
 		ForceCuddleErrCheckAndAssign:     false,
+		ForceExclusiveShortDeclarations:  false,
 		ForceCaseTrailingWhitespaceLimit: 0,
 		AllowCuddleWithCalls:             []string{"Lock", "RLock"},
 		AllowCuddleWithRHS:               []string{"Unlock", "RUnlock"},
@@ -389,6 +405,22 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 
 			return false
+		}
+
+		// If it's a short declaration we should not cuddle with anything else
+		// if ForceExclusiveShortDeclarations is set on; either this or the
+		// previous statement could be the short decl, so we'll find out which
+		// it was and use *that* statement's position
+		if p.config.ForceExclusiveShortDeclarations && cuddledWithLastStmt {
+			if p.isShortDecl(stmt) && !p.isShortDecl(previousStatement) {
+				t := stmt.(*ast.AssignStmt)
+
+				p.addError(t.Pos(), reasonShortDeclNotExclusive)
+			} else if p.isShortDecl(previousStatement) && !p.isShortDecl(stmt) {
+				t := previousStatement.(*ast.AssignStmt)
+
+				p.addError(t.Pos(), reasonShortDeclNotExclusive)
+			}
 		}
 
 		// If it's not an if statement and we're not cuddled move on. The only
@@ -886,6 +918,21 @@ func (p *Processor) findRHS(node ast.Node) []string {
 	}
 
 	return rhs
+}
+
+func (p *Processor) isShortDecl(node ast.Node) bool {
+	if node == nil {
+		return false
+	}
+
+	switch t := node.(type) {
+	case *ast.AssignStmt:
+		if t.Tok == token.DEFINE {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (p *Processor) findBlockStmt(node ast.Node) []*ast.BlockStmt {

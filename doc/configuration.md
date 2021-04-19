@@ -296,3 +296,41 @@ if err != nil {
     return err
 }
 ```
+
+### [force-short-decl-cuddling](rules.md#short-declaration-should-cuddle-only-with-other-short-declarations)
+
+Enforces that an assignment which is actually a short declaration (using `:=`)
+is only allowed to cuddle with other short declarations, and not plain
+assignments, blocks, etc. This rule helps make declarations stand out by
+themselves, much the same as grouping `var` statements.
+
+> Default value: false
+
+Supported when false:
+
+```go
+a := 1
+a = 2
+
+err := ErrorProducingFunc()
+if err != nil {
+    return err
+}
+```
+
+Required when true:
+
+```go
+a := 1
+
+a = 2
+
+err := ErrorProducingFunc()
+
+if err != nil {
+    return err
+}
+```
+
+**Note**: this means the option _overrides_ the 
+[enforce-err-cuddling](#enforce-err-cuddling) option above, among others.
