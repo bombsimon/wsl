@@ -1828,6 +1828,35 @@ func TestWithConfig(t *testing.T) {
 				reasonOnlyOneCuddle,
 			},
 		},
+		{
+			description: "force short decls to cuddle alone",
+			code: []byte(`package main
+
+			func main() {
+                // OK
+				a := 1
+                b := 2
+
+                // should fail
+				c := 3
+                b = 2
+
+                // should fail 
+                err := DoSomething()
+                if err != nil {
+                    b = 4
+                }
+			}`),
+			customConfig: &Configuration{
+				AllowAssignAndAnythingCuddle:    true,
+				ForceCuddleErrCheckAndAssign:    true,
+				ForceExclusiveShortDeclarations: true,
+			},
+			expectedErrorStrings: []string{
+				reasonShortDeclNotExclusive,
+				reasonShortDeclNotExclusive,
+			},
+		},
 	}
 
 	for _, tc := range cases {

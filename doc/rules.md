@@ -1013,3 +1013,38 @@ if err != nil {
     return err
 }
 ```
+
+---
+
+### Short declaration should cuddle only with other short declarations
+
+> Can be configured, see [configuration
+documentation](configuration.md#force-short-decl-cuddling)
+
+A short declaration (an "assignment" using `:=`) must not be cuddled with anything other than another short declaration.
+
+```go
+a := 1
+err := ErrorProducingFunc()
+if err != nil {
+    return err
+}
+```
+
+#### Recommended amendment
+
+Add an empty line between the short declaration and the error check.
+
+```go
+a := 1
+err := ErrorProducingFunc()
+
+if err != nil {
+    return err
+}
+```
+
+**Note**: this is the opposite of the case above forcing an `err` variable
+to be assigned together with its check; it also overrides some other rules
+which about assignments by separating short declarations from "plain"
+assignment statements using `=`.
