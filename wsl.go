@@ -1101,7 +1101,6 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 	// And now if the first statement is passed the number of allowed lines,
 	// then we had extra WS, possibly before the first comment group.
 	if p.nodeStart(firstStatement) > blockStartLine+allowedLinesBeforeFirstStatement {
-		fmt.Printf("error: p.nodeStart(firstStatement)=%d, blockStartLine+allowedLinesBeforeFirstStatement=%d\n", p.nodeStart(firstStatement), blockStartLine+allowedLinesBeforeFirstStatement)
 		p.addError(
 			blockStartPos,
 			reasonBlockStartsWithWS,
