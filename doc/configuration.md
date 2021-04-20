@@ -133,6 +133,36 @@ assignmentTwo := "so I cannot be cuddled"
 assignmentThree := "this is fine"
 ```
 
+### [allow-separated-leading-comment](rules.md#block-should-not-start-with-a-whitespace)
+
+This option allows whitespace after each comment group that begins a block.
+
+> Default value: false
+
+For example,
+
+```go
+func example() string {
+  // comment
+
+  return fmt.Sprintf("x")
+}
+```
+
+and
+
+```go
+func example() string {
+  // comment
+
+  // comment
+  return fmt.Sprintf("x")
+}
+```
+
+become legal, as the whitespace _after_ (or between) each comment block 
+doesn't count against whitespace before the first actual statement.
+
 ### [force-case-trailing-whitespace](rules.md#case-block-should-end-with-newline-at-this-size)
 
 Can be set to force trailing newlines at the end of case blocks to improve

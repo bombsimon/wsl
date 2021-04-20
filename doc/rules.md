@@ -202,6 +202,31 @@ func example() string {
 }
 ```
 
+> However, this can be configured to allow white space after one
+> or more initial comment groups, see
+[configuration documentation](configuration.md#allow-separated-leading-comment)
+>
+> If that is done, then these examples are allowed:
+
+```go
+  func example() string {
+  // comment
+
+  return fmt.Sprintf("x")
+}
+```
+
+> and
+
+```go
+  func example() string {
+  // comment
+
+  // comment
+  return fmt.Sprintf("x")
+}
+```
+
 ---
 
 ### Branch statements should not be cuddled if block has more than two lines

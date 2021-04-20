@@ -1732,7 +1732,71 @@ func TestWithConfig(t *testing.T) {
 					*/
 					fmt.Println("Hello, World")
 				}
+
+				func () { // Comment
+					// and one more
+
+					fmt.Println("Hello, World")
+				}
+
+				func () { // Comment
+					fmt.Println("Hello, World")
+				}
 			}`),
+		},
+		{
+			description: "allow separated leading comment (negative)",
+			customConfig: &Configuration{
+				AllowSeparatedLeadingComment: true,
+			},
+			code: []byte(`package main
+
+			func main() {
+				// These blocks should generate error
+				func () {
+
+					// Comment
+
+					// Comment
+					fmt.Println("Hello, World")
+				}
+
+				func () {
+
+					fmt.Println("Hello, World")
+				}
+
+				func () {
+					// Comment
+
+
+					fmt.Println("Hello, World")
+				}
+
+				func () {
+					// Comment
+
+					// Comment
+
+
+					fmt.Println("Hello, World")
+				}
+
+				func () { // Comment
+
+					/*
+						Multiline
+					*/
+					fmt.Println("Hello, World")
+				}
+			}`),
+			expectedErrorStrings: []string{
+				reasonBlockStartsWithWS,
+				reasonBlockStartsWithWS,
+				reasonBlockStartsWithWS,
+				reasonBlockStartsWithWS,
+				reasonBlockStartsWithWS,
+			},
 		},
 		{
 			description: "only warn about cuddling errors if it's an expression above",
