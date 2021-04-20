@@ -1070,8 +1070,17 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 			}
 
 			// We store number of seen comment groups because we allow multiple
-			// groups with a newline between them.
-			seenCommentGroups++
+			// groups with a newline between them; but if the first one has WS
+			// before it, we're not going to count it to force an error.
+			if p.config.AllowSeparatedLeadingComment {
+				cg := p.fileSet.Position(commentGroup.Pos()).Line
+
+				if seenCommentGroups > 0 || cg == blockStartLine+1 {
+					seenCommentGroups++
+				}
+			} else {
+				seenCommentGroups++
+			}
 
 			// Support both /* multiline */ and //single line comments
 			for _, c := range commentGroup.List {
@@ -1080,14 +1089,19 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 		}
 	}
 
-	// If we have multiple groups, add support for newline between each group.
+	// If we allow separated comments, allow for a space after each group
 	if p.config.AllowSeparatedLeadingComment {
 		if seenCommentGroups > 1 {
 			allowedLinesBeforeFirstStatement += seenCommentGroups - 1
+		} else if seenCommentGroups == 1 {
+			allowedLinesBeforeFirstStatement += 1
 		}
 	}
 
-	if p.nodeStart(firstStatement) != blockStartLine+allowedLinesBeforeFirstStatement {
+	// And now if the first statement is passed the number of allowed lines,
+	// then we had extra WS, possibly before the first comment group.
+	if p.nodeStart(firstStatement) > blockStartLine+allowedLinesBeforeFirstStatement {
+		fmt.Printf("error: p.nodeStart(firstStatement)=%d, blockStartLine+allowedLinesBeforeFirstStatement=%d\n", p.nodeStart(firstStatement), blockStartLine+allowedLinesBeforeFirstStatement)
 		p.addError(
 			blockStartPos,
 			reasonBlockStartsWithWS,
