@@ -413,13 +413,9 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 		// it was and use *that* statement's position
 		if p.config.ForceExclusiveShortDeclarations && cuddledWithLastStmt {
 			if p.isShortDecl(stmt) && !p.isShortDecl(previousStatement) {
-				t := stmt.(*ast.AssignStmt)
-
-				p.addError(t.Pos(), reasonShortDeclNotExclusive)
+				p.addError(stmt.Pos(), reasonShortDeclNotExclusive)
 			} else if p.isShortDecl(previousStatement) && !p.isShortDecl(stmt) {
-				t := previousStatement.(*ast.AssignStmt)
-
-				p.addError(t.Pos(), reasonShortDeclNotExclusive)
+				p.addError(previousStatement.Pos(), reasonShortDeclNotExclusive)
 			}
 		}
 
@@ -924,7 +920,7 @@ func (p *Processor) isShortDecl(node ast.Node) bool {
 	if t, ok := node.(*ast.AssignStmt); ok {
 		return t.Tok == token.DEFINE
 	}
-	
+
 	return false
 }
 
