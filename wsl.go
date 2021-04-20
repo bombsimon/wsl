@@ -921,17 +921,10 @@ func (p *Processor) findRHS(node ast.Node) []string {
 }
 
 func (p *Processor) isShortDecl(node ast.Node) bool {
-	if node == nil {
-		return false
+	if t, ok := node.(*ast.AssignStmt); ok {
+		return t.Tok == token.DEFINE
 	}
-
-	switch t := node.(type) {
-	case *ast.AssignStmt:
-		if t.Tok == token.DEFINE {
-			return true
-		}
-	}
-
+	
 	return false
 }
 
