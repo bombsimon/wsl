@@ -1921,6 +1921,19 @@ func TestWithConfig(t *testing.T) {
 				reasonShortDeclNotExclusive,
 			},
 		},
+		{
+			description: "key value pairs can use variables",
+			code: []byte(`package main
+
+			func main() {
+				someData := GetSomeData()
+				log.WithFields(log.Fields{
+					"data1": someData.One,
+					"data2": someData.Two,
+					"data3": someData.Three,
+				}).Debug("Got some data")
+			}`),
+		},
 	}
 
 	for _, tc := range cases {
