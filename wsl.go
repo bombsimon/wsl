@@ -845,8 +845,7 @@ func (p *Processor) findRHS(node ast.Node) []string {
 	case *ast.BasicLit, *ast.SelectStmt, *ast.ChanType,
 		*ast.LabeledStmt, *ast.DeclStmt, *ast.BranchStmt,
 		*ast.TypeSpec, *ast.ArrayType, *ast.CaseClause,
-		*ast.CommClause, *ast.KeyValueExpr, *ast.MapType,
-		*ast.FuncLit:
+		*ast.CommClause, *ast.MapType, *ast.FuncLit:
 	// Nothing to add to RHS
 	case *ast.Ident:
 		return []string{t.Name}
@@ -905,6 +904,9 @@ func (p *Processor) findRHS(node ast.Node) []string {
 		rhs = append(rhs, p.findRHS(t.X)...)
 		rhs = append(rhs, p.findRHS(t.Low)...)
 		rhs = append(rhs, p.findRHS(t.High)...)
+	case *ast.KeyValueExpr:
+		rhs = p.findRHS(t.Key)
+		rhs = append(rhs, p.findRHS(t.Value)...)
 	default:
 		if x, ok := maybeX(t); ok {
 			return p.findRHS(x)
