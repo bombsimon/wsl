@@ -28,7 +28,7 @@ Required when true:
 
 ```go
 x := []string{}
-y := "not going in x")
+y := "not going in x"
 
 x = append(x, "not y")
 x = append(x, y)
@@ -38,11 +38,10 @@ Supproted when false:
 
 ```go
 x := []string{}
-y := "not going in x")
+y := "not going in x"
 x = append(x, "not y")
 z := "string"
 x = append(x, "i don't care")
-
 ```
 
 ### [allow-assign-and-call](rules.md#only-cuddled-expressions-if-assigning-variable-or-using-from-line-above)
