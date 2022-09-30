@@ -301,7 +301,7 @@ if 1 == 1 {
 }
 ```
 
-### [enforce-err-cuddling](rules.md#if-statements-that-check-an-error-must-be-cuddled-with-the-statement-that-assigned-the-error)
+### [force-err-cuddling](rules.md#if-statements-that-check-an-error-must-be-cuddled-with-the-statement-that-assigned-the-error)
 
 Enforces that an `if` statement checking an error variable is cuddled with the line that assigned that error variable.
 
@@ -362,4 +362,4 @@ if err != nil {
 ```
 
 **Note**: this means the option _overrides_ the 
-[enforce-err-cuddling](#enforce-err-cuddling) option above, among others.
+[force-err-cuddling](#force-err-cuddling) option above, among others.
