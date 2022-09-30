@@ -1016,7 +1016,7 @@ switch inSwitch.(type) {
 ### If statements that check an error must be cuddled with the statement that assigned the error
 
 > Can be configured, see [configuration
-documentation](configuration.md#enforce-err-cuddling)
+documentation](configuration.md#force-err-cuddling)
 
 When an `if` statement checks a variable named `err`, which was assigned on the line above, it should be cuddled with that assignment. This makes clear the relationship between the error check and the call that may have resulted in an error.
 
