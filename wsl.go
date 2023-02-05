@@ -247,7 +247,6 @@ func (p *Processor) ProcessFiles(filenames []string) ([]Result, []string) {
 func (p *Processor) process(filename string, data []byte) {
 	fileSet := token.NewFileSet()
 	file, err := parser.ParseFile(fileSet, filename, data, parser.ParseComments)
-
 	// If the file is not parsable let's add a syntax error and move on.
 	if err != nil {
 		p.result = append(p.result, Result{
@@ -335,7 +334,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 		var calledOnLineAbove []string
 
 		// Check if the previous statement spans over multiple lines.
-		var cuddledWithMultiLineAssignment = cuddledWithLastStmt && p.nodeStart(previousStatement) != p.nodeStart(stmt)-1
+		cuddledWithMultiLineAssignment := cuddledWithLastStmt && p.nodeStart(previousStatement) != p.nodeStart(stmt)-1
 
 		// Ensure previous line is not a multi line assignment and if not get
 		// rightAndLeftHandSide assigned variables.
@@ -670,6 +669,22 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 				p.addError(t.Pos(), reasonOneCuddleBeforeGo)
 
 				continue
+			}
+
+			if c, ok := t.Call.Fun.(*ast.SelectorExpr); ok {
+				goCallArgs := append(p.findLHS(c.X), p.findRHS(c.X)...)
+
+				if atLeastOneInListsMatch(calledOnLineAbove, goCallArgs) {
+					continue
+				}
+			}
+
+			if c, ok := t.Call.Fun.(*ast.FuncLit); ok {
+				goCallArgs := append(p.findLHS(c.Body), p.findRHS(c.Body)...)
+
+				if atLeastOneInListsMatch(assignedOnLineAbove, goCallArgs) {
+					continue
+				}
 			}
 
 			if !atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) {
@@ -1207,7 +1222,7 @@ func (p *Processor) nodeStart(node ast.Node) int {
 }
 
 func (p *Processor) nodeEnd(node ast.Node) int {
-	var line = p.fileSet.Position(node.End()).Line
+	line := p.fileSet.Position(node.End()).Line
 
 	if isEmptyLabeledStmt(node) {
 		return p.fileSet.Position(node.Pos()).Line
