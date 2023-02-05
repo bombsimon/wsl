@@ -1,0 +1,75 @@
+---
+name: CI
+on:
+  push:
+  pull_request:
+
+jobs:
+  golangci-lint:
+    name: golangci-lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-go@v3
+        with:
+          go-version: '1.20'
+      - uses: actions/checkout@v3
+      - uses: golangci/golangci-lint-action@v3
+
+  tests:
+    # run after golangci-lint action to not produce duplicated errors
+    name: tests
+    needs: golangci-lint
+    strategy:
+      matrix:
+        go:
+          - '1.20'
+        os:
+          - ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ matrix.go }}
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Setup cache
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: ${{ runner.os }}-go-
+
+      - name: Test code
+        run: go test -race -v ./...
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Go
+        if: success()
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.20'
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Calc coverage
+        run: |
+          export PATH=$PATH:$(go env GOPATH)/bin
+          go test -v -covermode=count -coverprofile=coverage.out
+
+      - name: Convert coverage to lcov
+        uses: jandelgado/gcov2lcov-action@v1.0.9
+        with:
+          infile: coverage.out
+          outfile: coverage.lcov
+
+      - name: Coveralls
+        uses: coverallsapp/github-action@1.1.3
+        with:
+          github-token: ${{ secrets.github_token }}
+          path-to-lcov: coverage.lcov

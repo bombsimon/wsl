@@ -10,7 +10,6 @@ import (
 	"github.com/bombsimon/wsl/v3"
 )
 
-// nolint: gocognit
 func main() {
 	var (
 		args         []string
