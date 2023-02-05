@@ -1231,6 +1231,59 @@ func TestShouldAddEmptyLines(t *testing.T) {
 				}()
 			}`),
 		},
+		{
+			description: "go stmt can be cuddled if used in call",
+			code: []byte(`package main
+
+			func main() {
+				wg := sync.WaitGroup{}
+				go func(wg) {
+					defer wg.Done()
+
+					fmt.Println("cuddling correctly")
+				}()
+
+				one := 1
+				go func(wg) {
+					defer wg.Done()
+
+					fmt.Println("cuddling faulty")
+				}()
+
+				two := 2
+				go someFunc(two)
+
+				wg.Wait()
+
+				_ = one
+				_ = two
+			}`),
+			expectedErrorStrings: []string{"go statements can only invoke functions assigned on line above"},
+		},
+		{
+			description: "calling go stmt on type used above should be ok",
+			code: []byte(`package main
+
+			type A struct {
+				wg sync.WaitGrop
+			}
+
+			func (a *A) doWork() {
+				fmt.Println("doing work")
+				a.wg.Done()
+			}
+
+			func main() {
+				a := A{
+					wg: sync.WaitGroup{},
+				}
+
+				a.wg.Add(1)
+				go a.doWork()
+
+				wg.Done()
+			}`),
+		},
 	}
 
 	for _, tc := range cases {
@@ -1574,7 +1627,7 @@ func TestWithConfig(t *testing.T) {
 				once.Do(func() {
 					err = ProduceError()
 				})
-			
+
 				if err != nil {
 					return nil, err
 				}
@@ -1905,7 +1958,7 @@ func TestWithConfig(t *testing.T) {
 				c := 3
 				b = 2
 
-				// should fail 
+				// should fail
 				err := DoSomething()
 				if err != nil {
 					b = 4
