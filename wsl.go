@@ -5,12 +5,12 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"io/ioutil"
+	"os"
 	"reflect"
 	"strings"
 )
 
-// Error reason strings
+// Error reason strings.
 const (
 	reasonMustCuddleErrCheck             = "if statements that check an error must be cuddled with the statement that assigned the error"
 	reasonOnlyCuddleIfWithAssign         = "if statements should only be cuddled with assignments"
@@ -44,7 +44,7 @@ const (
 	reasonShortDeclNotExclusive          = "short declaration should cuddle only with other short declarations"
 )
 
-// Warning strings
+// Warning strings.
 const (
 	warnTypeNotImplement           = "type not implemented"
 	warnStmtNotImplemented         = "stmt type not implemented"
@@ -176,7 +176,7 @@ type Configuration struct {
 	ForceExclusiveShortDeclarations bool
 }
 
-// DefaultConfig returns default configuration
+// DefaultConfig returns default configuration.
 func DefaultConfig() Configuration {
 	return Configuration{
 		StrictAppend:                     true,
@@ -216,6 +216,8 @@ type Processor struct {
 }
 
 // NewProcessor will create a Processor.
+//
+//nolint:gocritic // It's fine to copy config struct
 func NewProcessorWithConfig(cfg Configuration) *Processor {
 	return &Processor{
 		result: []Result{},
@@ -230,10 +232,11 @@ func NewProcessor() *Processor {
 
 // ProcessFiles takes a string slice with file names (full paths) and lints
 // them.
-// nolint: gocritic
+//
+//nolint:gocritic // Don't want named returns
 func (p *Processor) ProcessFiles(filenames []string) ([]Result, []string) {
 	for _, filename := range filenames {
-		data, err := ioutil.ReadFile(filename)
+		data, err := os.ReadFile(filename)
 		if err != nil {
 			panic(err)
 		}
@@ -291,7 +294,6 @@ func (p *Processor) parseBlockBody(ident *ast.Ident, block *ast.BlockStmt) {
 
 // parseBlockStatements will parse all the statements found in the body of a
 // node. A list of Result is returned.
-// nolint: gocognit
 func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 	for i, stmt := range statements {
 		// Start by checking if this statement is another block (other than if,
@@ -396,8 +398,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			//     t.X = true
 			//     return t
 			// }
-			// nolint: gocritic
-			if i == len(statements)-1 && i == 1 {
+			if len(statements) == 2 && i == 1 {
 				if p.nodeEnd(stmt)-p.nodeStart(previousStatement) <= 2 {
 					return true
 				}
@@ -1019,7 +1020,6 @@ func atLeastOneInListsMatch(listOne, listTwo []string) bool {
 // findLeadingAndTrailingWhitespaces will find leading and trailing whitespaces
 // in a node. The method takes comments in consideration which will make the
 // parser more gentle.
-// nolint: gocognit
 func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, nextStatement ast.Node) {
 	var (
 		allowedLinesBeforeFirstStatement = 1
@@ -1111,7 +1111,7 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 		if seenCommentGroups > 1 {
 			allowedLinesBeforeFirstStatement += seenCommentGroups - 1
 		} else if seenCommentGroups == 1 {
-			allowedLinesBeforeFirstStatement += 1
+			allowedLinesBeforeFirstStatement++
 		}
 	}
 
