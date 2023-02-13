@@ -2001,7 +2001,7 @@ func TestWithConfig(t *testing.T) {
 			p := NewProcessor(file, fileSet)
 
 			if tc.customConfig != nil {
-				p = NewProcessorWithConfig(file, fileSet, *tc.customConfig)
+				p = NewProcessorWithConfig(file, fileSet, tc.customConfig)
 			}
 
 			p.ParseAST()
@@ -2044,7 +2044,7 @@ func TestTODO(t *testing.T) {
 			p := NewProcessor(file, fileSet)
 
 			if tc.customConfig != nil {
-				p = NewProcessorWithConfig(file, fileSet, *tc.customConfig)
+				p = NewProcessorWithConfig(file, fileSet, tc.customConfig)
 			}
 
 			p.ParseAST()

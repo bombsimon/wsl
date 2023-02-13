@@ -8,7 +8,8 @@ import (
 )
 
 // Analyzer is the wsl analyzer.
-// nolint // gochecknoglobals - Not needed
+//
+//nolint:gochecknoglobals // Analyzers tend to be global.
 var Analyzer = &analysis.Analyzer{
 	Name:             "wsl",
 	Doc:              "add or remove empty lines",
@@ -17,6 +18,7 @@ var Analyzer = &analysis.Analyzer{
 	RunDespiteErrors: true,
 }
 
+//nolint:gochecknoglobals // Config needs to be overwritten with flags.
 var config = Configuration{
 	StrictAppend:                     true,
 	AllowAssignAndCallCuddle:         true,
@@ -39,7 +41,7 @@ func flags() flag.FlagSet {
 
 func run(pass *analysis.Pass) (interface{}, error) {
 	for _, file := range pass.Files {
-		processor := NewProcessorWithConfig(file, pass.Fset, config)
+		processor := NewProcessorWithConfig(file, pass.Fset, &config)
 		processor.ParseAST()
 
 		for _, v := range processor.Result {
@@ -50,6 +52,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 				textEdits []analysis.TextEdit
 			)
 
+			//nolint:exhaustive // Not while TODO
 			switch v.Type {
 			case WhitespaceShouldAddBefore:
 				pos = v.Node.Pos()
@@ -60,6 +63,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 				end = v.Node.End()
 				newText = []byte("\n")
 			default:
+				//nolint:gocritic // We need TODOs while iterating...
 				// TODO
 				continue
 			}
@@ -90,5 +94,6 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		}
 	}
 
+	//nolint:nilnil // A pass don't need to return anything.
 	return nil, nil
 }
