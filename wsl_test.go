@@ -1,6 +1,7 @@
 package wsl
 
 import (
+	"flag"
 	"fmt"
 	"go/parser"
 	"go/token"
@@ -8,7 +9,18 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/tools/go/analysis/analysistest"
 )
+
+func TestFixer(t *testing.T) {
+	flags := flag.NewFlagSet("", flag.ExitOnError)
+
+	analyzer := Analyzer
+	analyzer.Flags = *flags
+
+	testdata := analysistest.TestData()
+	analysistest.RunWithSuggestedFixes(t, testdata, analyzer)
+}
 
 func TestGenericHandling(t *testing.T) {
 	cases := []struct {
