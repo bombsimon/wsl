@@ -222,10 +222,11 @@ func DefaultConfig() Configuration {
 
 // Result represents the result of one error.
 type Result struct {
-	Node   ast.Node
-	Reason string
-	NoFix  bool
-	Type   ErrorType
+	Node    ast.Node
+	FixNode ast.Node
+	Reason  string
+	NoFix   bool
+	Type    ErrorType
 }
 
 // Processor is the type that keeps track of the file and fileset and holds the
@@ -417,6 +418,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			if p.isShortDecl(stmt) && !p.isShortDecl(previousStatement) {
 				p.addError(
 					stmt,
+					nil,
 					reasonShortDeclNotExclusive,
 					WhitespaceShouldAddAfter,
 					false,
@@ -424,6 +426,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			} else if p.isShortDecl(previousStatement) && !p.isShortDecl(stmt) {
 				p.addError(
 					previousStatement,
+					nil,
 					reasonShortDeclNotExclusive,
 					WhitespaceShouldAddBefore,
 					false,
@@ -437,6 +440,19 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 		if _, ok := stmt.(*ast.IfStmt); !ok {
 			if !cuddledWithLastStmt {
 				continue
+			}
+		}
+
+		reportNewlineTwoLinesAbove := func(n1, n2 ast.Node, reason string) {
+			if atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) ||
+				atLeastOneInListsMatch(assignedOnLineAbove, calledOrAssignedFirstInBlock) {
+				// If the variable on the line above is allowed to be
+				// cuddled, break two lines above so we keep the proper
+				// cuddling.
+				p.addWhitespaceBeforeFixOtherNodeError(n1, n2, reason)
+			} else {
+				// If not, break here so we separate the cuddled variable.
+				p.addWhitespaceBeforeError(n1, reason)
 			}
 		}
 
@@ -485,23 +501,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 
 			if moreThanOneStatementAbove() {
-				switch statements[i-2].(type) {
-				case *ast.AssignStmt:
-					p.addWhitespaceBeforeError(t, reasonOnlyOneCuddle)
-				default:
-					if atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) {
-						p.addWhitespaceBeforeErrorNoFix(t, reasonOnlyOneCuddle)
-						continue
-					}
-
-					if atLeastOneInListsMatch(assignedOnLineAbove, calledOrAssignedFirstInBlock) {
-						p.addWhitespaceBeforeErrorNoFix(t, reasonOnlyOneCuddle)
-						continue
-					}
-
-					p.addWhitespaceBeforeError(t, reasonOnlyOneCuddle)
-				}
-
+				reportNewlineTwoLinesAbove(t, statements[i-1], reasonOnlyOneCuddle)
 				continue
 			}
 
@@ -599,7 +599,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 		case *ast.RangeStmt:
 			if moreThanOneStatementAbove() {
-				p.addWhitespaceBeforeError(t, reasonOneCuddleBeforeRange)
+				reportNewlineTwoLinesAbove(t, statements[i-1], reasonOneCuddleBeforeRange)
 				continue
 			}
 
@@ -634,8 +634,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 
 			if moreThanOneStatementAbove() {
-				p.addWhitespaceBeforeError(t, reasonOneCuddleBeforeDefer)
-
+				reportNewlineTwoLinesAbove(t, statements[i-1], reasonOneCuddleBeforeDefer)
 				continue
 			}
 
@@ -671,13 +670,11 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 		case *ast.ForStmt:
 			if len(rightAndLeftHandSide) == 0 {
 				p.addWhitespaceBeforeError(t, reasonForWithoutCondition)
-
 				continue
 			}
 
 			if moreThanOneStatementAbove() {
-				p.addWhitespaceBeforeError(t, reasonForWithMoreThanOneCuddle)
-
+				reportNewlineTwoLinesAbove(t, statements[i-1], reasonForWithMoreThanOneCuddle)
 				continue
 			}
 
@@ -695,8 +692,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 
 			if moreThanOneStatementAbove() {
-				p.addWhitespaceBeforeError(t, reasonOneCuddleBeforeGo)
-
+				reportNewlineTwoLinesAbove(t, statements[i-1], reasonOneCuddleBeforeGo)
 				continue
 			}
 
@@ -721,8 +717,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 		case *ast.SwitchStmt:
 			if moreThanOneStatementAbove() {
-				p.addWhitespaceBeforeError(t, reasonSwitchManyCuddles)
-
+				reportNewlineTwoLinesAbove(t, statements[i-1], reasonSwitchManyCuddles)
 				continue
 			}
 
@@ -735,8 +730,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 		case *ast.TypeSwitchStmt:
 			if moreThanOneStatementAbove() {
-				p.addWhitespaceBeforeError(t, reasonTypeSwitchTooCuddled)
-
+				reportNewlineTwoLinesAbove(t, statements[i-1], reasonTypeSwitchTooCuddled)
 				continue
 			}
 
@@ -1146,7 +1140,7 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 	// And now if the first statement is passed the number of allowed lines,
 	// then we had extra WS, possibly before the first comment group.
 	if p.nodeStart(firstStatement) > blockStartLine+allowedLinesBeforeFirstStatement {
-		p.addError(stmt, reasonBlockStartsWithWS, WhitespaceShouldRemoveBeginning, false)
+		p.addError(stmt, nil, reasonBlockStartsWithWS, WhitespaceShouldRemoveBeginning, false)
 	}
 
 	// If the blockEndLine is not 0 we're a regular block (not case).
@@ -1169,7 +1163,7 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 		}
 
 		if p.nodeEnd(lastStatement) != blockEndLine-1 && !isExampleFunc(ident) {
-			p.addError(stmt, reasonBlockEndsWithWS, WhitespaceShouldRemoveEnd, false)
+			p.addError(stmt, nil, reasonBlockEndsWithWS, WhitespaceShouldRemoveEnd, false)
 		}
 
 		return
@@ -1284,25 +1278,30 @@ func isEmptyLabeledStmt(node ast.Node) bool {
 }
 
 func (p *Processor) addWhitespaceBeforeError(node ast.Node, reason string) {
-	p.addError(node, reason, WhitespaceShouldAddBefore, false)
+	p.addError(node, nil, reason, WhitespaceShouldAddBefore, false)
+}
+
+func (p *Processor) addWhitespaceBeforeFixOtherNodeError(reportNode ast.Node, fixNode ast.Node, reason string) {
+	p.addError(reportNode, fixNode, reason, WhitespaceShouldAddBefore, false)
 }
 
 func (p *Processor) addWhitespaceAfterError(node ast.Node, reason string) {
-	p.addError(node, reason, WhitespaceShouldAddAfter, false)
-}
-
-func (p *Processor) addWhitespaceBeforeErrorNoFix(node ast.Node, reason string) {
-	p.addError(node, reason, WhitespaceShouldAddBefore, true)
+	p.addError(node, nil, reason, WhitespaceShouldAddAfter, false)
 }
 
 // Add an error for the file and line number for the current token.Pos with the
 // given reason.
-func (p *Processor) addError(node ast.Node, reason string, errType ErrorType, noFix bool) {
+func (p *Processor) addError(reportNode, fixNode ast.Node, reason string, errType ErrorType, noFix bool) {
+	if fixNode == nil {
+		fixNode = reportNode
+	}
+
 	p.Result = append(p.Result, Result{
-		Node:   node,
-		Reason: reason,
-		NoFix:  noFix,
-		Type:   errType,
+		Node:    reportNode,
+		FixNode: fixNode,
+		Reason:  reason,
+		NoFix:   noFix,
+		Type:    errType,
 	})
 }
 
