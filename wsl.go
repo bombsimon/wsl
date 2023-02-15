@@ -37,36 +37,36 @@ func (e ErrorType) String() string {
 
 // Error reason strings.
 const (
-	reasonMustCuddleErrCheck             = "if statements that check an error must be cuddled with the statement that assigned the error"
-	reasonOnlyCuddleIfWithAssign         = "if statements should only be cuddled with assignments"
-	reasonOnlyOneCuddle                  = "only one cuddle assignment allowed before if statement"
-	reasonOnlyCuddleWithUsedAssign       = "if statements should only be cuddled with assignments used in the if statement itself"
-	reasonOnlyCuddle2LineReturn          = "return statements should not be cuddled if block has more than two lines"
-	reasonMultiLineBranchCuddle          = "branch statements should not be cuddled if block has more than two lines"
+	reasonAnonSwitchCuddled              = "anonymous switch statements should never be cuddled"
 	reasonAppendCuddledWithoutUse        = "append only allowed to cuddle with appended value"
 	reasonAssignsCuddleAssign            = "assignments should only be cuddled with other assignments"
-	reasonNeverCuddleDeclare             = "declarations should never be cuddled"
-	reasonExpressionCuddledWithDeclOrRet = "expressions should not be cuddled with declarations or returns"
-	reasonExpressionCuddledWithBlock     = "expressions should not be cuddled with blocks"
-	reasonExprCuddlingNonAssignedVar     = "only cuddled expressions if assigning variable or using from line above"
-	reasonOneCuddleBeforeRange           = "only one cuddle assignment allowed before range statement"
-	reasonRangeCuddledWithoutUse         = "ranges should only be cuddled with assignments used in the iteration"
-	reasonOneCuddleBeforeDefer           = "only one cuddle assignment allowed before defer statement"
-	reasonDeferCuddledWithOtherVar       = "defer statements should only be cuddled with expressions on same variable"
-	reasonForWithoutCondition            = "for statement without condition should never be cuddled"
-	reasonForWithMoreThanOneCuddle       = "only one cuddle assignment allowed before for statement"
-	reasonForCuddledAssignWithoutUse     = "for statements should only be cuddled with assignments used in the iteration"
-	reasonOneCuddleBeforeGo              = "only one cuddle assignment allowed before go statement"
-	reasonGoFuncWithoutAssign            = "go statements can only invoke functions assigned on line above"
-	reasonSwitchManyCuddles              = "only one cuddle assignment allowed before switch statement"
-	reasonAnonSwitchCuddled              = "anonymous switch statements should never be cuddled"
-	reasonSwitchCuddledWithoutUse        = "switch statements should only be cuddled with variables switched"
-	reasonTypeSwitchTooCuddled           = "only one cuddle assignment allowed before type switch statement"
-	reasonTypeSwitchCuddledWithoutUse    = "type switch statements should only be cuddled with variables switched"
-	reasonBlockStartsWithWS              = "block should not start with a whitespace"
 	reasonBlockEndsWithWS                = "block should not end with a whitespace (or comment)"
+	reasonBlockStartsWithWS              = "block should not start with a whitespace"
 	reasonCaseBlockTooCuddly             = "case block should end with newline at this size"
+	reasonDeferCuddledWithOtherVar       = "defer statements should only be cuddled with expressions on same variable"
+	reasonExprCuddlingNonAssignedVar     = "only cuddled expressions if assigning variable or using from line above"
+	reasonExpressionCuddledWithBlock     = "expressions should not be cuddled with blocks"
+	reasonExpressionCuddledWithDeclOrRet = "expressions should not be cuddled with declarations or returns"
+	reasonForCuddledAssignWithoutUse     = "for statements should only be cuddled with assignments used in the iteration"
+	reasonForWithoutCondition            = "for statement without condition should never be cuddled"
+	reasonGoFuncWithoutAssign            = "go statements can only invoke functions assigned on line above"
+	reasonMultiLineBranchCuddle          = "branch statements should not be cuddled if block has more than two lines"
+	reasonMustCuddleErrCheck             = "if statements that check an error must be cuddled with the statement that assigned the error"
+	reasonNeverCuddleDeclare             = "declarations should never be cuddled"
+	reasonOnlyCuddle2LineReturn          = "return statements should not be cuddled if block has more than two lines"
+	reasonOnlyCuddleIfWithAssign         = "if statements should only be cuddled with assignments"
+	reasonOnlyCuddleWithUsedAssign       = "if statements should only be cuddled with assignments used in the if statement itself"
+	reasonOnlyOneCuddleBeforeDefer       = "only one cuddle assignment allowed before defer statement"
+	reasonOnlyOneCuddleBeforeFor         = "only one cuddle assignment allowed before for statement"
+	reasonOnlyOneCuddleBeforeGo          = "only one cuddle assignment allowed before go statement"
+	reasonOnlyOneCuddleBeforeIf          = "only one cuddle assignment allowed before if statement"
+	reasonOnlyOneCuddleBeforeRange       = "only one cuddle assignment allowed before range statement"
+	reasonOnlyOneCuddleBeforeSwitch      = "only one cuddle assignment allowed before switch statement"
+	reasonOnlyOneCuddleBeforeTypeSwitch  = "only one cuddle assignment allowed before type switch statement"
+	reasonRangeCuddledWithoutUse         = "ranges should only be cuddled with assignments used in the iteration"
 	reasonShortDeclNotExclusive          = "short declaration should cuddle only with other short declarations"
+	reasonSwitchCuddledWithoutUse        = "switch statements should only be cuddled with variables switched"
+	reasonTypeSwitchCuddledWithoutUse    = "type switch statements should only be cuddled with variables switched"
 )
 
 // Warning strings.
@@ -501,7 +501,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 
 			if moreThanOneStatementAbove() {
-				reportNewlineTwoLinesAbove(t, statements[i-1], reasonOnlyOneCuddle)
+				reportNewlineTwoLinesAbove(t, statements[i-1], reasonOnlyOneCuddleBeforeIf)
 				continue
 			}
 
@@ -599,7 +599,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 		case *ast.RangeStmt:
 			if moreThanOneStatementAbove() {
-				reportNewlineTwoLinesAbove(t, statements[i-1], reasonOneCuddleBeforeRange)
+				reportNewlineTwoLinesAbove(t, statements[i-1], reasonOnlyOneCuddleBeforeRange)
 				continue
 			}
 
@@ -634,7 +634,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 
 			if moreThanOneStatementAbove() {
-				reportNewlineTwoLinesAbove(t, statements[i-1], reasonOneCuddleBeforeDefer)
+				reportNewlineTwoLinesAbove(t, statements[i-1], reasonOnlyOneCuddleBeforeDefer)
 				continue
 			}
 
@@ -674,7 +674,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 
 			if moreThanOneStatementAbove() {
-				reportNewlineTwoLinesAbove(t, statements[i-1], reasonForWithMoreThanOneCuddle)
+				reportNewlineTwoLinesAbove(t, statements[i-1], reasonOnlyOneCuddleBeforeFor)
 				continue
 			}
 
@@ -692,7 +692,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 
 			if moreThanOneStatementAbove() {
-				reportNewlineTwoLinesAbove(t, statements[i-1], reasonOneCuddleBeforeGo)
+				reportNewlineTwoLinesAbove(t, statements[i-1], reasonOnlyOneCuddleBeforeGo)
 				continue
 			}
 
@@ -717,7 +717,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 		case *ast.SwitchStmt:
 			if moreThanOneStatementAbove() {
-				reportNewlineTwoLinesAbove(t, statements[i-1], reasonSwitchManyCuddles)
+				reportNewlineTwoLinesAbove(t, statements[i-1], reasonOnlyOneCuddleBeforeSwitch)
 				continue
 			}
 
@@ -730,7 +730,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 		case *ast.TypeSwitchStmt:
 			if moreThanOneStatementAbove() {
-				reportNewlineTwoLinesAbove(t, statements[i-1], reasonTypeSwitchTooCuddled)
+				reportNewlineTwoLinesAbove(t, statements[i-1], reasonOnlyOneCuddleBeforeTypeSwitch)
 				continue
 			}
 

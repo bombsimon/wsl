@@ -568,8 +568,8 @@ func TestShouldAddEmptyLines(t *testing.T) {
 			}`),
 			expectedErrorStrings: []string{
 				reasonAssignsCuddleAssign,
-				reasonOneCuddleBeforeDefer,
-				reasonOneCuddleBeforeDefer,
+				reasonOnlyOneCuddleBeforeDefer,
+				reasonOnlyOneCuddleBeforeDefer,
 			},
 		},
 		{
@@ -1139,9 +1139,9 @@ func TestShouldAddEmptyLines(t *testing.T) {
 				go t4()
 			}`),
 			expectedErrorStrings: []string{
-				reasonOneCuddleBeforeGo,
+				reasonOnlyOneCuddleBeforeGo,
 				reasonGoFuncWithoutAssign,
-				reasonOneCuddleBeforeGo,
+				reasonOnlyOneCuddleBeforeGo,
 			},
 		},
 		{
@@ -1958,7 +1958,7 @@ func TestWithConfig(t *testing.T) {
 			},
 			expectedErrorStrings: []string{
 				reasonOnlyCuddleWithUsedAssign,
-				reasonOnlyOneCuddle,
+				reasonOnlyOneCuddleBeforeIf,
 			},
 		},
 		{
