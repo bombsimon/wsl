@@ -2064,7 +2064,7 @@ func TestTODO(t *testing.T) {
 			t.Logf("WARNINGS: %s", p.Warnings)
 
 			for _, r := range p.Result {
-				fmt.Println(r.Node, r.Reason)
+				fmt.Println(r.FixRangeStart, r.Reason)
 			}
 
 			require.Len(t, p.Result, len(tc.expectedErrorStrings), "correct amount of errors found")

@@ -1,0 +1,20 @@
+package testpkg
+
+import "fmt"
+
+func RemoveWhitespaceNoComments() {
+	a := 1
+	if a < 2 {
+		a = 2
+	} // want "block should not end with a whitespace"
+
+	switch {
+	case true:
+		fmt.Println("true")
+
+	default:
+		fmt.Println("false")
+	} // want "block should not end with a whitespace"
+
+	_ = a
+} // want "block should not end with a whitespace"

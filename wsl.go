@@ -222,11 +222,12 @@ func DefaultConfig() Configuration {
 
 // Result represents the result of one error.
 type Result struct {
-	Node    ast.Node
-	FixNode ast.Node
-	Reason  string
-	NoFix   bool
-	Type    ErrorType
+	ReportAt      token.Pos
+	FixRangeStart token.Pos
+	FixRangeEnd   token.Pos
+	Reason        string
+	NoFix         bool
+	Type          ErrorType
 }
 
 // Processor is the type that keeps track of the file and fileset and holds the
@@ -416,20 +417,20 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 		// it was and use *that* statement's position
 		if p.config.ForceExclusiveShortDeclarations && cuddledWithLastStmt {
 			if p.isShortDecl(stmt) && !p.isShortDecl(previousStatement) {
-				p.addError(
-					stmt,
-					nil,
+				p.addErrorRange(
+					stmt.Pos(),
+					stmt.End(),
+					stmt.End(),
 					reasonShortDeclNotExclusive,
 					WhitespaceShouldAddAfter,
-					false,
 				)
 			} else if p.isShortDecl(previousStatement) && !p.isShortDecl(stmt) {
-				p.addError(
-					previousStatement,
-					nil,
+				p.addErrorRange(
+					previousStatement.Pos(),
+					previousStatement.Pos(),
+					previousStatement.Pos(),
 					reasonShortDeclNotExclusive,
 					WhitespaceShouldAddBefore,
-					false,
 				)
 			}
 		}
@@ -449,7 +450,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 				// If the variable on the line above is allowed to be
 				// cuddled, break two lines above so we keep the proper
 				// cuddling.
-				p.addWhitespaceBeforeFixOtherNodeError(n1, n2, reason)
+				p.addErrorRange(n1.Pos(), n2.Pos(), n2.Pos(), reason, WhitespaceShouldAddBefore)
 			} else {
 				// If not, break here so we separate the cuddled variable.
 				p.addWhitespaceBeforeError(n1, reason)
@@ -1140,7 +1141,15 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 	// And now if the first statement is passed the number of allowed lines,
 	// then we had extra WS, possibly before the first comment group.
 	if p.nodeStart(firstStatement) > blockStartLine+allowedLinesBeforeFirstStatement {
-		p.addError(stmt, nil, reasonBlockStartsWithWS, WhitespaceShouldRemoveBeginning, false)
+		// TODO: We need to pick a better start of the range so we don't delete
+		// potential comments.
+		p.addErrorRange(
+			blockStartPos,
+			blockStartPos,
+			firstStatement.Pos(),
+			reasonBlockStartsWithWS,
+			WhitespaceShouldRemoveBeginning,
+		)
 	}
 
 	// If the blockEndLine is not 0 we're a regular block (not case).
@@ -1163,7 +1172,13 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 		}
 
 		if p.nodeEnd(lastStatement) != blockEndLine-1 && !isExampleFunc(ident) {
-			p.addError(stmt, nil, reasonBlockEndsWithWS, WhitespaceShouldRemoveEnd, false)
+			p.addErrorRange(
+				stmt.End(),
+				lastStatement.End(),
+				stmt.End(),
+				reasonBlockEndsWithWS,
+				WhitespaceShouldRemoveEnd,
+			)
 		}
 
 		return
@@ -1278,32 +1293,20 @@ func isEmptyLabeledStmt(node ast.Node) bool {
 }
 
 func (p *Processor) addWhitespaceBeforeError(node ast.Node, reason string) {
-	p.addError(node, nil, reason, WhitespaceShouldAddBefore, false)
-}
-
-func (p *Processor) addWhitespaceBeforeFixOtherNodeError(reportNode, fixNode ast.Node, reason string) {
-	p.addError(reportNode, fixNode, reason, WhitespaceShouldAddBefore, false)
+	p.addErrorRange(node.Pos(), node.Pos(), node.Pos(), reason, WhitespaceShouldAddBefore)
 }
 
 func (p *Processor) addWhitespaceAfterError(node ast.Node, reason string) {
-	p.addError(node, nil, reason, WhitespaceShouldAddAfter, false)
+	p.addErrorRange(node.Pos(), node.End(), node.End(), reason, WhitespaceShouldAddAfter)
 }
 
-// Add an error for the file and line number for the current token.Pos with the
-// given reason.
-//
-//nolint:unparam // We will potentially use this in the future.
-func (p *Processor) addError(reportNode, fixNode ast.Node, reason string, errType ErrorType, noFix bool) {
-	if fixNode == nil {
-		fixNode = reportNode
-	}
-
+func (p *Processor) addErrorRange(reportAt, start, end token.Pos, reason string, errType ErrorType) {
 	p.Result = append(p.Result, Result{
-		Node:    reportNode,
-		FixNode: fixNode,
-		Reason:  reason,
-		NoFix:   noFix,
-		Type:    errType,
+		ReportAt:      reportAt,
+		FixRangeStart: start,
+		FixRangeEnd:   end,
+		Reason:        reason,
+		Type:          errType,
 	})
 }
 

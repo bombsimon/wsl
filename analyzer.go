@@ -2,7 +2,6 @@ package wsl
 
 import (
 	"flag"
-	"go/token"
 
 	"golang.org/x/tools/go/analysis"
 )
@@ -55,40 +54,35 @@ func run(pass *analysis.Pass) (interface{}, error) {
 
 		for _, v := range processor.Result {
 			var (
-				pos       token.Pos
-				end       token.Pos
 				newText   []byte
 				textEdits []analysis.TextEdit
 			)
 
-			//nolint:exhaustive // Not while TODO
 			switch v.Type {
 			case WhitespaceShouldAddBefore:
-				pos = v.FixNode.Pos()
-				end = v.FixNode.Pos()
 				newText = []byte("\n")
 			case WhitespaceShouldAddAfter:
-				pos = v.FixNode.End()
-				end = v.FixNode.End()
 				newText = []byte("\n")
+			case WhitespaceShouldRemoveEnd:
+				newText = []byte("\n}")
+			case WhitespaceShouldRemoveBeginning:
+				newText = []byte("{\n")
 			default:
-				//nolint:gocritic // We need TODOs while iterating...
+				//nolint:gocritic // Not while TODO
 				// TODO
 				continue
 			}
 
-			if !v.NoFix {
-				textEdits = []analysis.TextEdit{
-					{
-						Pos:     pos,
-						End:     end,
-						NewText: newText,
-					},
-				}
+			textEdits = []analysis.TextEdit{
+				{
+					Pos:     v.FixRangeStart,
+					End:     v.FixRangeEnd,
+					NewText: newText,
+				},
 			}
 
 			d := analysis.Diagnostic{
-				Pos:      v.Node.Pos(),
+				Pos:      v.ReportAt,
 				Category: "",
 				Message:  v.Reason,
 				SuggestedFixes: []analysis.SuggestedFix{
