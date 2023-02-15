@@ -1281,7 +1281,7 @@ func (p *Processor) addWhitespaceBeforeError(node ast.Node, reason string) {
 	p.addError(node, nil, reason, WhitespaceShouldAddBefore, false)
 }
 
-func (p *Processor) addWhitespaceBeforeFixOtherNodeError(reportNode ast.Node, fixNode ast.Node, reason string) {
+func (p *Processor) addWhitespaceBeforeFixOtherNodeError(reportNode, fixNode ast.Node, reason string) {
 	p.addError(reportNode, fixNode, reason, WhitespaceShouldAddBefore, false)
 }
 
@@ -1291,6 +1291,8 @@ func (p *Processor) addWhitespaceAfterError(node ast.Node, reason string) {
 
 // Add an error for the file and line number for the current token.Pos with the
 // given reason.
+//
+//nolint:unparam // We will potentially use this in the future.
 func (p *Processor) addError(reportNode, fixNode ast.Node, reason string, errType ErrorType, noFix bool) {
 	if fixNode == nil {
 		fixNode = reportNode
