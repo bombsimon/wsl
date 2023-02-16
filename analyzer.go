@@ -53,47 +53,23 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		processor.ParseAST()
 
 		for _, v := range processor.Result {
-			var (
-				newText   []byte
-				textEdits []analysis.TextEdit
-			)
-
-			switch v.Type {
-			case WhitespaceShouldAddBefore:
-				newText = []byte("\n")
-			case WhitespaceShouldAddAfter:
-				newText = []byte("\n")
-			case WhitespaceShouldRemoveEnd:
-				newText = []byte("\n}")
-			case WhitespaceShouldRemoveBeginning:
-				newText = []byte("{\n")
-			default:
-				//nolint:gocritic // Not while TODO
-				// TODO
-				continue
-			}
-
-			textEdits = []analysis.TextEdit{
-				{
-					Pos:     v.FixRangeStart,
-					End:     v.FixRangeEnd,
-					NewText: newText,
-				},
-			}
-
-			d := analysis.Diagnostic{
+			pass.Report(analysis.Diagnostic{
 				Pos:      v.ReportAt,
-				Category: "",
+				Category: "whitespace",
 				Message:  v.Reason,
 				SuggestedFixes: []analysis.SuggestedFix{
 					{
-						Message:   v.Type.String(),
-						TextEdits: textEdits,
+						Message: v.Type.String(),
+						TextEdits: []analysis.TextEdit{
+							{
+								Pos:     v.FixRangeStart,
+								End:     v.FixRangeEnd,
+								NewText: []byte("\n"),
+							},
+						},
 					},
 				},
-			}
-
-			pass.Report(d)
+			})
 		}
 	}
 

@@ -425,13 +425,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 					WhitespaceShouldAddAfter,
 				)
 			} else if p.isShortDecl(previousStatement) && !p.isShortDecl(stmt) {
-				p.addErrorRange(
-					previousStatement.Pos(),
-					previousStatement.Pos(),
-					previousStatement.Pos(),
-					reasonShortDeclNotExclusive,
-					WhitespaceShouldAddBefore,
-				)
+				p.addWhitespaceBeforeError(previousStatement, reasonShortDeclNotExclusive)
 			}
 		}
 
@@ -1045,13 +1039,12 @@ func atLeastOneInListsMatch(listOne, listTwo []string) bool {
 // parser more gentle.
 func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, nextStatement ast.Node) {
 	var (
-		allowedLinesBeforeFirstStatement = 1
-		commentMap                       = ast.NewCommentMap(p.fileSet, stmt, p.file.Comments)
-		blockStatements                  []ast.Stmt
-		blockStartLine                   int
-		blockEndLine                     int
-		blockStartPos                    token.Pos
-		blockEndPos                      token.Pos
+		commentMap      = ast.NewCommentMap(p.fileSet, stmt, p.file.Comments)
+		blockStatements []ast.Stmt
+		blockStartLine  int
+		blockEndLine    int
+		blockStartPos   token.Pos
+		blockEndPos     token.Pos
 	)
 
 	// Depending on the block type, get the statements in the block and where
@@ -1087,18 +1080,24 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 	}
 
 	var (
-		firstStatement    = blockStatements[0]
-		lastStatement     = blockStatements[len(blockStatements)-1]
-		seenCommentGroups = 0
+		firstStatement = blockStatements[0]
+		lastStatement  = blockStatements[len(blockStatements)-1]
 	)
 
 	// Get the comment related to the first statement, we do allow commends in
 	// the beginning of a block before the first statement.
+	var (
+		openingNodePos     = blockStartPos // Either LBrace or comment if on same line
+		firstNode          ast.Node        // Either the first statement or the first comment
+		lastLeadingComment ast.Node
+	)
+
 	if c, ok := commentMap[firstStatement]; ok {
 		for _, commentGroup := range c {
 			// If the comment group is on the same line as the block start
 			// (LBrace) we should not consider it.
 			if p.nodeStart(commentGroup) == blockStartLine {
+				openingNodePos = commentGroup.End() - 1
 				continue
 			}
 
@@ -1109,47 +1108,49 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 				break
 			}
 
-			// We store number of seen comment groups because we allow multiple
-			// groups with a newline between them; but if the first one has WS
-			// before it, we're not going to count it to force an error.
-			if p.config.AllowSeparatedLeadingComment {
-				cg := p.fileSet.Position(commentGroup.Pos()).Line
-
-				if seenCommentGroups > 0 || cg == blockStartLine+1 {
-					seenCommentGroups++
-				}
-			} else {
-				seenCommentGroups++
+			if firstNode == nil {
+				firstNode = commentGroup
 			}
 
-			// Support both /* multiline */ and //single line comments
-			for _, c := range commentGroup.List {
-				allowedLinesBeforeFirstStatement += len(strings.Split(c.Text, "\n"))
-			}
+			lastLeadingComment = commentGroup
 		}
 	}
 
-	// If we allow separated comments, allow for a space after each group
-	if p.config.AllowSeparatedLeadingComment {
-		if seenCommentGroups > 1 {
-			allowedLinesBeforeFirstStatement += seenCommentGroups - 1
-		} else if seenCommentGroups == 1 {
-			allowedLinesBeforeFirstStatement++
-		}
+	if firstNode == nil {
+		firstNode = firstStatement
 	}
 
-	// And now if the first statement is passed the number of allowed lines,
-	// then we had extra WS, possibly before the first comment group.
-	if p.nodeStart(firstStatement) > blockStartLine+allowedLinesBeforeFirstStatement {
-		// TODO: We need to pick a better start of the range so we don't delete
-		// potential comments.
+	var (
+		openingLine        = p.fileSet.Position(openingNodePos).Line
+		firstStatementLine = p.nodeStart(firstNode)
+	)
+
+	// We never allow a leading space between the first comment and opening of
+	// block so start by enforcing that.
+	if openingLine+1 != firstStatementLine {
 		p.addErrorRange(
-			blockStartPos,
-			blockStartPos,
+			openingNodePos,
+			openingNodePos+1,
 			firstStatement.Pos(),
 			reasonBlockStartsWithWS,
 			WhitespaceShouldRemoveBeginning,
 		)
+	}
+
+	// If we don't allow separated comments, check if we have more violations
+	// than the first leading comment.
+	if lastLeadingComment != nil && !p.config.AllowSeparatedLeadingComment {
+		// And now if the first statement is passed the number of allowed lines,
+		// then we had extra WS, possibly before the first comment group.
+		if p.nodeEnd(lastLeadingComment)+1 != p.nodeStart(firstStatement) {
+			p.addErrorRange(
+				openingNodePos,
+				lastLeadingComment.End(),
+				firstStatement.Pos(),
+				reasonBlockStartsWithWS,
+				WhitespaceShouldRemoveBeginning,
+			)
+		}
 	}
 
 	// If the blockEndLine is not 0 we're a regular block (not case).
@@ -1175,7 +1176,7 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 			p.addErrorRange(
 				stmt.End(),
 				lastStatement.End(),
-				stmt.End(),
+				stmt.End()-1,
 				reasonBlockEndsWithWS,
 				WhitespaceShouldRemoveEnd,
 			)
