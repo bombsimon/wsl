@@ -1100,7 +1100,7 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 			// If the comment group is on the same line as the block start
 			// (LBrace) we should not consider it.
 			if p.nodeEnd(commentGroup) == blockStartLine {
-				openingNodePos = commentGroup.End() - 1
+				openingNodePos = commentGroup.End()
 				continue
 			}
 
@@ -1115,7 +1115,7 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 			if lastLeadingComment == nil && p.nodeStart(commentGroup)-1 != blockStartLine {
 				p.addErrorRange(
 					openingNodePos,
-					openingNodePos+1,
+					openingNodePos,
 					commentGroup.Pos(),
 					reasonBlockStartsWithWS,
 					WhitespaceShouldRemoveBeginning,
@@ -1147,6 +1147,10 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 		blockStartLine = p.nodeEnd(lastLeadingComment)
 	}
 
+	// Check if we have a whitespace between the last node which can be the
+	// Lbrace, a comment on the same line or the last comment if we have
+	// comments inside the actual block and the first statement. This is never
+	// allowed.
 	if p.nodeStart(firstStatement)-1 != blockStartLine {
 		p.addErrorRange(
 			openingNodePos,
@@ -1159,30 +1163,69 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 
 	// If the blockEndLine is not 0 we're a regular block (not case).
 	if blockEndLine != 0 {
-		if p.config.AllowTrailingComment {
-			if lastComment, ok := commentMap[lastStatement]; ok {
-				var (
-					lastCommentGroup = lastComment[len(lastComment)-1]
-					lastCommentLine  = lastCommentGroup.List[len(lastCommentGroup.List)-1]
-					countNewlines    = 0
-				)
+		// We don't want to reject example functions since they have to end with
+		// a comment.
+		if isExampleFunc(ident) {
+			return
+		}
 
-				countNewlines += len(strings.Split(lastCommentLine.Text, "\n"))
+		var (
+			lastNode         ast.Node = lastStatement
+			trailingComments []ast.Node
+		)
 
-				// No newlines between trailing comments and end of block.
-				if p.nodeStart(lastCommentLine)+countNewlines != blockEndLine-1 {
-					return
-				}
+		// Check if we have an comments _after_ the last statement and update
+		// the last node if so.
+		if c, ok := commentMap[lastStatement]; ok {
+			lastComment := c[len(c)-1]
+			if lastComment.Pos() > lastStatement.End() {
+				lastNode = lastComment
 			}
 		}
 
-		if p.nodeEnd(lastStatement) != blockEndLine-1 && !isExampleFunc(ident) {
+		// TODO: This should be improved.
+		// The trailing comments are mapped to the last statement item which can
+		// be anything depending on what the last statement is.
+		// In `fmt.Println("hello")`, trailing comments will be mapped to
+		// `*ast.BasicLit` for the "hello" string.
+		// A short term improvement can be to cache this but for now we naively
+		// iterate over all items when we check a block.
+		for _, commentGroups := range commentMap {
+			for _, commentGroup := range commentGroups {
+				if commentGroup.Pos() < lastNode.End() || commentGroup.End() > stmt.End() {
+					continue
+				}
+
+				trailingComments = append(trailingComments, commentGroup)
+			}
+		}
+
+		// TODO: Should this be relaxed?
+		// Given the old code we only allowed trailing newline if it was
+		// directly tied to the last statement so for backwards compatibility
+		// we'll do the same. This means we fail all but the last whitespace
+		// even when allowing trailing comments.
+		for _, comment := range trailingComments {
+			if p.nodeStart(comment)-1 != p.nodeEnd(lastNode) {
+				p.addErrorRange(
+					blockEndPos,
+					lastNode.End(),
+					comment.Pos(),
+					reasonBlockEndsWithWS,
+					WhitespaceShouldRemoveBeginning,
+				)
+			}
+
+			lastNode = comment
+		}
+
+		if !p.config.AllowTrailingComment && p.nodeEnd(stmt)-1 != p.nodeEnd(lastNode) {
 			p.addErrorRange(
-				stmt.End(),
-				lastStatement.End(),
+				blockEndPos,
+				lastNode.End(),
 				stmt.End()-1,
 				reasonBlockEndsWithWS,
-				WhitespaceShouldRemoveEnd,
+				WhitespaceShouldRemoveBeginning,
 			)
 		}
 

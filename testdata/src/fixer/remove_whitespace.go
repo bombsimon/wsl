@@ -46,6 +46,16 @@ func RemoveWhiteSpaceWithhComments() { // want "block should not start with a wh
 		// This comment should be kept
 	} // want "block should not end with a whitespace"
 
+	if a > 3 { // want "block should not start with a whitespace"
+
+		// This comment should be kept
+
+		a = 2
+
+		// This comment should be kept
+
+	} // want "block should not end with a whitespace"
+
 	_ = a
 
 	// This comment should be kept as well
