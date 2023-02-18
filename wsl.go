@@ -1143,8 +1143,8 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 
 	lastNodePos := openingNodePos
 	if lastLeadingComment != nil {
-		blockStartLine = p.nodeEnd(lastLeadingComment)
 		lastNodePos = lastLeadingComment.End()
+		blockStartLine = p.nodeEnd(lastLeadingComment)
 	}
 
 	if p.nodeStart(firstStatement)-1 != blockStartLine {

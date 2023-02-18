@@ -14,5 +14,5 @@ func TestFixer(t *testing.T) {
 	analyzer.Flags = *flags
 
 	testdata := analysistest.TestData()
-	analysistest.RunWithSuggestedFixes(t, testdata, analyzer)
+	analysistest.RunWithSuggestedFixes(t, testdata, analyzer, "fixer")
 }
