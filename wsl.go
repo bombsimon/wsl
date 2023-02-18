@@ -1206,7 +1206,7 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 		// we'll do the same. This means we fail all but the last whitespace
 		// even when allowing trailing comments.
 		for _, comment := range trailingComments {
-			if p.nodeStart(comment)-1 != p.nodeEnd(lastNode) {
+			if p.nodeStart(comment)-p.nodeEnd(lastNode) > 1 {
 				p.addErrorRange(
 					blockEndPos,
 					lastNode.End(),
