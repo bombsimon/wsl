@@ -52,21 +52,24 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		processor := NewProcessorWithConfig(file, pass.Fset, &config)
 		processor.ParseAST()
 
-		for _, v := range processor.Result {
+		for pos, fix := range processor.Result {
+			textEdits := []analysis.TextEdit{}
+			for _, f := range fix.FixRanges {
+				textEdits = append(textEdits, analysis.TextEdit{
+					Pos:     f.FixRangeStart,
+					End:     f.FixRangeEnd,
+					NewText: []byte("\n"),
+				})
+			}
+
 			pass.Report(analysis.Diagnostic{
-				Pos:      v.ReportAt,
+				Pos:      pos,
 				Category: "whitespace",
-				Message:  v.Reason,
+				Message:  fix.Reason,
 				SuggestedFixes: []analysis.SuggestedFix{
 					{
-						Message: v.Type.String(),
-						TextEdits: []analysis.TextEdit{
-							{
-								Pos:     v.FixRangeStart,
-								End:     v.FixRangeEnd,
-								NewText: []byte("\n"),
-							},
-						},
+						Message:   fix.Type.String(),
+						TextEdits: textEdits,
 					},
 				},
 			})

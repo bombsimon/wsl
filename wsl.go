@@ -220,14 +220,17 @@ func DefaultConfig() Configuration {
 	}
 }
 
-// Result represents the result of one error.
-type Result struct {
-	ReportAt      token.Pos
+// Fix is a range to fixup.
+type Fix struct {
 	FixRangeStart token.Pos
 	FixRangeEnd   token.Pos
-	Reason        string
-	NoFix         bool
-	Type          ErrorType
+}
+
+// Result represents the result of one error.
+type Result struct {
+	FixRanges []Fix
+	Reason    string
+	Type      ErrorType
 }
 
 // Processor is the type that keeps track of the file and fileset and holds the
@@ -236,7 +239,7 @@ type Processor struct {
 	config   *Configuration
 	file     *ast.File
 	fileSet  *token.FileSet
-	Result   []Result
+	Result   map[token.Pos]Result
 	Warnings []string
 }
 
@@ -246,6 +249,7 @@ func NewProcessorWithConfig(file *ast.File, fileSet *token.FileSet, cfg *Configu
 		config:  cfg,
 		file:    file,
 		fileSet: fileSet,
+		Result:  make(map[token.Pos]Result),
 	}
 }
 
@@ -1088,7 +1092,6 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 	// the beginning of a block before the first statement.
 	var (
 		openingNodePos     = blockStartPos // Either LBrace or comment if on same line
-		firstNode          ast.Node        // Either the first statement or the first comment
 		lastLeadingComment ast.Node
 	)
 
@@ -1096,7 +1099,7 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 		for _, commentGroup := range c {
 			// If the comment group is on the same line as the block start
 			// (LBrace) we should not consider it.
-			if p.nodeStart(commentGroup) == blockStartLine {
+			if p.nodeEnd(commentGroup) == blockStartLine {
 				openingNodePos = commentGroup.End() - 1
 				continue
 			}
@@ -1108,49 +1111,50 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 				break
 			}
 
-			if firstNode == nil {
-				firstNode = commentGroup
+			// We never allow leading whitespace for the first comment.
+			if lastLeadingComment == nil && p.nodeStart(commentGroup)-1 != blockStartLine {
+				p.addErrorRange(
+					openingNodePos,
+					openingNodePos+1,
+					commentGroup.Pos(),
+					reasonBlockStartsWithWS,
+					WhitespaceShouldRemoveBeginning,
+				)
+			}
+
+			// If lastLeadingComment is set this is not the first comment so we
+			// should remove whitespace between them if we don't explicitly
+			// allow it.
+			if lastLeadingComment != nil && !p.config.AllowSeparatedLeadingComment {
+				if p.nodeStart(commentGroup)+1 != p.nodeEnd(lastLeadingComment) {
+					p.addErrorRange(
+						openingNodePos,
+						lastLeadingComment.End(),
+						commentGroup.Pos(),
+						reasonBlockStartsWithWS,
+						WhitespaceShouldRemoveBeginning,
+					)
+				}
 			}
 
 			lastLeadingComment = commentGroup
 		}
 	}
 
-	if firstNode == nil {
-		firstNode = firstStatement
+	lastNodePos := openingNodePos
+	if lastLeadingComment != nil {
+		blockStartLine = p.nodeEnd(lastLeadingComment)
+		lastNodePos = lastLeadingComment.End()
 	}
 
-	var (
-		openingLine        = p.fileSet.Position(openingNodePos).Line
-		firstStatementLine = p.nodeStart(firstNode)
-	)
-
-	// We never allow a leading space between the first comment and opening of
-	// block so start by enforcing that.
-	if openingLine+1 != firstStatementLine {
+	if p.nodeStart(firstStatement)-1 != blockStartLine {
 		p.addErrorRange(
 			openingNodePos,
-			openingNodePos+1,
+			lastNodePos,
 			firstStatement.Pos(),
 			reasonBlockStartsWithWS,
 			WhitespaceShouldRemoveBeginning,
 		)
-	}
-
-	// If we don't allow separated comments, check if we have more violations
-	// than the first leading comment.
-	if lastLeadingComment != nil && !p.config.AllowSeparatedLeadingComment {
-		// And now if the first statement is passed the number of allowed lines,
-		// then we had extra WS, possibly before the first comment group.
-		if p.nodeEnd(lastLeadingComment)+1 != p.nodeStart(firstStatement) {
-			p.addErrorRange(
-				openingNodePos,
-				lastLeadingComment.End(),
-				firstStatement.Pos(),
-				reasonBlockStartsWithWS,
-				WhitespaceShouldRemoveBeginning,
-			)
-		}
 	}
 
 	// If the blockEndLine is not 0 we're a regular block (not case).
@@ -1302,13 +1306,21 @@ func (p *Processor) addWhitespaceAfterError(node ast.Node, reason string) {
 }
 
 func (p *Processor) addErrorRange(reportAt, start, end token.Pos, reason string, errType ErrorType) {
-	p.Result = append(p.Result, Result{
-		ReportAt:      reportAt,
+	report, ok := p.Result[reportAt]
+	if !ok {
+		report = Result{
+			Reason:    reason,
+			Type:      errType,
+			FixRanges: []Fix{},
+		}
+	}
+
+	report.FixRanges = append(report.FixRanges, Fix{
 		FixRangeStart: start,
 		FixRangeEnd:   end,
-		Reason:        reason,
-		Type:          errType,
 	})
+
+	p.Result[reportAt] = report
 }
 
 func (p *Processor) addWarning(w string, pos token.Pos, t interface{}) {
