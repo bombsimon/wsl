@@ -1178,7 +1178,7 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 		// the last node if so.
 		if c, ok := commentMap[lastStatement]; ok {
 			lastComment := c[len(c)-1]
-			if lastComment.Pos() > lastStatement.End() {
+			if lastComment.Pos() > lastStatement.End() && lastComment.Pos() < stmt.End() {
 				lastNode = lastComment
 			}
 		}
