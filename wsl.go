@@ -400,9 +400,12 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 				// If both the assignment on the line above _and_ the assignment
 				// two lines above is part of line or first in block, add the
 				// newline as if non were.
+				_, isAssignmentTwoLinesAbove := statements[i-2].(*ast.AssignStmt)
 				assignedTwoLinesAbove := p.findLHS(statements[i-2])
-				if atLeastOneInListsMatch(rightAndLeftHandSide, assignedTwoLinesAbove) ||
-					atLeastOneInListsMatch(assignedTwoLinesAbove, calledOrAssignedFirstInBlock) {
+
+				if isAssignmentTwoLinesAbove &&
+					(atLeastOneInListsMatch(rightAndLeftHandSide, assignedTwoLinesAbove) ||
+						atLeastOneInListsMatch(assignedTwoLinesAbove, calledOrAssignedFirstInBlock)) {
 					p.addWhitespaceBeforeError(n1, reason)
 				} else {
 					// If the variable on the line above is allowed to be
@@ -1060,7 +1063,7 @@ func (p *processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 	// Get the comment related to the first statement, we do allow commends in
 	// the beginning of a block before the first statement.
 	var (
-		openingNodePos     = blockStartPos // Either LBrace or comment if on same line
+		openingNodePos     = blockStartPos + 1
 		lastLeadingComment ast.Node
 	)
 

@@ -339,35 +339,6 @@ func Switch() {
 	default:
 		fmt.Println("It's after noon")
 	}
-
-	switch {
-	case true, false:
-		fmt.Println("ok")
-	case true || false:
-		fmt.Println("ok")
-	case true, false:
-		fmt.Println("ok")
-	case true || false:
-		fmt.Println("ok")
-	case true,
-		false: // want "block should not start with a whitespace"
-
-		fmt.Println("starting whitespace multiline case")
-	case true ||
-		false: // want "block should not start with a whitespace"
-
-		fmt.Println("starting whitespace multiline case")
-	case true,
-		false:
-		fmt.Println("ending whitespace multiline case")
-
-	case true ||
-		false:
-		fmt.Println("ending whitespace multiline case")
-
-	case true, false:
-		fmt.Println("all")
-	}
 }
 
 func TypeSwitch() {
@@ -562,5 +533,27 @@ func CommentInLast() {
 	default:
 		// Foo
 		return
+	}
+}
+
+func OnlyCheckTwoLinesAboveIfAssignment() {
+	if err != nil {
+		return
+	}
+	a, err := someFn() // want "assignments should only be cuddled with other assignments"
+	if err != nil {    // want "only one cuddle assignment allowed before if statement"
+		return result, err
+	}
+	b := someFn()                 // want "assignments should only be cuddled with other assignments"
+	if err := fn(b); err != nil { // want "only one cuddle assignment allowed before if statement"
+		return
+	}
+
+	if true {
+		return
+	}
+	c, err := someFn() // want "assignments should only be cuddled with other assignments"
+	if err != nil {    // want "only one cuddle assignment allowed before if statement"
+		return result, err
 	}
 }
