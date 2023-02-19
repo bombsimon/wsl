@@ -1077,8 +1077,10 @@ func (p *processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 			// If we have comments and the last comment ends before the first
 			// statement and the node is after the colon, this must be the node
 			// mapped to comments.
-			if cg[len(cg)-1].End() < firstStatement.Pos() && cg[0].Pos() > blockStartPos {
-				firstStatementCommentGroups = append(firstStatementCommentGroups, cg...)
+			for _, c := range cg {
+				if c.End() < firstStatement.Pos() && c.Pos() > blockStartPos {
+					firstStatementCommentGroups = append(firstStatementCommentGroups, c)
+				}
 			}
 
 			// And same if we have comments where the first comment is after the

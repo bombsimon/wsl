@@ -558,3 +558,12 @@ func Block() {
 		foo = "1" // want "assignments should only be cuddled with other assignments"
 	}()
 }
+
+func CommentInLast() {
+	switch nextStatement.(type) {
+	case *someType, *anotherType:
+	default:
+		// Foo
+		return
+	}
+}

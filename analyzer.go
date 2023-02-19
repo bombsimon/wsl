@@ -2,6 +2,7 @@ package wsl
 
 import (
 	"flag"
+	"strings"
 
 	"golang.org/x/tools/go/analysis"
 )
@@ -53,6 +54,11 @@ func flags() flag.FlagSet {
 
 func run(pass *analysis.Pass) (interface{}, error) {
 	for _, file := range pass.Files {
+		filename := pass.Fset.Position(file.Pos()).Filename
+		if !strings.HasSuffix(filename, ".go") {
+			continue
+		}
+
 		processor := newProcessorWithConfig(file, pass.Fset, &config)
 		processor.parseAST()
 
