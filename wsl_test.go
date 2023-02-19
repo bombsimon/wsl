@@ -58,7 +58,43 @@ func TestWithConfig(t *testing.T) {
 		{
 			subdir: "trailing_comments",
 			configFn: func() {
-				config.AllowTrailingComment = false
+				config.AllowTrailingComment = true
+			},
+		},
+		{
+			subdir: "separate_leading_whitespace",
+			configFn: func() {
+				config.AllowSeparatedLeadingComment = true
+			},
+		},
+		{
+			subdir: "error_check",
+			configFn: func() {
+				config.ForceCuddleErrCheckAndAssign = true
+			},
+		},
+		{
+			subdir: "short_decl",
+			configFn: func() {
+				config.ForceExclusiveShortDeclarations = true
+			},
+		},
+		{
+			subdir: "strict_append",
+			configFn: func() {
+				config.StrictAppend = false
+			},
+		},
+		{
+			subdir: "assign_and_anything",
+			configFn: func() {
+				config.AllowAssignAndAnythingCuddle = true
+			},
+		},
+		{
+			subdir: "decl",
+			configFn: func() {
+				config.AllowCuddleDeclaration = true
 			},
 		},
 	} {

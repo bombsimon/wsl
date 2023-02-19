@@ -60,3 +60,10 @@ func RemoveWhiteSpaceWithhComments() { // want "block should not start with a wh
 
 	// This comment should be kept as well
 } // want "block should not end with a whitespace"
+
+
+func ExampleT() {
+	fmt.Println("output")
+
+	// Output: output
+}

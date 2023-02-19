@@ -1,0 +1,13 @@
+package pkg
+
+import "fmt"
+
+func Fn() {
+	if x == 1 {
+		x = 0
+	}
+	z := x + 2
+
+	fmt.Println("x")
+	y := "x"
+}

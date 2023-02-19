@@ -253,23 +253,6 @@ func NewProcessorWithConfig(file *ast.File, fileSet *token.FileSet, cfg *Configu
 	}
 }
 
-// NewProcessor will create a Processor.
-func NewProcessor(file *ast.File, fileSet *token.FileSet) *Processor {
-	return NewProcessorWithConfig(
-		file, fileSet,
-		&Configuration{
-			StrictAppend:                     true,
-			AllowAssignAndCallCuddle:         true,
-			AllowMultiLineAssignCuddle:       true,
-			AllowTrailingComment:             false,
-			ForceCuddleErrCheckAndAssign:     false,
-			ForceCaseTrailingWhitespaceLimit: 0,
-			AllowCuddleWithCalls:             []string{"Lock", "RLock"},
-			AllowCuddleWithRHS:               []string{"Unlock", "RUnlock"},
-			ErrorVariableNames:               []string{"err"},
-		})
-}
-
 // ParseAST will parse the AST attached to the Processor instance.
 func (p *Processor) ParseAST() {
 	for _, d := range p.file.Decls {
@@ -421,15 +404,32 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 		// it was and use *that* statement's position
 		if p.config.ForceExclusiveShortDeclarations && cuddledWithLastStmt {
 			if p.isShortDecl(stmt) && !p.isShortDecl(previousStatement) {
+				var reportNode ast.Node = previousStatement
+
+				cm := ast.NewCommentMap(p.fileSet, stmt, p.file.Comments)
+				if cg, ok := cm[stmt]; ok && len(cg) > 0 {
+					for _, c := range cg {
+						if c.Pos() > previousStatement.End() && c.End() < stmt.Pos() {
+							reportNode = c
+						}
+					}
+				}
+
 				p.addErrorRange(
 					stmt.Pos(),
-					stmt.End(),
-					stmt.End(),
+					reportNode.End(),
+					reportNode.End(),
 					reasonShortDeclNotExclusive,
 					WhitespaceShouldAddAfter,
 				)
 			} else if p.isShortDecl(previousStatement) && !p.isShortDecl(stmt) {
-				p.addWhitespaceBeforeError(previousStatement, reasonShortDeclNotExclusive)
+				p.addErrorRange(
+					previousStatement.Pos(),
+					stmt.Pos(),
+					stmt.Pos(),
+					reasonShortDeclNotExclusive,
+					WhitespaceShouldAddAfter,
+				)
 			}
 		}
 
@@ -442,6 +442,8 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 		}
 
+		// TODO: If both the line above and two lines above is used  we should
+		// split as if non were.
 		reportNewlineTwoLinesAbove := func(n1, n2 ast.Node, reason string) {
 			if atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) ||
 				atLeastOneInListsMatch(assignedOnLineAbove, calledOrAssignedFirstInBlock) {
@@ -487,7 +489,13 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 					}
 
 					if atLeastOneInListsMatch(assignedOnLineAbove, p.config.ErrorVariableNames) {
-						p.addWhitespaceBeforeError(t, reasonMustCuddleErrCheck)
+						p.addErrorRange(
+							stmt.Pos(),
+							previousStatement.End(),
+							stmt.Pos(),
+							reasonMustCuddleErrCheck,
+							WhitespaceShouldRemoveBeginning,
+						)
 					}
 				}
 
