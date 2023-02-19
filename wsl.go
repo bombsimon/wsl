@@ -1049,6 +1049,7 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 		blockEndLine    int
 		blockStartPos   token.Pos
 		blockEndPos     token.Pos
+		isCase          bool
 	)
 
 	// Depending on the block type, get the statements in the block and where
@@ -1061,9 +1062,11 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 	case *ast.CaseClause:
 		blockStatements = t.Body
 		blockStartPos = t.Colon
+		isCase = true
 	case *ast.CommClause:
 		blockStatements = t.Body
 		blockStartPos = t.Colon
+		isCase = true
 	default:
 		p.addWarning(warnWSNodeTypeNotImplemented, stmt.Pos(), stmt)
 
@@ -1095,50 +1098,67 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 		lastLeadingComment ast.Node
 	)
 
-	if c, ok := commentMap[firstStatement]; ok {
-		for _, commentGroup := range c {
-			// If the comment group is on the same line as the block start
-			// (LBrace) we should not consider it.
-			if p.nodeEnd(commentGroup) == blockStartLine {
-				openingNodePos = commentGroup.End()
-				continue
-			}
+	var commentGroups []*ast.CommentGroup
 
-			// We only care about comments before our statement from the comment
-			// map. As soon as we hit comments after our statement let's break
-			// out!
-			if commentGroup.Pos() > firstStatement.Pos() {
-				break
+	if cg, ok := commentMap[firstStatement]; ok && !isCase {
+		commentGroups = cg
+	} else {
+		// TODO: Just like with trailing whitespaces comments in a case block is
+		// tied to the last token of the first statement. For now we iterate over
+		// all comments in the stmt and grab those that's after colon and before
+		// first statement.
+		for _, cg := range commentMap {
+			// If we have comments and the last comment ends before the first
+			// statement and the node is after the colon, this must be the node
+			// mapped to comments.
+			if len(cg) > 0 && cg[len(cg)-1].End() < firstStatement.Pos() && cg[0].Pos() > blockStartPos {
+				commentGroups = append(commentGroups, cg...)
 			}
+		}
+	}
 
-			// We never allow leading whitespace for the first comment.
-			if lastLeadingComment == nil && p.nodeStart(commentGroup)-1 != blockStartLine {
+	for _, commentGroup := range commentGroups {
+		// If the comment group is on the same line as the block start
+		// (LBrace) we should not consider it.
+		if p.nodeEnd(commentGroup) == blockStartLine {
+			openingNodePos = commentGroup.End()
+			continue
+		}
+
+		// We only care about comments before our statement from the comment
+		// map. As soon as we hit comments after our statement let's break
+		// out!
+		if commentGroup.Pos() > firstStatement.Pos() {
+			break
+		}
+
+		// We never allow leading whitespace for the first comment.
+		if lastLeadingComment == nil && p.nodeStart(commentGroup)-1 != blockStartLine {
+			p.addErrorRange(
+				openingNodePos,
+				openingNodePos,
+				commentGroup.Pos(),
+				reasonBlockStartsWithWS,
+				WhitespaceShouldRemoveBeginning,
+			)
+		}
+
+		// If lastLeadingComment is set this is not the first comment so we
+		// should remove whitespace between them if we don't explicitly
+		// allow it.
+		if lastLeadingComment != nil && !p.config.AllowSeparatedLeadingComment {
+			if p.nodeStart(commentGroup)+1 != p.nodeEnd(lastLeadingComment) {
 				p.addErrorRange(
 					openingNodePos,
-					openingNodePos,
+					lastLeadingComment.End(),
 					commentGroup.Pos(),
 					reasonBlockStartsWithWS,
 					WhitespaceShouldRemoveBeginning,
 				)
 			}
-
-			// If lastLeadingComment is set this is not the first comment so we
-			// should remove whitespace between them if we don't explicitly
-			// allow it.
-			if lastLeadingComment != nil && !p.config.AllowSeparatedLeadingComment {
-				if p.nodeStart(commentGroup)+1 != p.nodeEnd(lastLeadingComment) {
-					p.addErrorRange(
-						openingNodePos,
-						lastLeadingComment.End(),
-						commentGroup.Pos(),
-						reasonBlockStartsWithWS,
-						WhitespaceShouldRemoveBeginning,
-					)
-				}
-			}
-
-			lastLeadingComment = commentGroup
 		}
+
+		lastLeadingComment = commentGroup
 	}
 
 	lastNodePos := openingNodePos

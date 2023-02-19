@@ -7,6 +7,14 @@ import (
 	"golang.org/x/tools/go/analysis/analysistest"
 )
 
+func TestWIP(t *testing.T) {
+	testdata := analysistest.TestData()
+	analyzer := Analyzer
+	analyzer.Flags = flags()
+
+	analysistest.RunWithSuggestedFixes(t, testdata, analyzer, "wip")
+}
+
 func TestFixer(t *testing.T) {
 	testdata := analysistest.TestData()
 	analyzer := Analyzer
