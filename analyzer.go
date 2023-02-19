@@ -53,8 +53,8 @@ func flags() flag.FlagSet {
 
 func run(pass *analysis.Pass) (interface{}, error) {
 	for _, file := range pass.Files {
-		processor := NewProcessorWithConfig(file, pass.Fset, &config)
-		processor.ParseAST()
+		processor := newProcessorWithConfig(file, pass.Fset, &config)
+		processor.parseAST()
 
 		for pos, fix := range processor.Result {
 			textEdits := []analysis.TextEdit{}
@@ -72,7 +72,6 @@ func run(pass *analysis.Pass) (interface{}, error) {
 				Message:  fix.Reason,
 				SuggestedFixes: []analysis.SuggestedFix{
 					{
-						Message:   fix.Type.String(),
 						TextEdits: textEdits,
 					},
 				},

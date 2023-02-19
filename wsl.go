@@ -8,33 +8,6 @@ import (
 	"strings"
 )
 
-// ErrorType represents the kind of error from the linter to determine where to
-// add or remove a newline.
-type ErrorType int
-
-// The available error types.
-const (
-	WhitespaceShouldAddBefore ErrorType = iota
-	WhitespaceShouldAddAfter
-	WhitespaceShouldRemoveBeginning
-	WhitespaceShouldRemoveEnd
-)
-
-func (e ErrorType) String() string {
-	switch e {
-	case WhitespaceShouldAddBefore:
-		return "should add whitesapce before this statement"
-	case WhitespaceShouldAddAfter:
-		return "should add whitesapce after this statement"
-	case WhitespaceShouldRemoveBeginning:
-		return "should remove whitespace in beginning of block"
-	case WhitespaceShouldRemoveEnd:
-		return "should remove whitespace in end of block"
-	}
-
-	return ""
-}
-
 // Error reason strings.
 const (
 	reasonAnonSwitchCuddled              = "anonymous switch statements should never be cuddled"
@@ -202,59 +175,40 @@ type Configuration struct {
 	ForceExclusiveShortDeclarations bool
 }
 
-// DefaultConfig returns default configuration.
-func DefaultConfig() Configuration {
-	return Configuration{
-		StrictAppend:                     true,
-		AllowAssignAndCallCuddle:         true,
-		AllowAssignAndAnythingCuddle:     false,
-		AllowMultiLineAssignCuddle:       true,
-		AllowTrailingComment:             false,
-		AllowSeparatedLeadingComment:     false,
-		ForceCuddleErrCheckAndAssign:     false,
-		ForceExclusiveShortDeclarations:  false,
-		ForceCaseTrailingWhitespaceLimit: 0,
-		AllowCuddleWithCalls:             []string{"Lock", "RLock"},
-		AllowCuddleWithRHS:               []string{"Unlock", "RUnlock"},
-		ErrorVariableNames:               []string{"err"},
-	}
-}
-
-// Fix is a range to fixup.
-type Fix struct {
+// fix is a range to fixup.
+type fix struct {
 	FixRangeStart token.Pos
 	FixRangeEnd   token.Pos
 }
 
-// Result represents the result of one error.
-type Result struct {
-	FixRanges []Fix
+// result represents the result of one error.
+type result struct {
+	FixRanges []fix
 	Reason    string
-	Type      ErrorType
 }
 
-// Processor is the type that keeps track of the file and fileset and holds the
+// processor is the type that keeps track of the file and fileset and holds the
 // results from parsing the AST.
-type Processor struct {
+type processor struct {
 	config   *Configuration
 	file     *ast.File
 	fileSet  *token.FileSet
-	Result   map[token.Pos]Result
+	Result   map[token.Pos]result
 	Warnings []string
 }
 
-// NewProcessorWithConfig will create a Processor with the passed configuration.
-func NewProcessorWithConfig(file *ast.File, fileSet *token.FileSet, cfg *Configuration) *Processor {
-	return &Processor{
+// newProcessorWithConfig will create a Processor with the passed configuration.
+func newProcessorWithConfig(file *ast.File, fileSet *token.FileSet, cfg *Configuration) *processor {
+	return &processor{
 		config:  cfg,
 		file:    file,
 		fileSet: fileSet,
-		Result:  make(map[token.Pos]Result),
+		Result:  make(map[token.Pos]result),
 	}
 }
 
-// ParseAST will parse the AST attached to the Processor instance.
-func (p *Processor) ParseAST() {
+// parseAST will parse the AST attached to the Processor instance.
+func (p *processor) parseAST() {
 	for _, d := range p.file.Decls {
 		switch v := d.(type) {
 		case *ast.FuncDecl:
@@ -270,7 +224,7 @@ func (p *Processor) ParseAST() {
 
 // parseBlockBody will parse any kind of block statements such as switch cases
 // and if statements. A list of Result is returned.
-func (p *Processor) parseBlockBody(ident *ast.Ident, block *ast.BlockStmt) {
+func (p *processor) parseBlockBody(ident *ast.Ident, block *ast.BlockStmt) {
 	// Nothing to do if there's no value.
 	if reflect.ValueOf(block).IsNil() {
 		return
@@ -285,7 +239,7 @@ func (p *Processor) parseBlockBody(ident *ast.Ident, block *ast.BlockStmt) {
 
 // parseBlockStatements will parse all the statements found in the body of a
 // node. A list of Result is returned.
-func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
+func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 	for i, stmt := range statements {
 		// Start by checking if this statement is another block (other than if,
 		// for and range). This could be assignment to a function, defer or go
@@ -420,7 +374,6 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 					reportNode.End(),
 					reportNode.End(),
 					reasonShortDeclNotExclusive,
-					WhitespaceShouldAddAfter,
 				)
 			} else if p.isShortDecl(previousStatement) && !p.isShortDecl(stmt) {
 				p.addErrorRange(
@@ -428,7 +381,6 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 					stmt.Pos(),
 					stmt.Pos(),
 					reasonShortDeclNotExclusive,
-					WhitespaceShouldAddAfter,
 				)
 			}
 		}
@@ -450,7 +402,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 				// If the variable on the line above is allowed to be
 				// cuddled, break two lines above so we keep the proper
 				// cuddling.
-				p.addErrorRange(n1.Pos(), n2.Pos(), n2.Pos(), reason, WhitespaceShouldAddBefore)
+				p.addErrorRange(n1.Pos(), n2.Pos(), n2.Pos(), reason)
 			} else {
 				// If not, break here so we separate the cuddled variable.
 				p.addWhitespaceBeforeError(n1, reason)
@@ -494,7 +446,6 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 							previousStatement.End(),
 							stmt.Pos(),
 							reasonMustCuddleErrCheck,
-							WhitespaceShouldRemoveBeginning,
 						)
 					}
 				}
@@ -764,7 +715,7 @@ func (p *Processor) parseBlockStatements(statements []ast.Stmt) {
 // directly as the first argument inside a body.
 // The body will then be parsed as a *ast.BlockStmt (regular block) or as a list
 // of []ast.Stmt (case block).
-func (p *Processor) firstBodyStatement(i int, allStmt []ast.Stmt) ast.Node {
+func (p *processor) firstBodyStatement(i int, allStmt []ast.Stmt) ast.Node {
 	stmt := allStmt[i]
 
 	// Start by checking if the statement has a body (probably if-statement,
@@ -820,7 +771,7 @@ func (p *Processor) firstBodyStatement(i int, allStmt []ast.Stmt) ast.Node {
 	return firstBodyStatement
 }
 
-func (p *Processor) findLHS(node ast.Node) []string {
+func (p *processor) findLHS(node ast.Node) []string {
 	var lhs []string
 
 	if node == nil {
@@ -879,7 +830,7 @@ func (p *Processor) findLHS(node ast.Node) []string {
 	return lhs
 }
 
-func (p *Processor) findRHS(node ast.Node) []string {
+func (p *processor) findRHS(node ast.Node) []string {
 	var rhs []string
 
 	if node == nil {
@@ -963,7 +914,7 @@ func (p *Processor) findRHS(node ast.Node) []string {
 	return rhs
 }
 
-func (p *Processor) isShortDecl(node ast.Node) bool {
+func (p *processor) isShortDecl(node ast.Node) bool {
 	if t, ok := node.(*ast.AssignStmt); ok {
 		return t.Tok == token.DEFINE
 	}
@@ -971,7 +922,7 @@ func (p *Processor) isShortDecl(node ast.Node) bool {
 	return false
 }
 
-func (p *Processor) findBlockStmt(node ast.Node) []*ast.BlockStmt {
+func (p *processor) findBlockStmt(node ast.Node) []*ast.BlockStmt {
 	var blocks []*ast.BlockStmt
 
 	switch t := node.(type) {
@@ -1049,7 +1000,7 @@ func atLeastOneInListsMatch(listOne, listTwo []string) bool {
 // findLeadingAndTrailingWhitespaces will find leading and trailing whitespaces
 // in a node. The method takes comments in consideration which will make the
 // parser more gentle.
-func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, nextStatement ast.Node) {
+func (p *processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, nextStatement ast.Node) {
 	var (
 		commentMap      = ast.NewCommentMap(p.fileSet, stmt, p.file.Comments)
 		blockStatements []ast.Stmt
@@ -1168,7 +1119,6 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 				openingNodePos,
 				commentGroup.Pos(),
 				reasonBlockStartsWithWS,
-				WhitespaceShouldRemoveBeginning,
 			)
 		}
 
@@ -1182,7 +1132,6 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 					lastLeadingComment.End(),
 					commentGroup.Pos(),
 					reasonBlockStartsWithWS,
-					WhitespaceShouldRemoveBeginning,
 				)
 			}
 		}
@@ -1206,7 +1155,6 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 			lastNodePos,
 			firstStatement.Pos(),
 			reasonBlockStartsWithWS,
-			WhitespaceShouldRemoveBeginning,
 		)
 	}
 
@@ -1261,7 +1209,6 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 					lastNode.End(),
 					comment.Pos(),
 					reasonBlockEndsWithWS,
-					WhitespaceShouldRemoveBeginning,
 				)
 			}
 
@@ -1274,7 +1221,6 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 				lastNode.End(),
 				stmt.End()-1,
 				reasonBlockEndsWithWS,
-				WhitespaceShouldRemoveBeginning,
 			)
 		}
 
@@ -1317,7 +1263,6 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 			closingNode.End(),
 			closingNode.End(),
 			reasonCaseBlockTooCuddly,
-			WhitespaceShouldAddAfter,
 		)
 	}
 }
@@ -1326,11 +1271,11 @@ func isExampleFunc(ident *ast.Ident) bool {
 	return ident != nil && strings.HasPrefix(ident.Name, "Example")
 }
 
-func (p *Processor) nodeStart(node ast.Node) int {
+func (p *processor) nodeStart(node ast.Node) int {
 	return p.fileSet.Position(node.Pos()).Line
 }
 
-func (p *Processor) nodeEnd(node ast.Node) int {
+func (p *processor) nodeEnd(node ast.Node) int {
 	line := p.fileSet.Position(node.End()).Line
 
 	if isEmptyLabeledStmt(node) {
@@ -1351,21 +1296,20 @@ func isEmptyLabeledStmt(node ast.Node) bool {
 	return empty
 }
 
-func (p *Processor) addWhitespaceBeforeError(node ast.Node, reason string) {
-	p.addErrorRange(node.Pos(), node.Pos(), node.Pos(), reason, WhitespaceShouldAddBefore)
+func (p *processor) addWhitespaceBeforeError(node ast.Node, reason string) {
+	p.addErrorRange(node.Pos(), node.Pos(), node.Pos(), reason)
 }
 
-func (p *Processor) addErrorRange(reportAt, start, end token.Pos, reason string, errType ErrorType) {
+func (p *processor) addErrorRange(reportAt, start, end token.Pos, reason string) {
 	report, ok := p.Result[reportAt]
 	if !ok {
-		report = Result{
+		report = result{
 			Reason:    reason,
-			Type:      errType,
-			FixRanges: []Fix{},
+			FixRanges: []fix{},
 		}
 	}
 
-	report.FixRanges = append(report.FixRanges, Fix{
+	report.FixRanges = append(report.FixRanges, fix{
 		FixRangeStart: start,
 		FixRangeEnd:   end,
 	})
@@ -1373,7 +1317,7 @@ func (p *Processor) addErrorRange(reportAt, start, end token.Pos, reason string,
 	p.Result[reportAt] = report
 }
 
-func (p *Processor) addWarning(w string, pos token.Pos, t interface{}) {
+func (p *processor) addWarning(w string, pos token.Pos, t interface{}) {
 	position := p.fileSet.Position(pos)
 
 	p.Warnings = append(p.Warnings,
