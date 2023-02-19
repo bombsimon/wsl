@@ -66,8 +66,8 @@ func If() {
 
 	c := true
 	fooBar := "string"
-
 	a, b := true, false
+
 	if a && b || !c && len(fooBar) > 2 { // want "only one cuddle assignment allowed before if statement"
 		return false
 	}

@@ -394,15 +394,22 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 		}
 
-		// TODO: If both the line above and two lines above is used  we should
-		// split as if non were.
 		reportNewlineTwoLinesAbove := func(n1, n2 ast.Node, reason string) {
 			if atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) ||
 				atLeastOneInListsMatch(assignedOnLineAbove, calledOrAssignedFirstInBlock) {
-				// If the variable on the line above is allowed to be
-				// cuddled, break two lines above so we keep the proper
-				// cuddling.
-				p.addErrorRange(n1.Pos(), n2.Pos(), n2.Pos(), reason)
+				// If both the assignment on the line above _and_ the assignment
+				// two lines above is part of line or first in block, add the
+				// newline as if non were.
+				assignedTwoLinesAbove := p.findLHS(statements[i-2])
+				if atLeastOneInListsMatch(rightAndLeftHandSide, assignedTwoLinesAbove) ||
+					atLeastOneInListsMatch(assignedTwoLinesAbove, calledOrAssignedFirstInBlock) {
+					p.addWhitespaceBeforeError(n1, reason)
+				} else {
+					// If the variable on the line above is allowed to be
+					// cuddled, break two lines above so we keep the proper
+					// cuddling.
+					p.addErrorRange(n1.Pos(), n2.Pos(), n2.Pos(), reason)
+				}
 			} else {
 				// If not, break here so we separate the cuddled variable.
 				p.addWhitespaceBeforeError(n1, reason)

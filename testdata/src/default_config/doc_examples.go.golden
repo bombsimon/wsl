@@ -209,8 +209,8 @@ func OnlyOneGo() {
 
 func OnlyOneIf() {
 	lengthA := len(sliceA)
-
 	lengthB := len(sliceB)
+
 	if lengthA != lengthB { // want "only one cuddle assignment allowed before if statement"
 		fmt.Println("not equal")
 	}
