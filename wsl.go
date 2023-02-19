@@ -1320,70 +1320,6 @@ func (p *Processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 			WhitespaceShouldAddAfter,
 		)
 	}
-
-	// blockEndLine = p.fileSet.Position(blockEndPos).Line - 1
-
-	// var (
-	// 	blockSize                = blockEndLine - blockStartLine
-	// 	caseTrailingCommentLines int
-	// )
-
-	// // TODO: I don't know what comments are bound to in cases. For regular
-	// // blocks the last comment is bound to the last statement but for cases
-	// // they are bound to the case clause expression. This will however get us all
-	// // comments and depending on the case expression this gets tricky.
-	// //
-	// // To handle this I get the comment map from the current statement (the case
-	// // itself) and iterate through all groups and all comment within all groups.
-	// // I then get the comments after the last statement but before the next case
-	// // clause and just map each line of comment that way.
-	// var lastComment ast.Node
-
-	// for _, commentGroups := range commentMap {
-	// 	for _, commentGroup := range commentGroups {
-	// 		for _, comment := range commentGroup.List {
-	// 			commentLine := p.fileSet.Position(comment.Pos()).Line
-
-	// 			// If the comment is on the same line as the last statement we
-	// 			// need to store it in case we're about to add a newline.
-	// 			if commentLine == p.nodeStart(lastStatement) {
-	// 				lastComment = comment
-	// 				continue
-	// 			}
-
-	// 			// Ignore comments before the last statement.
-	// 			if commentLine <= p.nodeStart(lastStatement) {
-	// 				continue
-	// 			}
-
-	// 			// Ignore comments after the end of this case.
-	// 			if commentLine > blockEndLine {
-	// 				continue
-	// 			}
-
-	// 			// This allows /* multiline */ comments with newlines as well
-	// 			// as regular (//) ones
-	// 			caseTrailingCommentLines += len(strings.Split(comment.Text, "\n"))
-
-	// 			// Set last comment so we know where to add newline
-	// 			lastComment = comment
-	// 		}
-	// 	}
-	// }
-
-	// hasTrailingWhitespace := p.nodeEnd(lastStatement)+caseTrailingCommentLines != blockEndLine
-
-	// // If the force trailing limit is configured and we don't end with a newline.
-	// if p.config.ForceCaseTrailingWhitespaceLimit > 0 && !hasTrailingWhitespace {
-	// 	// Check if the block size is too big to miss the newline.
-	// 	if blockSize >= p.config.ForceCaseTrailingWhitespaceLimit {
-	// 		if lastComment != nil {
-	// 			p.addWhitespaceAfterError(lastComment, reasonCaseBlockTooCuddly)
-	// 		} else {
-	// 			p.addWhitespaceAfterError(lastStatement, reasonCaseBlockTooCuddly)
-	// 		}
-	// 	}
-	// }
 }
 
 func isExampleFunc(ident *ast.Ident) bool {
@@ -1417,10 +1353,6 @@ func isEmptyLabeledStmt(node ast.Node) bool {
 
 func (p *Processor) addWhitespaceBeforeError(node ast.Node, reason string) {
 	p.addErrorRange(node.Pos(), node.Pos(), node.Pos(), reason, WhitespaceShouldAddBefore)
-}
-
-func (p *Processor) addWhitespaceAfterError(node ast.Node, reason string) {
-	p.addErrorRange(node.Pos(), node.End(), node.End(), reason, WhitespaceShouldAddAfter)
 }
 
 func (p *Processor) addErrorRange(reportAt, start, end token.Pos, reason string, errType ErrorType) {
