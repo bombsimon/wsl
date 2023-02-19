@@ -39,7 +39,7 @@ func Assignment() {
 func TrailingWhitespaceOrComment() {
 	return fmt.Sprintf("x")
 	// REMEMBER: add mux function later.
-	// NOTE:
+
 } // want "block should not end with a whitespace"
 
 // Default is for this turned off so no diagnostic.
@@ -53,7 +53,7 @@ func CaseTrailingWhitespace() {
 }
 
 func StartingWhitespace() { // want "block should not start with a whitespace"
-	// NOTE:
+
 
 	return
 }
