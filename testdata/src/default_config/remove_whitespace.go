@@ -61,6 +61,20 @@ func RemoveWhiteSpaceWithhComments() { // want "block should not start with a wh
 	// This comment should be kept as well
 } // want "block should not end with a whitespace"
 
+func MultipleCommentsAreSorted() {
+	switch 1 {
+	case 1: // want "block should not start with a whitespace"
+		// Comment
+
+		// Comment
+		fmt.Println("1")
+	case 2: // want "block should not start with a whitespace"
+		// Comment
+
+		// Comment
+		fmt.Println("2")
+	}
+}
 
 func ExampleT() {
 	fmt.Println("output")

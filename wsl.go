@@ -5,6 +5,7 @@ import (
 	"go/ast"
 	"go/token"
 	"reflect"
+	"sort"
 	"strings"
 )
 
@@ -1107,6 +1108,18 @@ func (p *processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 				}
 			}
 		}
+
+		// Since the comments come from a map they might not be ordered meaning
+		// that the last and first comment groups can be in the wrong order. We
+		// fix this by sorting all comments by pos after adding them all to the
+		// slice.
+		sort.Slice(firstStatementCommentGroups, func(i, j int) bool {
+			return firstStatementCommentGroups[i].Pos() < firstStatementCommentGroups[j].Pos()
+		})
+
+		sort.Slice(lastStatementCommentGroups, func(i, j int) bool {
+			return lastStatementCommentGroups[i].Pos() < lastStatementCommentGroups[j].Pos()
+		})
 	}
 
 	for _, commentGroup := range firstStatementCommentGroups {
