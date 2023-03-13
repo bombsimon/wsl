@@ -1,9 +1,9 @@
 package testpkg
 
 func Advanced() {
-	var foo = 1
-	var bar = 2    // want "declarations should never be cuddled"
-	var biz int // want "declarations should never be cuddled"
+	var foo = 1 // want "declarations should never be cuddled"
+	var bar = 2
+	var biz int
 
 	x := []string{}
 	x = append(x, "literal")

@@ -1,12 +1,16 @@
 package wsl
 
 import (
+	"bytes"
 	"fmt"
 	"go/ast"
 	"go/token"
 	"reflect"
 	"sort"
 	"strings"
+
+	"github.com/dave/dst"
+	"github.com/dave/dst/decorator"
 )
 
 // Error reason strings.
@@ -180,6 +184,7 @@ type Configuration struct {
 type fix struct {
 	fixRangeStart token.Pos
 	fixRangeEnd   token.Pos
+	newText       []byte
 }
 
 // result represents the result of one error.
@@ -191,20 +196,29 @@ type result struct {
 // processor is the type that keeps track of the file and fileset and holds the
 // results from parsing the AST.
 type processor struct {
-	config   *Configuration
-	file     *ast.File
-	fileSet  *token.FileSet
-	result   map[token.Pos]result
-	warnings []string
+	config    *Configuration
+	file      *ast.File
+	fileSet   *token.FileSet
+	decorator *decorator.Decorator
+	result    map[token.Pos]result
+	warnings  []string
 }
 
 // newProcessorWithConfig will create a Processor with the passed configuration.
 func newProcessorWithConfig(file *ast.File, fileSet *token.FileSet, cfg *Configuration) *processor {
+	dec := decorator.NewDecorator(fileSet)
+
+	_, err := dec.DecorateFile(file)
+	if err != nil {
+		panic(err)
+	}
+
 	return &processor{
-		config:  cfg,
-		file:    file,
-		fileSet: fileSet,
-		result:  make(map[token.Pos]result),
+		config:    cfg,
+		file:      file,
+		fileSet:   fileSet,
+		decorator: dec,
+		result:    make(map[token.Pos]result),
 	}
 }
 
@@ -241,6 +255,8 @@ func (p *processor) parseBlockBody(ident *ast.Ident, block *ast.BlockStmt) {
 // parseBlockStatements will parse all the statements found in the body of a
 // node. A list of Result is returned.
 func (p *processor) parseBlockStatements(statements []ast.Stmt) {
+	seenDeclStmtIdx := 0
+
 	for i, stmt := range statements {
 		// Start by checking if this statement is another block (other than if,
 		// for and range). This could be assignment to a function, defer or go
@@ -396,6 +412,29 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 		}
 
 		reportNewlineTwoLinesAbove := func(n1, n2 ast.Node, reason string) {
+			// If two statements above are var dcl they will be grouped together
+			// and mvoe the ast. If so we just separate thew new group.
+			//
+			//   var a = 1
+			//   var b = 2
+			//   if a > b {}
+			//
+			// Will become
+			//
+			//   var (
+			//       a = 1
+			//       b = 2
+			//   )
+			//
+			//   if a > b  {}
+			_, n1IsDecl := statements[i-1].(*ast.DeclStmt)
+			_, n2IsDecl := statements[i-2].(*ast.DeclStmt)
+
+			if n1IsDecl && n2IsDecl {
+				p.addWhitespaceBeforeError(n1, reason)
+				return
+			}
+
 			if atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) ||
 				atLeastOneInListsMatch(assignedOnLineAbove, calledOrAssignedFirstInBlock) {
 				// If both the assignment on the line above _and_ the assignment
@@ -534,9 +573,215 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 
 			p.addWhitespaceBeforeError(t, reasonAssignsCuddleAssign)
 		case *ast.DeclStmt:
-			if !p.config.AllowCuddleDeclaration {
-				p.addWhitespaceBeforeError(t, reasonNeverCuddleDeclare)
+			if seenDeclStmtIdx > i {
+				continue
 			}
+
+			if p.config.AllowCuddleDeclaration {
+				continue
+			}
+
+			reportIfNotAllowed := func() {
+				if !p.config.AllowCuddleDeclaration {
+					p.addWhitespaceBeforeError(t, reasonNeverCuddleDeclare)
+				}
+			}
+
+			hasOnlyValueSpecs := func(specs []ast.Spec, shouldReport bool) bool {
+				hasNonValueSpec := false
+
+				for _, spec := range specs {
+					if _, ok := spec.(*ast.ValueSpec); !ok {
+						hasNonValueSpec = true
+						break
+					}
+				}
+
+				if hasNonValueSpec && shouldReport {
+					reportIfNotAllowed()
+				}
+
+				return !hasNonValueSpec
+			}
+
+			gd, ok := t.Decl.(*ast.GenDecl)
+			if !ok {
+				reportIfNotAllowed()
+				continue
+			}
+
+			if !hasOnlyValueSpecs(gd.Specs, true) {
+				continue
+			}
+
+			// If previous node wasn't a decl and we don't allow cuddling them
+			// just add an error.
+			previousDeclNode, ok := previousStatement.(*ast.DeclStmt)
+			if !ok {
+				reportIfNotAllowed()
+				continue
+			}
+
+			if pn, ok := previousDeclNode.Decl.(*ast.GenDecl); ok {
+				if gd.Tok != pn.Tok {
+					reportIfNotAllowed()
+					continue
+				}
+			}
+
+			// Previous _was_ a decl, let's group this one and the previous one
+			// and look forward until we no longer have a cuddled decl.
+			var (
+				endNode   ast.Node = previousDeclNode
+				startNode ast.Node = previousDeclNode
+			)
+
+			// There's a difference on where `dst` decorates decl stmts based on
+			// if it's a single value spec or if it's a grouped var block or any
+			// kind of node with multiple child nodes.
+			// If we have a single `var a = 1` we need to move the decoration
+			// from the *dst.DeclStmt to the *dst.ValueSpec which holds the
+			// assigned value. This will make sure we keep the comment when
+			// combining all the specs.
+			moveCommentsIfGrouped := func(node *ast.DeclStmt, specs []dst.Spec) {
+				if len(specs) != 1 {
+					return
+				}
+
+				dds, ok := p.decorator.Dst.Nodes[node].(*dst.DeclStmt)
+				if !ok {
+					return
+				}
+
+				if spec, ok := specs[0].(*dst.ValueSpec); ok {
+					if spec.Decs.NodeDecs.Start == nil && spec.Decs.NodeDecs.End == nil {
+						spec.Decs.NodeDecs = dst.NodeDecs{
+							Start: dds.Decs.NodeDecs.Start,
+							End:   dds.Decs.NodeDecs.End,
+						}
+						dds.Decs.NodeDecs = dst.NodeDecs{}
+					}
+				}
+			}
+
+			seenDeclStmtIdx = i
+			for seenDeclStmtIdx < len(statements) {
+				// If next statement is not a decl there's nothing more to
+				// group.
+				nextStatement, ok := statements[seenDeclStmtIdx].(*ast.DeclStmt)
+				if !ok {
+					break
+				}
+
+				// If the next statement isn't cuddled we don't want to group.
+				if p.nodeStart(nextStatement)-1 != p.nodeEnd(endNode) {
+					break
+				}
+
+				previousGenDecl, ok := previousDeclNode.Decl.(*ast.GenDecl)
+				if !ok {
+					break
+				}
+
+				nextGenDecl, ok := nextStatement.Decl.(*ast.GenDecl)
+				if !ok {
+					break
+				}
+
+				if previousGenDecl.Tok != nextGenDecl.Tok {
+					break
+				}
+
+				if !hasOnlyValueSpecs(nextGenDecl.Specs, false) {
+					break
+				}
+
+				pd, ok := p.decorator.Dst.Nodes[previousGenDecl].(*dst.GenDecl)
+				if !ok {
+					p.addWarning("dst node is not matching", previousGenDecl.Pos(), stmt)
+				}
+
+				nd, ok := p.decorator.Dst.Nodes[nextGenDecl].(*dst.GenDecl)
+				if !ok {
+					p.addWarning("dst node is not matching", nextGenDecl.Pos(), stmt)
+				}
+
+				// We must set Rparen to true on the first node to indicate that
+				// it's a multiline block and that the comment should end with
+				// the assignment, not the closing parenthesis.
+				pd.Rparen = true
+
+				moveCommentsIfGrouped(previousDeclNode, pd.Specs)
+				moveCommentsIfGrouped(nextStatement, nd.Specs)
+
+				pd.Specs = append(pd.Specs, nd.Specs...)
+
+				pn, ok := p.decorator.Dst.Nodes[previousDeclNode].(*dst.DeclStmt)
+				if !ok {
+					p.addWarning("dst node is not matching", previousDeclNode.Pos(), stmt)
+				}
+
+				pn.Decl = pd
+
+				endNode = nextStatement
+				seenDeclStmtIdx++
+			}
+
+			// More hacks to ensure new text spans the whole way. If we have a
+			// comment on our end node that starts after the node ends it's a
+			// trailing comment so we need to span over it wit our new text.
+			//
+			//   v------------------ Need to start here
+			//   // comment
+			//   var a = 1
+			//   var b = 2 // comment
+			//   -------------------^ Need to end here
+			commentMap := ast.NewCommentMap(p.fileSet, previousStatement, p.file.Comments)
+			if cm, ok := commentMap[previousDeclNode]; ok {
+				for _, c := range cm {
+					if c.End() < previousStatement.Pos() {
+						startNode = c
+					}
+				}
+			}
+
+			commentMap = ast.NewCommentMap(p.fileSet, endNode, p.file.Comments)
+			if cm, ok := commentMap[endNode]; ok {
+				lastComment := cm[len(cm)-1]
+				if lastComment.Pos() > endNode.End() {
+					endNode = lastComment
+				}
+			}
+
+			decl, ok := p.decorator.Dst.Nodes[previousStatement].(*dst.DeclStmt)
+			if !ok {
+				p.addWarning("failed to get node", stmt.Pos(), stmt)
+				continue
+			}
+
+			dummyFile := &dst.File{
+				Name: dst.NewIdent("dummy"),
+				Decls: []dst.Decl{
+					decl.Decl,
+				},
+			}
+
+			b := bytes.Buffer{}
+			decorator.Fprint(&b, dummyFile)
+
+			stripLen := len("package dummy\n\n")
+			newText := b.Bytes()
+			newText = newText[stripLen:]
+			newText = newText[:len(newText)-1]
+
+			p.addErrorRangeWithFix(
+				previousDeclNode.Pos(),
+				startNode.Pos(),
+				endNode.End(),
+				reasonNeverCuddleDeclare,
+				newText,
+			)
+
 		case *ast.ExprStmt:
 			switch previousStatement.(type) {
 			case *ast.DeclStmt, *ast.ReturnStmt:
@@ -1326,6 +1571,10 @@ func (p *processor) addWhitespaceBeforeError(node ast.Node, reason string) {
 }
 
 func (p *processor) addErrorRange(reportAt, start, end token.Pos, reason string) {
+	p.addErrorRangeWithFix(reportAt, start, end, reason, []byte("\n"))
+}
+
+func (p *processor) addErrorRangeWithFix(reportAt, start, end token.Pos, reason string, newText []byte) {
 	report, ok := p.result[reportAt]
 	if !ok {
 		report = result{
@@ -1337,6 +1586,7 @@ func (p *processor) addErrorRange(reportAt, start, end token.Pos, reason string)
 	report.fixRanges = append(report.fixRanges, fix{
 		fixRangeStart: start,
 		fixRangeEnd:   end,
+		newText:       newText,
 	})
 
 	p.result[reportAt] = report
@@ -1348,4 +1598,11 @@ func (p *processor) addWarning(w string, pos token.Pos, t interface{}) {
 	p.warnings = append(p.warnings,
 		fmt.Sprintf("%s:%d: %s (%T)", position.Filename, position.Line, w, t),
 	)
+}
+
+//nolint:unused // Kept for debugging
+func (p *processor) printFileAndLine(n ast.Node) {
+	fn := p.fileSet.Position(n.Pos()).Filename
+	ln := p.fileSet.Position(n.Pos()).Line
+	fmt.Printf("%s:%d\n", fn, ln)
 }

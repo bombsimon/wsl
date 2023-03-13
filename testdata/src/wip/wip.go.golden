@@ -1,1 +1,25 @@
 package testpkg
+
+func fn() {
+	_ = 1
+
+	// Comment before 1
+
+	var ( // Comment before 1
+
+		// Comment before 2
+		a = 1 // want "declarations should never be cuddled"
+		b = 2
+		// Comment after 1
+	)
+
+	// Comment after 2
+
+	var ( // One
+		a = 1 // want "declarations should never be cuddled"
+		b = 2
+		// Two
+	)
+
+	_ = 1
+}

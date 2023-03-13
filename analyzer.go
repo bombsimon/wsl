@@ -93,7 +93,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 				textEdits = append(textEdits, analysis.TextEdit{
 					Pos:     f.fixRangeStart,
 					End:     f.fixRangeEnd,
-					NewText: []byte("\n"),
+					NewText: f.newText,
 				})
 			}
 
