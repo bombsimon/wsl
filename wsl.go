@@ -178,14 +178,14 @@ type Configuration struct {
 
 // fix is a range to fixup.
 type fix struct {
-	FixRangeStart token.Pos
-	FixRangeEnd   token.Pos
+	fixRangeStart token.Pos
+	fixRangeEnd   token.Pos
 }
 
 // result represents the result of one error.
 type result struct {
-	FixRanges []fix
-	Reason    string
+	fixRanges []fix
+	reason    string
 }
 
 // processor is the type that keeps track of the file and fileset and holds the
@@ -194,8 +194,8 @@ type processor struct {
 	config   *Configuration
 	file     *ast.File
 	fileSet  *token.FileSet
-	Result   map[token.Pos]result
-	Warnings []string
+	result   map[token.Pos]result
+	warnings []string
 }
 
 // newProcessorWithConfig will create a Processor with the passed configuration.
@@ -204,7 +204,7 @@ func newProcessorWithConfig(file *ast.File, fileSet *token.FileSet, cfg *Configu
 		config:  cfg,
 		file:    file,
 		fileSet: fileSet,
-		Result:  make(map[token.Pos]result),
+		result:  make(map[token.Pos]result),
 	}
 }
 
@@ -1326,26 +1326,26 @@ func (p *processor) addWhitespaceBeforeError(node ast.Node, reason string) {
 }
 
 func (p *processor) addErrorRange(reportAt, start, end token.Pos, reason string) {
-	report, ok := p.Result[reportAt]
+	report, ok := p.result[reportAt]
 	if !ok {
 		report = result{
-			Reason:    reason,
-			FixRanges: []fix{},
+			reason:    reason,
+			fixRanges: []fix{},
 		}
 	}
 
-	report.FixRanges = append(report.FixRanges, fix{
-		FixRangeStart: start,
-		FixRangeEnd:   end,
+	report.fixRanges = append(report.fixRanges, fix{
+		fixRangeStart: start,
+		fixRangeEnd:   end,
 	})
 
-	p.Result[reportAt] = report
+	p.result[reportAt] = report
 }
 
 func (p *processor) addWarning(w string, pos token.Pos, t interface{}) {
 	position := p.fileSet.Position(pos)
 
-	p.Warnings = append(p.Warnings,
+	p.warnings = append(p.warnings,
 		fmt.Sprintf("%s:%d: %s (%T)", position.Filename, position.Line, w, t),
 	)
 }

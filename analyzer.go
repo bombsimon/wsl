@@ -49,10 +49,35 @@ func flags() flag.FlagSet {
 	flags.BoolVar(&config.StrictAppend, "strict-append", true, "Strict rules for append")
 	flags.IntVar(&config.ForceCaseTrailingWhitespaceLimit, "force-case-trailing-whitespace", 0, "Force newlines for case blocks > this number.")
 
+	flags.String("allow-cuddle-with-calls", "Lock,RLock", "Comma separated list of idents that can have cuddles after")
+	flags.String("allow-cuddle-with-rhs", "Unlock,RUnlock", "Comma separated list of idents that can have cuddles before")
+	flags.String("error-variable-names", "err", "Comma separated list of error variable names")
+
 	return *flags
 }
 
+func lookupAndSplit(pass *analysis.Pass, flagName string) []string {
+	flagVal := pass.Analyzer.Flags.Lookup(flagName)
+	if flagVal == nil {
+		return nil
+	}
+
+	return strings.Split(flagVal.Value.String(), ",")
+}
+
 func run(pass *analysis.Pass) (interface{}, error) {
+	if v := lookupAndSplit(pass, "allow-cuddle-with-calls"); v != nil {
+		config.AllowCuddleWithCalls = v
+	}
+
+	if v := lookupAndSplit(pass, "allow-cuddle-with-rhs"); v != nil {
+		config.AllowCuddleWithRHS = v
+	}
+
+	if v := lookupAndSplit(pass, "error-variable-names"); v != nil {
+		config.ErrorVariableNames = v
+	}
+
 	for _, file := range pass.Files {
 		filename := pass.Fset.Position(file.Pos()).Filename
 		if !strings.HasSuffix(filename, ".go") {
@@ -62,12 +87,12 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		processor := newProcessorWithConfig(file, pass.Fset, &config)
 		processor.parseAST()
 
-		for pos, fix := range processor.Result {
+		for pos, fix := range processor.result {
 			textEdits := []analysis.TextEdit{}
-			for _, f := range fix.FixRanges {
+			for _, f := range fix.fixRanges {
 				textEdits = append(textEdits, analysis.TextEdit{
-					Pos:     f.FixRangeStart,
-					End:     f.FixRangeEnd,
+					Pos:     f.fixRangeStart,
+					End:     f.fixRangeEnd,
 					NewText: []byte("\n"),
 				})
 			}
@@ -75,7 +100,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			pass.Report(analysis.Diagnostic{
 				Pos:      pos,
 				Category: "whitespace",
-				Message:  fix.Reason,
+				Message:  fix.reason,
 				SuggestedFixes: []analysis.SuggestedFix{
 					{
 						TextEdits: textEdits,
