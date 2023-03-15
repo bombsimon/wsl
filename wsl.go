@@ -508,7 +508,8 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 				continue
 			}
 
-			if _, ok := previousStatement.(*ast.AssignStmt); ok {
+			switch previousStatement.(type) {
+			case *ast.AssignStmt, *ast.IncDecStmt:
 				continue
 			}
 
@@ -533,6 +534,14 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 
 			p.addWhitespaceBeforeError(t, reasonAssignsCuddleAssign)
+		case *ast.IncDecStmt:
+			switch previousStatement.(type) {
+			case *ast.AssignStmt, *ast.IncDecStmt:
+				continue
+			}
+
+			p.addWhitespaceBeforeError(t, reasonAssignsCuddleAssign)
+
 		case *ast.DeclStmt:
 			if !p.config.AllowCuddleDeclaration {
 				p.addWhitespaceBeforeError(t, reasonNeverCuddleDeclare)
