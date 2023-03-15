@@ -2,5 +2,6 @@ package pkg
 
 func Fn() {
     var a = 1
-    bar b = 2
+    var b = 2
+    var c = 3
 }
