@@ -597,3 +597,22 @@ func OnlyCheckTwoLinesAboveIfAssignment() {
 		return result, err
 	}
 }
+
+func IncrementDecrement() {
+	a := 1
+	a++
+	a--
+	b := 2
+
+	if true {
+		b--
+	}
+
+	b++ // want "assignments should only be cuddled with other assignments"
+
+	go func() {}()
+
+	b++ // want "assignments should only be cuddled with other assignments"
+
+	go func() {}() // want "only one cuddle assignment allowed before go statement"
+}
