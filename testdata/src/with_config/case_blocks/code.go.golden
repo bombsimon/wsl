@@ -1,0 +1,48 @@
+package testpkg
+
+import "fmt"
+
+func Fn() {
+	switch 1 {
+	case 1: // want "block should not start with a whitespace"
+		// Comment
+		// Comment
+		fmt.Println("a")
+
+		// Comment
+		fmt.Println("a") // want "case block should end with newline at this size"
+
+	case 2: // want "block should not start with a whitespace"
+		fmt.Println("a")
+	case 3:
+		fmt.Println("a")
+	case 4:
+		fmt.Println("a")
+		fmt.Println("a")
+		fmt.Println("a")
+		fmt.Println("a") // want "case block should end with newline at this size"
+
+	case 5:
+		fmt.Println("a")
+		fmt.Println("a")
+		fmt.Println("a")
+		fmt.Println("a")
+		// Error // want "case block should end with newline at this size"
+
+	case 6:
+		// Comment
+		// Comment
+	case 7:
+		fmt.Println("a")
+		/*
+
+			Comment
+
+		*/
+
+		// Error // want "case block should end with newline at this size"
+
+	case 7:
+		fmt.Println("a")
+	}
+}

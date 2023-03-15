@@ -159,7 +159,7 @@ func example() string {
 }
 ```
 
-become legal, as the whitespace _after_ (or between) each comment block 
+become legal, as the whitespace _after_ (or between) each comment block
 doesn't count against whitespace before the first actual statement.
 
 ### [force-case-trailing-whitespace](rules.md#case-block-should-end-with-newline-at-this-size)
@@ -231,42 +231,6 @@ var (
     foo    = 1
     fooBar = 2
 )
-```
-
-### [allow-case-trailing-whitespace](rules.md#block-should-not-end-with-a-whitespace-or-comment)
-
-Controls if you may end case statements with a whitespace. This option is
-independent of other blocks and was introduced to improve readability for
-complex blocks.
-
-> Default value: false
-
-Supported when true:
-
-```go
-switch {
-case 1:
-    fmt.Println("x")
-
-case 2:
-    fmt.Println("x")
-
-case 3:
-    fmt.Pritnln("x")
-}
-```
-
-Required when false:
-
-```go
-switch {
-case 1:
-    fmt.Println("x")
-case 2:
-    fmt.Println("x")
-case 3:
-    fmt.Pritnln("x")
-}
 ```
 
 ### [allow-trailing-comment](rules.md#block-should-not-end-with-a-whitespace-or-comment)
@@ -361,5 +325,5 @@ if err != nil {
 }
 ```
 
-**Note**: this means the option _overrides_ the 
+**Note**: this means the option _overrides_ the
 [force-err-cuddling](#force-err-cuddling) option above, among others.
