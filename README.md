@@ -1,4 +1,4 @@
-# WSL - Whitespace Linter
+# wsl - Whitespace Linter
 
 [![forthebadge](https://forthebadge.com/images/badges/made-with-go.svg)](https://forthebadge.com)
 [![forthebadge](https://forthebadge.com/images/badges/built-with-love.svg)](https://forthebadge.com)
@@ -6,75 +6,45 @@
 [![GitHub Actions](https://github.com/bombsimon/wsl/actions/workflows/go.yml/badge.svg)](https://github.com/bombsimon/wsl/actions/workflows/go.yml)
 [![Coverage Status](https://coveralls.io/repos/github/bombsimon/wsl/badge.svg?branch=master)](https://coveralls.io/github/bombsimon/wsl?branch=master)
 
-WSL is a linter that enforces a very **non scientific** vision of how to make
+`wsl` is a linter that enforces a very **non scientific** vision of how to make
 code more readable by enforcing empty lines at the right places.
 
-I think too much code out there is to cuddly and a bit too warm for it's own
-good, making it harder for other people to read and understand. The linter will
-warn about newlines in and around blocks, in the beginning of files and other
-places in the code.
-
-**I know this linter is aggressive** and a lot of projects I've tested it on
-have failed miserably. For this linter to be useful at all I want to be open to
-new ideas, configurations and discussions! Also note that some of the warnings
-might be bugs or unintentional false positives so I would love an
+**This linter is aggressive** and a lot of projects I've tested it on have
+failed miserably. For this linter to be useful at all I want to be open to new
+ideas, configurations and discussions! Also note that some of the warnings might
+be bugs or unintentional false positives so I would love an
 [issue](https://github.com/bombsimon/wsl/issues/new) to fix, discuss, change or
 make something configurable!
 
 ## Installation
 
-### By `go get` (local installation)
-
-You can do that by using:
-
 ```sh
-go get -u github.com/bombsimon/wsl/v3/cmd/...
+go get github.com/bombsimon/wsl/cmd/...
 ```
-
-### By golangci-lint (CI automation)
-
-`wsl` is already integrated with
-[golangci-lint](https://github.com/golangci/golangci-lint). Please refer to the
-instructions there.
 
 ## Usage
 
-How to use depends on how you install `wsl`.
+> **Note**: This linter provides a fixer that can fix most issues with the
+`--fix` flag. However, currently `golangci-lint` [does not support suggested
+fixes](https://github.com/golangci/golangci-lint/issues/1779) so the `--fix`
+flag in `golangci-lint` will **not** work.
 
-### With local binary
-
-The general command format for `wsl` is:
-
-```sh
-$ wsl [flags] <file1> [files...]
-$ wsl [flags] </path/to/package/...>
-
-# Examples
-
-$ wsl ./main.go
-$ wsl --no-test ./main.go
-$ wsl --allow-cuddle-declarations ./main.go
-$ wsl --no-test --allow-cuddle-declaration ./main.go
-$ wsl --no-test --allow-trailing-comment ./myProject/...
-```
-
-The "..." wildcard is not used like other `go` commands but instead can only
-be to a relative or absolute path.
-
-By default, the linter will run on `./...` which means all go files in the
-current path and all subsequent paths, including test files. To disable linting
-test files, use `-n` or `--no-test`.
-
-### By `golangci-lint` (CI automation)
-
-The recommended command is:
+`wsl` uses the [analysis](https://pkg.go.dev/golang.org/x/tools/go/analysis)
+package meaning it will operate on package level with the default analysis flags
+and way of working.
 
 ```sh
-golangci-lint run --disable-all --enable wsl
+wsl --help
+wsl [flags] </path/to/package/...>
+
+wsl --allow-cuddle-declarations --fix ./...
 ```
 
-For more information, please refer to
-[golangci-lint](https://github.com/golangci/golangci-lint)'s documentation.
+`wsl` is also integrated in [`golangci-lint`](https://golangci-lint.run)
+
+```sh
+golangci-lint run --no-config --disable-all --enable wsl
+```
 
 ## Issues and configuration
 
@@ -82,7 +52,8 @@ The linter suppers a few ways to configure it to satisfy more than one kind of
 code style. These settings could be set either with flags or with YAML
 configuration if used via `golangci-lint`.
 
-The supported configuration can be found [in the documentation](doc/configuration.md).
+The supported configuration can be found [in the
+documentation](doc/configuration.md).
 
 Below are the available checklist for any hit from `wsl`. If you do not see any,
 feel free to raise an [issue](https://github.com/bombsimon/wsl/issues/new).
@@ -106,14 +77,11 @@ feel free to raise an [issue](https://github.com/bombsimon/wsl/issues/new).
 * [For statements should only be cuddled with assignments used in the iteration](doc/rules.md#for-statements-should-only-be-cuddled-with-assignments-used-in-the-iteration)
 * [Go statements can only invoke functions assigned on line above](doc/rules.md#go-statements-can-only-invoke-functions-assigned-on-line-above)
 * [If statements should only be cuddled with assignments](doc/rules.md#if-statements-should-only-be-cuddled-with-assignments)
-* [If statements should only be cuddled with assignments used in the if
-  statement
-  itself](doc/rules.md#if-statements-should-only-be-cuddled-with-assignments-used-in-the-if-statement-itself)
+* [If statements should only be cuddled with assignments used in the if statement itself](doc/rules.md#if-statements-should-only-be-cuddled-with-assignments-used-in-the-if-statement-itself)
 * [If statements that check an error must be cuddled with the statement that assigned the error](doc/rules.md#if-statements-that-check-an-error-must-be-cuddled-with-the-statement-that-assigned-the-error)
-* [Only cuddled expressions if assigning variable or using from line
-  above](doc/rules.md#only-cuddled-expressions-if-assigning-variable-or-using-from-line-above)
+* [Only cuddled expressions if assigning variable or using from line above](doc/rules.md#only-cuddled-expressions-if-assigning-variable-or-using-from-line-above)
 * [Only one cuddle assignment allowed before defer statement](doc/rules.md#only-one-cuddle-assignment-allowed-before-defer-statement)
-* [Only one cuddle assginment allowed before for statement](doc/rules.md#only-one-cuddle-assignment-allowed-before-for-statement)
+* [Only one cuddle assignment allowed before for statement](doc/rules.md#only-one-cuddle-assignment-allowed-before-for-statement)
 * [Only one cuddle assignment allowed before go statement](doc/rules.md#only-one-cuddle-assignment-allowed-before-go-statement)
 * [Only one cuddle assignment allowed before if statement](doc/rules.md#only-one-cuddle-assignment-allowed-before-if-statement)
 * [Only one cuddle assignment allowed before range statement](doc/rules.md#only-one-cuddle-assignment-allowed-before-range-statement)
