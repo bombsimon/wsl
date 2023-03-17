@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/bombsimon/wsl/v3"
+	"github.com/bombsimon/wsl/v4"
 	"golang.org/x/tools/go/analysis/singlechecker"
 )
 
