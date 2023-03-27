@@ -952,6 +952,10 @@ func (p *processor) findBlockStmt(node ast.Node) []*ast.BlockStmt {
 		}
 	case *ast.CallExpr:
 		blocks = append(blocks, p.findBlockStmt(t.Fun)...)
+
+		for _, x := range t.Args {
+			blocks = append(blocks, p.findBlockStmt(x)...)
+		}
 	case *ast.FuncLit:
 		blocks = append(blocks, t.Body)
 	case *ast.ExprStmt:
