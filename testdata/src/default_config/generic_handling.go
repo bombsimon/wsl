@@ -573,3 +573,22 @@ func IncrementDecrement() {
 	b++            // want "assignments should only be cuddled with other assignments"
 	go func() {}() // want "only one cuddle assignment allowed before go statement"
 }
+
+// Issue #09
+func AnonymousFunc() {
+	fmt.Println(func() string {
+		_ = 1
+		_ = 2
+		_ = 3
+		return "string" // want "return statements should not be cuddled if block has more than two lines"
+	})
+
+	fmt.Println(func() error {
+		foo := "foo"
+		fmt.Println("fmt.Println") // want "only cuddled expressions if assigning variable or using from line above"
+		if foo == "bar" {          // want "if statements should only be cuddled with assignments"
+			return fmt.Errorf("bar")
+		}
+		return nil // want "return statements should not be cuddled if block has more than two lines"
+	}())
+}
