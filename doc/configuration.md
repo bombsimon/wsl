@@ -34,7 +34,7 @@ x = append(x, "not y")
 x = append(x, y)
 ```
 
-Supproted when false:
+Supported when false:
 
 ```go
 x := []string{}
