@@ -19,7 +19,7 @@ make something configurable!
 ## Installation
 
 ```sh
-go get github.com/bombsimon/wsl/v4/cmd/...
+go install github.com/bombsimon/wsl/v4/cmd...@master
 ```
 
 ## Usage
