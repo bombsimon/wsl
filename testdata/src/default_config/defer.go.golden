@@ -1,0 +1,62 @@
+package testpkg
+
+import "fmt"
+
+func fn1() {
+	undoMaxProcs, err := maxprocsSet()
+	if err != nil {
+		return fmt.Errorf("failed to set GOMAXPROCS, err: %w", err)
+	}
+	defer undoMaxProcs()
+
+	callback, x := getCb()
+	if x != b {
+		return
+	}
+	defer callback()
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	db, err := OpenDB()
+	requireNoError(t, err)
+	defer db.Close()
+
+	tx := BeginTx(db)
+	defer func() {
+		EndTx(tx, err)
+	}()
+
+	thingOne := getOne()
+	thingTwo := getTwo()
+	defer thingOne.Close()
+}
+
+func fn2() {
+	thingOne := getOne()
+
+	thingTwo := getTwo()
+	defer thingTwo.Close() // want "only one cuddle assignment allowed before defer statement"
+
+	someF, err := getF()
+	if err != nil {
+		return err
+	}
+
+	someF() // want "expressions should not be cuddled with block"
+
+	thingOne := getOne()
+	defer thingOne.Close()
+
+	thingTwo := getTwo()   // want "assignments should only be cuddled with other assignments"
+	defer thingTwo.Close() // want "only one cuddle assignment allowed before defer statement"
+
+	thingOne := getOne()
+	thingTwo := getTwo()
+
+	defer thingOne.Close() // want "only one cuddle assignment allowed before defer statement"
+	defer thingTwo.Close()
+}
