@@ -39,6 +39,7 @@ linters:
   disable:
     - cyclop
     - deadcode
+    - depguard
     - dupl
     - dupword
     - exhaustivestruct
