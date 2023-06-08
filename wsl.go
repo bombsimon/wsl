@@ -326,14 +326,38 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 			continue
 		}
 
-		moreThanOneStatementAbove := func() bool {
-			if i < 2 {
+		nStatementsBefore := func(n int) bool {
+			if i < n {
 				return false
 			}
 
-			statementBeforePreviousStatement := statements[i-2]
+			for j := 1; j < n; j++ {
+				s1 := statements[i-j]
+				s2 := statements[i-(j+1)]
 
-			return p.nodeStart(previousStatement)-1 == p.nodeEnd(statementBeforePreviousStatement)
+				if p.nodeStart(s1)-1 != p.nodeEnd(s2) {
+					return false
+				}
+			}
+
+			return true
+		}
+
+		nStatementsAfter := func(n int) bool {
+			if len(statements)-1 < i+n {
+				return false
+			}
+
+			for j := 0; j < n; j++ {
+				s1 := statements[i+j]
+				s2 := statements[i+j+1]
+
+				if p.nodeEnd(s1)+1 != p.nodeStart(s2) {
+					return false
+				}
+			}
+
+			return true
 		}
 
 		isLastStatementInBlockOfOnlyTwoLines := func() bool {
@@ -469,7 +493,7 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 				continue
 			}
 
-			if moreThanOneStatementAbove() {
+			if nStatementsBefore(2) {
 				reportNewlineTwoLinesAbove(t, statements[i-1], reasonOnlyOneCuddleBeforeIf)
 				continue
 			}
@@ -576,7 +600,7 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 				p.addWhitespaceBeforeError(t, reasonExprCuddlingNonAssignedVar)
 			}
 		case *ast.RangeStmt:
-			if moreThanOneStatementAbove() {
+			if nStatementsBefore(2) {
 				reportNewlineTwoLinesAbove(t, statements[i-1], reasonOnlyOneCuddleBeforeRange)
 				continue
 			}
@@ -592,27 +616,39 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 				continue
 			}
 
-			// Special treatment of deferring body closes after error checking
-			// according to best practices. See
-			// https://github.com/bombsimon/wsl/issues/31 which links to
-			// discussion about error handling after HTTP requests. This is hard
-			// coded and very specific but for now this is to be seen as a
-			// special case. What this does is that it *only* allows a defer
-			// statement with `Close` on the right hand side to be cuddled with
-			// an if-statement to support this:
-			//  resp, err := client.Do(req)
-			//  if err != nil {
-			//      return err
-			//  }
-			//  defer resp.Body.Close()
-			if _, ok := previousStatement.(*ast.IfStmt); ok {
-				if atLeastOneInListsMatch(rightHandSide, []string{"Close"}) {
-					continue
+			if nStatementsBefore(2) {
+				// We allow cuddling defer if the defer references something
+				// used two lines above.
+				// There are several reasons to why we do this.
+				// Originally there was a special use case only for "Close"
+				//
+				// https://github.com/bombsimon/wsl/issues/31 which links to
+				//  resp, err := client.Do(req)
+				//  if err != nil {
+				//      return err
+				//  }
+				//  defer resp.Body.Close()
+				//
+				// After a discussion in a followup issue it makes sense to not
+				// only hard code `Close` but for anything that's referenced two
+				// statements above.
+				//
+				// https://github.com/bombsimon/wsl/issues/85
+				//  db, err := OpenDB()
+				//  require.NoError(t, err)
+				//  defer db.Close()
+				//
+				// All of this is only allowed if there's exactly three cuddled
+				// statements, otherwise the regular rules apply.
+				if !nStatementsBefore(3) && !nStatementsAfter(1) {
+					variablesTwoLinesAbove := append(p.findLHS(statements[i-2]), p.findRHS(statements[i-2])...)
+					if atLeastOneInListsMatch(rightHandSide, variablesTwoLinesAbove) {
+						continue
+					}
 				}
-			}
 
-			if moreThanOneStatementAbove() {
 				reportNewlineTwoLinesAbove(t, statements[i-1], reasonOnlyOneCuddleBeforeDefer)
+
 				continue
 			}
 
@@ -651,7 +687,7 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 				continue
 			}
 
-			if moreThanOneStatementAbove() {
+			if nStatementsBefore(2) {
 				reportNewlineTwoLinesAbove(t, statements[i-1], reasonOnlyOneCuddleBeforeFor)
 				continue
 			}
@@ -669,7 +705,7 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 				continue
 			}
 
-			if moreThanOneStatementAbove() {
+			if nStatementsBefore(2) {
 				reportNewlineTwoLinesAbove(t, statements[i-1], reasonOnlyOneCuddleBeforeGo)
 				continue
 			}
@@ -694,7 +730,7 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 				p.addWhitespaceBeforeError(t, reasonGoFuncWithoutAssign)
 			}
 		case *ast.SwitchStmt:
-			if moreThanOneStatementAbove() {
+			if nStatementsBefore(2) {
 				reportNewlineTwoLinesAbove(t, statements[i-1], reasonOnlyOneCuddleBeforeSwitch)
 				continue
 			}
@@ -707,7 +743,7 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 				}
 			}
 		case *ast.TypeSwitchStmt:
-			if moreThanOneStatementAbove() {
+			if nStatementsBefore(2) {
 				reportNewlineTwoLinesAbove(t, statements[i-1], reasonOnlyOneCuddleBeforeTypeSwitch)
 				continue
 			}

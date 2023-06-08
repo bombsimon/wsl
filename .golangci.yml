@@ -62,11 +62,13 @@ linters:
     - nosnakecase
     - paralleltest
     - prealloc
+    - rowserrcheck
     - scopelint
     - structcheck
     - testpackage
     - varcheck
     - varnamelen
+    - wastedassign
   fast: false
 
 
