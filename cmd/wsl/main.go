@@ -6,5 +6,5 @@ import (
 )
 
 func main() {
-	singlechecker.Main(wsl.Analyzer)
+	singlechecker.Main(wsl.NewAnalyzer(nil))
 }
