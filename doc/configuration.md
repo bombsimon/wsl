@@ -184,7 +184,7 @@ case 3:
     fmt.Println("Many")
     fmt.Println("lines")
     fmt.Println("without")
-    fmt.Println("newlinew")
+    fmt.Println("newline")
 case 4:
     fmt.Println("done")
 }
@@ -255,7 +255,6 @@ if false {
     //
     // Multiline OK
 }
-
 if 1 == 1 {
     fmt.Println("x")
     /*

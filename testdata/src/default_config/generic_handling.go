@@ -9,7 +9,7 @@ import (
 )
 
 func OnlyComments() {
-	// Also signel comments are ignored
+	// Also signal comments are ignored
 	// foo := false
 	// if true {
 	//
@@ -212,7 +212,7 @@ func IdentifiersWithIndices() {
 
 		someIndex := 3
 		if val := someSlice[someIndex]; val != nil {
-			retunr
+			return
 		}
 	}
 }
