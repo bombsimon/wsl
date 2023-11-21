@@ -769,7 +769,7 @@ more than 1 assignment(s), they should have more space between them for clarity
 purposes. One bad example is:
 
 ```go
-assignOne := SomeOone()
+assignOne := SomeOne()
 assignTwo := SomeTwo()
 switch assignTwo {
 case 1:
@@ -784,7 +784,7 @@ default:
 An empty line between the last assignment and the `switch` block:
 
 ```go
-assignOne := SomeOone()
+assignOne := SomeOne()
 assignTwo := SomeTwo()
 
 switch assignTwo {

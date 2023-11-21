@@ -205,7 +205,7 @@ func OnlyOneRange() {
 }
 
 func OnlyOneSwitch() {
-	assignOne := SomeOone()
+	assignOne := SomeOne()
 	assignTwo := SomeTwo()
 	switch assignTwo { // want "only one cuddle assignment allowed before switch statement"
 	case 1:

@@ -25,8 +25,8 @@ func RemoveWhitespaceNoComments() { // want "block should not start with a white
 
 } // want "block should not end with a whitespace"
 
-// RemoveWhiteSpaceWithhComments keeps comments even when removing newlines.
-func RemoveWhiteSpaceWithhComments() { // want "block should not start with a whitespace"
+// RemoveWhiteSpaceWithComments keeps comments even when removing newlines.
+func RemoveWhiteSpaceWithComments() { // want "block should not start with a whitespace"
 	// This comment should be kept
 
 	a := 1

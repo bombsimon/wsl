@@ -53,7 +53,7 @@ const (
 	warnUnknownRHS                 = "UNKNOWN RHS"
 )
 
-// Configuration represents configurable settingds for the linter.
+// Configuration represents configurable settings for the linter.
 type Configuration struct {
 	// StrictAppend will do strict checking when assigning from append (x =
 	// append(x, y)). If this is set to true the append call must append either
@@ -757,7 +757,7 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 				}
 			}
 		case *ast.CaseClause, *ast.CommClause:
-			// Case clauses will be checked by not allowing leading ot trailing
+			// Case clauses will be checked by not allowing leading of trailing
 			// whitespaces within the block. There's nothing in the case itself
 			// that may be cuddled.
 		default:
@@ -1121,7 +1121,7 @@ func (p *processor) findLeadingAndTrailingWhitespaces(ident *ast.Ident, stmt, ne
 		lastStatement  = blockStatements[len(blockStatements)-1]
 	)
 
-	// Get the comment related to the first statement, we do allow commends in
+	// Get the comment related to the first statement, we do allow comments in
 	// the beginning of a block before the first statement.
 	var (
 		openingNodePos     = blockStartPos + 1
