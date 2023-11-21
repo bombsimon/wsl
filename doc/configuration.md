@@ -1,6 +1,6 @@
 # Configuration
 
-The configuration should always have the same name for the flag in `wsl`  as the
+The configuration should always have the same name for the flag in `wsl` as the
 key name in the `golangci-lint` documentation. For example if you run local
 installation you should be able to use `--allow-cuddle-declarations` and if
 you're using `golangci-lint` the `golangci.yaml` configuration should look like
@@ -236,9 +236,12 @@ var (
 ### [allow-trailing-comment](rules.md#block-should-not-end-with-a-whitespace-or-comment)
 
 Controls if blocks can end with comments. This is not encouraged sine it's
-usually code smell but might be useful do improve understanding or learning
-purposes. To be allowed there must be no whitespace between the comment and the
-last statement or the comment and the closing brace.
+not clear what node the comment belongs to. To be allowed there must be no
+whitespace between the comment and the last statement or the comment and the
+closing bracket.
+
+[Example functions](https://go.dev/blog/examples) used for testing is excluded
+from this rule.
 
 > Default value: false
 
@@ -255,6 +258,7 @@ if false {
     //
     // Multiline OK
 }
+
 if 1 == 1 {
     fmt.Println("x")
     /*
@@ -266,7 +270,8 @@ if 1 == 1 {
 
 ### [force-err-cuddling](rules.md#if-statements-that-check-an-error-must-be-cuddled-with-the-statement-that-assigned-the-error)
 
-Enforces that an `if` statement checking an error variable is cuddled with the line that assigned that error variable.
+Enforces that an `if` statement checking an error variable is cuddled with the
+line that assigned that error variable.
 
 > Default value: false
 
