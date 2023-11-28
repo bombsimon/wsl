@@ -75,7 +75,7 @@ func (wa *wslAnalyzer) flags() flag.FlagSet {
 
 func (wa *wslAnalyzer) run(pass *analysis.Pass) (interface{}, error) {
 	for _, file := range pass.Files {
-		filename := pass.Fset.Position(file.Pos()).Filename
+		filename := pass.Fset.PositionFor(file.Pos(), false).Filename
 		if !strings.HasSuffix(filename, ".go") {
 			continue
 		}
