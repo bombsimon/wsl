@@ -74,8 +74,8 @@ func BranchStatement() {
 }
 
 func Declarations() {
-	var eol string
-	var i int // want "declarations should never be cuddled"
+	var eol string // want "declarations should never be cuddled"
+	var i int
 }
 
 func Defer() {
