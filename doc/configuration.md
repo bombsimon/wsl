@@ -331,3 +331,28 @@ if err != nil {
 
 **Note**: this means the option _overrides_ the
 [force-err-cuddling](#force-err-cuddling) option above, among others.
+
+### [allow-if-cuddling-with-local-assignments](rules.md#if-statements-should-only-be-cuddled-with-assignments-used-in-the-if-statement-itself)
+
+Can be configured to control the cuddling behavior of `if` statements with assignments.
+
+When set to false (default):
+
+```go
+x := true
+
+if true {
+    fmt.Println("should have space between")
+    fmt.Println("x is not used in this if block")
+}
+```
+
+When set to true:
+
+```go
+x := true
+if true {
+    fmt.Println("didn't use cuddled variable")
+}
+```
+This rule ensures that `if` statements are aligned only with assignments used within the if statement itself, improving code readability.

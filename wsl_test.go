@@ -88,6 +88,12 @@ func TestWithConfig(t *testing.T) {
 				config.AllowCuddleDeclaration = true
 			},
 		},
+		{
+			subdir: "cuddled_assignment_in_if_blocks",
+			configFn: func(config *Configuration) {
+				config.AllowCuddledAssignmentsInIfBlocks = true
+			},
+		},
 	} {
 		t.Run(tc.subdir, func(t *testing.T) {
 			config := defaultConfig()

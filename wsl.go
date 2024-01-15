@@ -174,6 +174,26 @@ type Configuration struct {
 	//
 	// is not allowed. This logic overrides ForceCuddleErrCheckAndAssign among others.
 	ForceExclusiveShortDeclarations bool
+
+	// AllowCuddledAssignmentsInIfBlocks will cause an error when an If statement that
+	// has assignments outside its scope attempts to cuddle with assignments within the
+	// if statement itself. The default value is false but setting it to true will not cause any error.
+	// For example:
+	//
+	// x := true
+	//
+	// if true {
+	//   fmt.Println("didn't use cuddled variable")
+	// }
+	//
+	// is allowed, but
+	//
+	// x := true
+	// if true {
+	//   fmt.Println("didn't use cuddled variable")
+	// }
+	// is not allowed.
+	AllowCuddledAssignmentsInIfBlocks bool
 }
 
 // fix is a range to fixup.
@@ -503,6 +523,10 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 
 			if atLeastOneInListsMatch(assignedOnLineAbove, calledOrAssignedFirstInBlock) {
+				continue
+			}
+
+			if p.config.AllowCuddledAssignmentsInIfBlocks {
 				continue
 			}
 

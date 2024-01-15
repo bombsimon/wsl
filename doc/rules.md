@@ -528,6 +528,9 @@ if 1 != one {
 
 ### If statements should only be cuddled with assignments used in the if statement itself
 
+> Can be configured, see [configuration
+documentation](configuration.md#allow-if-cuddling-with-local-assignments)
+
 `if` statements should only cuddle with the associated assignment. Otherwise,
 it deserves some space between itself and whoever before it. One bad example is
 the `if` block that uses `x` cuddled with `z` assignment:
