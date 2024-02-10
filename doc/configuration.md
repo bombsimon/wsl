@@ -332,9 +332,9 @@ if err != nil {
 **Note**: this means the option _overrides_ the
 [force-err-cuddling](#force-err-cuddling) option above, among others.
 
-### [allow-if-cuddling-with-local-assignments](rules.md#if-statements-should-only-be-cuddled-with-assignments-used-in-the-if-statement-itself)
+### [allow-cuddling-with-local-assignments-for-blocks](rules.md#if-statements-should-only-be-cuddled-with-assignments-used-in-the-if-statement-itself)
 
-Can be configured to control the cuddling behavior of `if` statements with assignments.
+Can be configured to control the cuddling behavior of `if` statements with assignments or other blocks like for.
 
 When set to false (default):
 
