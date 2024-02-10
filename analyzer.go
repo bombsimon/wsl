@@ -21,20 +21,20 @@ func NewAnalyzer(config *Configuration) *analysis.Analyzer {
 
 func defaultConfig() *Configuration {
 	return &Configuration{
-		AllowAssignAndAnythingCuddle:      false,
-		AllowAssignAndCallCuddle:          true,
-		AllowCuddleDeclaration:            false,
-		AllowMultiLineAssignCuddle:        true,
-		AllowSeparatedLeadingComment:      false,
-		AllowTrailingComment:              false,
-		AllowCuddledAssignmentsInIfBlocks: false,
-		ForceCuddleErrCheckAndAssign:      false,
-		ForceExclusiveShortDeclarations:   false,
-		StrictAppend:                      true,
-		AllowCuddleWithCalls:              []string{"Lock", "RLock"},
-		AllowCuddleWithRHS:                []string{"Unlock", "RUnlock"},
-		ErrorVariableNames:                []string{"err"},
-		ForceCaseTrailingWhitespaceLimit:  0,
+		AllowAssignAndAnythingCuddle:     false,
+		AllowAssignAndCallCuddle:         true,
+		AllowCuddleDeclaration:           false,
+		AllowMultiLineAssignCuddle:       true,
+		AllowSeparatedLeadingComment:     false,
+		AllowTrailingComment:             false,
+		AllowCuddledAssignmentsAndBlocks: false,
+		ForceCuddleErrCheckAndAssign:     false,
+		ForceExclusiveShortDeclarations:  false,
+		StrictAppend:                     true,
+		AllowCuddleWithCalls:             []string{"Lock", "RLock"},
+		AllowCuddleWithRHS:               []string{"Unlock", "RUnlock"},
+		ErrorVariableNames:               []string{"err"},
+		ForceCaseTrailingWhitespaceLimit: 0,
 	}
 }
 
@@ -62,7 +62,7 @@ func (wa *wslAnalyzer) flags() flag.FlagSet {
 	flags.BoolVar(&wa.config.AllowMultiLineAssignCuddle, "allow-multi-line-assign", true, "Allow cuddling with multi line assignments")
 	flags.BoolVar(&wa.config.AllowSeparatedLeadingComment, "allow-separated-leading-comment", false, "Allow empty newlines in leading comments")
 	flags.BoolVar(&wa.config.AllowTrailingComment, "allow-trailing-comment", false, "Allow blocks to end with a comment")
-	flag.BoolVar(&wa.config.AllowCuddledAssignmentsInIfBlocks, "allow-cuddled-assignments", false, "Allow cuddling assignments within If blocks")
+	flag.BoolVar(&wa.config.AllowCuddledAssignmentsAndBlocks, "allow-cuddled-assignments", false, "Allow cuddling assignments within blocks")
 	flags.BoolVar(&wa.config.ForceCuddleErrCheckAndAssign, "force-err-cuddling", false, "Force cuddling of error checks with error var assignment")
 	flags.BoolVar(&wa.config.ForceExclusiveShortDeclarations, "force-short-decl-cuddling", false, "Force short declarations to cuddle by themselves")
 	flags.BoolVar(&wa.config.StrictAppend, "strict-append", true, "Strict rules for append")

@@ -91,7 +91,7 @@ func TestWithConfig(t *testing.T) {
 		{
 			subdir: "cuddled_assignment_in_if_blocks",
 			configFn: func(config *Configuration) {
-				config.AllowCuddledAssignmentsInIfBlocks = true
+				config.AllowCuddledAssignmentsAndBlocks = true
 			},
 		},
 	} {

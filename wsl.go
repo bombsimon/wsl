@@ -175,10 +175,10 @@ type Configuration struct {
 	// is not allowed. This logic overrides ForceCuddleErrCheckAndAssign among others.
 	ForceExclusiveShortDeclarations bool
 
-	// AllowCuddledAssignmentsInIfBlocks will cause an error when an If statement that
+	// AllowCuddledAssignmentsAndBlocks will cause an error when a block that
 	// has assignments outside its scope attempts to cuddle with assignments within the
-	// if statement itself. The default value is false but setting it to true will not cause any error.
-	// For example:
+	// block itself. The default value is false but setting it to true will not cause any error.
+	// For example for if statement it will be like this:
 	//
 	// x := true
 	//
@@ -193,7 +193,7 @@ type Configuration struct {
 	//   fmt.Println("didn't use cuddled variable")
 	// }
 	// is not allowed.
-	AllowCuddledAssignmentsInIfBlocks bool
+	AllowCuddledAssignmentsAndBlocks bool
 }
 
 // fix is a range to fixup.
@@ -526,7 +526,7 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 				continue
 			}
 
-			if p.config.AllowCuddledAssignmentsInIfBlocks {
+			if p.config.AllowCuddledAssignmentsAndBlocks {
 				continue
 			}
 
@@ -624,6 +624,10 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 				p.addWhitespaceBeforeError(t, reasonExprCuddlingNonAssignedVar)
 			}
 		case *ast.RangeStmt:
+			if p.config.AllowCuddledAssignmentsAndBlocks {
+				continue
+			}
+
 			if nStatementsBefore(2) {
 				reportNewlineTwoLinesAbove(t, statements[i-1], reasonOnlyOneCuddleBeforeRange)
 				continue
@@ -706,6 +710,10 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 				p.addWhitespaceBeforeError(t, reasonDeferCuddledWithOtherVar)
 			}
 		case *ast.ForStmt:
+			if p.config.AllowCuddledAssignmentsAndBlocks {
+				continue
+			}
+
 			if len(rightAndLeftHandSide) == 0 {
 				p.addWhitespaceBeforeError(t, reasonForWithoutCondition)
 				continue
@@ -721,6 +729,10 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 			// first line in the block for details.
 			if !atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) {
 				if !atLeastOneInListsMatch(assignedOnLineAbove, calledOrAssignedFirstInBlock) {
+					if p.config.AllowCuddledAssignmentsAndBlocks {
+						continue
+					}
+
 					p.addWhitespaceBeforeError(t, reasonForCuddledAssignWithoutUse)
 				}
 			}
@@ -759,6 +771,10 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 				continue
 			}
 
+			if p.config.AllowCuddledAssignmentsAndBlocks {
+				continue
+			}
+
 			if !atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) {
 				if len(rightAndLeftHandSide) == 0 {
 					p.addWhitespaceBeforeError(t, reasonAnonSwitchCuddled)
@@ -769,6 +785,10 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 		case *ast.TypeSwitchStmt:
 			if nStatementsBefore(2) {
 				reportNewlineTwoLinesAbove(t, statements[i-1], reasonOnlyOneCuddleBeforeTypeSwitch)
+				continue
+			}
+
+			if p.config.AllowCuddledAssignmentsAndBlocks {
 				continue
 			}
 
