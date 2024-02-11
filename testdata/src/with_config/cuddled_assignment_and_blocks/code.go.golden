@@ -11,6 +11,17 @@ func If() {
 	}
 
 	_ = x
+
+
+	a := true
+	b := true
+
+	if true { // want "only one cuddle assignment allowed before if statement"
+		fmt.Println("didn't use cuddled variable")
+	}
+
+	_ = a
+	_ = b
 }
 
 func For() {
@@ -20,6 +31,16 @@ func For() {
 	}
 
 	_ = x
+
+	a := true
+	b := true
+
+	for { // want "only one cuddle assignment allowed before for statement"
+		fmt.Println("didn't use cuddled variable")
+	}
+
+	_ = a
+	_ = b
 }
 
 func Range() {
@@ -29,20 +50,41 @@ func Range() {
 	}
 
 	_ = x
+
+	a := true
+	b := true
+
+	for i := range make([]int, 10) { // want "only one cuddle assignment allowed before range statement"
+		fmt.Println("didn't use cuddled variable")
+	}
+
+	_ = a
+	_ = b
 }
 
 func Switch() {
 	x := true
 	switch "a" {
-	case "b":
+	case "a":
 		return 1
-	case "c":
-		return 2
 	default:
-		return 3
+		return 2
 	}
 
 	_ = x
+
+	a := true
+	b := true
+
+	switch "a" { // want "only one cuddle assignment allowed before switch statement"
+	case "a":
+		return 1
+	default:
+		return 2
+	}
+
+	_ = a
+	_ = b
 }
 
 func TypeSwitch() {
@@ -52,14 +94,25 @@ func TypeSwitch() {
 	switch a.(type) {
 	case int:
 		return 1
-	case uint:
-		return 2
 	default:
-		return 3
+		return 2
 	}
 
 	_ = x
 	_ = a
+
+	b := true
+	c := true
+
+	switch a.(type) { // want "only one cuddle assignment allowed before type switch statement"
+	case "a":
+		return 1
+	default:
+		return 2
+	}
+
+	_ = b
+	_ = c
 }
 
 func Defer() {
@@ -69,5 +122,15 @@ func Defer() {
 	}()
 
 	_ = x
+
+	a := true
+	b := true
+
+	defer func() { // want "only one cuddle assignment allowed before defer statement"
+		fmt.Println("a")
+	}()
+
+	_ = a
+	_ = b
 }
 

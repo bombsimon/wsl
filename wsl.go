@@ -644,10 +644,6 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 				continue
 			}
 
-			if p.config.AllowCuddledAssignmentsAndBlocks {
-				continue
-			}
-
 			if nStatementsBefore(2) {
 				// We allow cuddling defer if the defer references something
 				// used two lines above.
@@ -707,6 +703,10 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 
 			if atLeastOneInListsMatch(assignedOnLineAbove, calledOrAssignedFirstInBlock) {
+				continue
+			}
+
+			if p.config.AllowCuddledAssignmentsAndBlocks {
 				continue
 			}
 
