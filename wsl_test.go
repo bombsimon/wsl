@@ -90,9 +90,9 @@ func TestWithConfig(t *testing.T) {
 			},
 		},
 		{
-			subdir: "cuddled_assignment_and_blocks",
+			subdir: "assignment_not_used_in_block",
 			configFn: func(config *Configuration) {
-				config.AllowCuddledAssignmentsAndBlocks = true
+				config.AllowCuddleAssignmentNotUsedInBlock = true
 			},
 		},
 	} {

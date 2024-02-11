@@ -175,8 +175,8 @@ type Configuration struct {
 	// is not allowed. This logic overrides ForceCuddleErrCheckAndAssign among others.
 	ForceExclusiveShortDeclarations bool
 
-	// AllowCuddledAssignmentsAndBlocks will allow variables that's not used in
-	// the block expression or first in the block to be cuddled. The default
+	// AllowCuddleAssignmentNotUsedInBlock will allow variables that's not used
+	// in the block expression or first in the block to be cuddled. The default
 	// value is false but setting it to true will not cause any error. For
 	// example for if statement it will be like this:
 	//
@@ -192,8 +192,9 @@ type Configuration struct {
 	// if true {
 	//   fmt.Println("didn't use cuddled variable")
 	// }
+	//
 	// is not allowed if this is false.
-	AllowCuddledAssignmentsAndBlocks bool
+	AllowCuddleAssignmentNotUsedInBlock bool
 }
 
 // fix is a range to fixup.
@@ -526,7 +527,7 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 				continue
 			}
 
-			if p.config.AllowCuddledAssignmentsAndBlocks {
+			if p.config.AllowCuddleAssignmentNotUsedInBlock {
 				continue
 			}
 
@@ -629,7 +630,7 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 				continue
 			}
 
-			if p.config.AllowCuddledAssignmentsAndBlocks {
+			if p.config.AllowCuddleAssignmentNotUsedInBlock {
 				continue
 			}
 
@@ -706,7 +707,7 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 				continue
 			}
 
-			if p.config.AllowCuddledAssignmentsAndBlocks {
+			if p.config.AllowCuddleAssignmentNotUsedInBlock {
 				continue
 			}
 
@@ -714,7 +715,7 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 				p.addWhitespaceBeforeError(t, reasonDeferCuddledWithOtherVar)
 			}
 		case *ast.ForStmt:
-			if len(rightAndLeftHandSide) == 0 && !p.config.AllowCuddledAssignmentsAndBlocks {
+			if len(rightAndLeftHandSide) == 0 && !p.config.AllowCuddleAssignmentNotUsedInBlock {
 				p.addWhitespaceBeforeError(t, reasonForWithoutCondition)
 				continue
 			}
@@ -724,7 +725,7 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 				continue
 			}
 
-			if p.config.AllowCuddledAssignmentsAndBlocks {
+			if p.config.AllowCuddleAssignmentNotUsedInBlock {
 				continue
 			}
 
@@ -771,7 +772,7 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 				continue
 			}
 
-			if p.config.AllowCuddledAssignmentsAndBlocks {
+			if p.config.AllowCuddleAssignmentNotUsedInBlock {
 				continue
 			}
 
@@ -788,7 +789,7 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 				continue
 			}
 
-			if p.config.AllowCuddledAssignmentsAndBlocks {
+			if p.config.AllowCuddleAssignmentNotUsedInBlock {
 				continue
 			}
 
