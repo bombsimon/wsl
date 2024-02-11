@@ -1,6 +1,7 @@
 package wsl
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -89,18 +90,26 @@ func TestWithConfig(t *testing.T) {
 			},
 		},
 		{
-			subdir: "cuddled_assignment_in_if_blocks",
+			subdir: "cuddled_assignment_and_blocks",
 			configFn: func(config *Configuration) {
 				config.AllowCuddledAssignmentsAndBlocks = true
 			},
 		},
 	} {
 		t.Run(tc.subdir, func(t *testing.T) {
+			cwd, _ := os.Getwd()
+			subdir := filepath.Join("with_config", tc.subdir)
+
+			// Ensure the subdir actually exist.
+			if _, err := os.Stat(filepath.Join(cwd, "testdata", "src", subdir)); err != nil {
+				t.Error("subdir not found")
+			}
+
 			config := defaultConfig()
 			tc.configFn(config)
 
 			analyzer := NewAnalyzer(config)
-			analysistest.RunWithSuggestedFixes(t, testdata, analyzer, filepath.Join("with_config", tc.subdir))
+			analysistest.RunWithSuggestedFixes(t, testdata, analyzer, subdir)
 		})
 	}
 }

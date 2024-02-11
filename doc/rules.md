@@ -41,7 +41,7 @@ case s.Switches["zero timeout"]:
 ### Append only allowed to cuddle with appended value
 
 > Can be configured, see [configuration
-documentation](configuration.md#strict-append)
+> documentation](configuration.md#strict-append)
 
 `append` is only allowed to cuddle with the appended value. Otherwise, they
 deserve some distance. If the variables you're assigning isn't going to be
@@ -81,7 +81,7 @@ x = append(x, useMe))
 ### Assignments should only be cuddled with other assignments
 
 > Can be configured, see [configuration
-documentation](configuration.md#allow-assign-and-anything)
+> documentation](configuration.md#allow-assign-and-anything)
 
 Assignments should either be grouped together or have some space between whoever
 else before it. One bad example is `z` and `y` in such case:
@@ -117,7 +117,7 @@ fmt.Println("x")
 ### Block should not end with a whitespace (or comment)
 
 > Can be configured, see [configuration
-documentation](configuration.md#allow-trailing-comment)
+> documentation](configuration.md#allow-trailing-comment)
 
 Having an empty trailing whitespace is unnecessary and makes the block
 definition looks never-ending long. You want to let reader know that the
@@ -149,7 +149,7 @@ func example(y int) string {
 ### Case block should end with newline at this size
 
 > Can be configured, see [configuration
-documentation](configuration.md#force-case-trailing-whitespace)
+> documentation](configuration.md#force-case-trailing-whitespace)
 
 To improve readability WSL can force to add whitespaces based on a set limit.
 See link to configuration for options.
@@ -204,7 +204,7 @@ func example() string {
 
 > However, this can be configured to allow white space after one
 > or more initial comment groups, see
-[configuration documentation](configuration.md#allow-separated-leading-comment)
+> [configuration documentation](configuration.md#allow-separated-leading-comment)
 >
 > If that is done, then these examples are allowed:
 
@@ -276,7 +276,7 @@ for i := range make([]int, 5) {
 ### Declarations should never be cuddled
 
 > Can be configured, see
-[configuration documentation](configuration.md#allow-cuddle-declarations)
+> [configuration documentation](configuration.md#allow-cuddle-declarations)
 
 `var` declarations, in opinion, should never be cuddled. Instead, multiple
 `var` patterns is encouraged to use the grouped `var` format. One case study is:
@@ -290,7 +290,7 @@ var i int
 
 Since this hit is opinionated, there are 3 ways to deal with it:
 
-1) Use the grouped `var` pattern:
+1. Use the grouped `var` pattern:
 
 ```go
 var (
@@ -299,9 +299,9 @@ var (
 )
 ```
 
-2) Allow it by configuration (`wsl`  or `golangci-lint`)
+2. Allow it by configuration (`wsl` or `golangci-lint`)
 
-3) Use an empty line between them
+3. Use an empty line between them
 
 ```go
 var eol = ""
@@ -312,6 +312,9 @@ var i = 0
 ---
 
 ### Defer statements should only be cuddled with expressions on same variable
+
+> Can be configured, see [configuration
+> documentation](configuration.md#allow-cuddled-assignments-and-blocks)
 
 `defer` statement should only cuddle with related expressions. Otherwise, it
 deserves some distance from whatever it is. One bad example is:
@@ -425,6 +428,9 @@ for {
 
 ### For statements should only be cuddled with assignments used in the iteration
 
+> Can be configured, see [configuration
+> documentation](configuration.md#allow-cuddled-assignments-and-blocks)
+
 `for` statement should only cuddle with related assignments. Otherwise, its
 relationship status can be very complicated, making reader wondering what the
 co-relation between the `for` block and whatever it is. One bad example is:
@@ -529,7 +535,7 @@ if 1 != one {
 ### If statements should only be cuddled with assignments used in the if statement itself
 
 > Can be configured, see [configuration
-documentation](configuration.md#allow-if-cuddling-with-local-assignments)
+> documentation](configuration.md#allow-cuddled-assignments-and-blocks)
 
 `if` statements should only cuddle with the associated assignment. Otherwise,
 it deserves some space between itself and whoever before it. One bad example is
@@ -565,7 +571,7 @@ if !x {
 ### Only cuddled expressions if assigning variable or using from line above
 
 > Can be configured, see
-[configuration documentation](configuration.md#allow-assign-and-call)
+> [configuration documentation](configuration.md#allow-assign-and-call)
 
 When an assignment is cuddling with an unrelated expression, they create
 confusing relationship to one another. Therefore, they should keep their
@@ -605,7 +611,7 @@ defer assignmentTwo()
 
 > **EXCEPTION**: It is allowed to use the following:
 >
-> 1) The `defer` after `error` check as reported in [Issue #31](https://github.com/bombsimon/wsl/issues/31)
+> 1. The `defer` after `error` check as reported in [Issue #31](https://github.com/bombsimon/wsl/issues/31)
 >
 > ```go
 > f1, err := os.Open("/path/to/f1.txt")
@@ -618,7 +624,7 @@ defer assignmentTwo()
 >
 > OR
 >
-> 2) The conventional mutex `Lock` and `Unlock`.
+> 2. The conventional mutex `Lock` and `Unlock`.
 >
 > ```go
 > m.Lock()
@@ -848,6 +854,9 @@ switch v := thirdT.(type)
 
 ### Ranges should only be cuddled with assignments used in the iteration
 
+> Can be configured, see [configuration
+> documentation](configuration.md#allow-cuddled-assignments-and-blocks)
+
 `range` statements should only cuddle with assignments related to it. Otherwise,
 it creates unrelated relationship perception that sends the reader to wonder
 why are they closely together. One bad example is:
@@ -936,6 +945,9 @@ func IsNotZero(i int) bool {
 
 ### Switch statements should only be cuddled with variables switched
 
+> Can be configured, see [configuration
+> documentation](configuration.md#allow-cuddled-assignments-and-blocks)
+
 `switch` statements with associated switching variable should not cuddle with
 non-associated switching entity. This will set the reader wondering why are
 they grouped together at the first place. One bad example is:
@@ -980,6 +992,9 @@ case 1:
 
 ### Type switch statements should only be cuddled with variables switched
 
+> Can be configured, see [configuration
+> documentation](configuration.md#allow-cuddled-assignments-and-blocks)
+
 `type` `switch` statements should only cuddle with its switching variable.
 Otherwise, it makes unclear relationship between the `switch` block and whatever
 before it. Here is a bad example:
@@ -1019,7 +1034,7 @@ switch inSwitch.(type) {
 ### If statements that check an error must be cuddled with the statement that assigned the error
 
 > Can be configured, see [configuration
-documentation](configuration.md#force-err-cuddling)
+> documentation](configuration.md#force-err-cuddling)
 
 When an `if` statement checks a variable named `err`, which was assigned on the line above, it should be cuddled with that assignment. This makes clear the relationship between the error check and the call that may have resulted in an error.
 
@@ -1047,7 +1062,7 @@ if err != nil {
 ### Short declaration should cuddle only with other short declarations
 
 > Can be configured, see [configuration
-documentation](configuration.md#force-short-decl-cuddling)
+> documentation](configuration.md#force-short-decl-cuddling)
 
 A short declaration (an "assignment" using `:=`) must not be cuddled with anything other than another short declaration.
 

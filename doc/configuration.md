@@ -332,11 +332,31 @@ if err != nil {
 **Note**: this means the option _overrides_ the
 [force-err-cuddling](#force-err-cuddling) option above, among others.
 
-### [allow-cuddling-with-local-assignments-for-blocks](rules.md#if-statements-should-only-be-cuddled-with-assignments-used-in-the-if-statement-itself)
+### [allow-cuddled-assignments-and-blocks](rules.md#if-statements-should-only-be-cuddled-with-assignments-used-in-the-if-statement-itself)
 
-Can be configured to control the cuddling behavior of `if` statements with assignments or other blocks like for.
+_Applies to_
 
-When set to false (default):
+- [for](rules.md#for-statements-should-only-be-cuddled-with-assignments-used-in-the-iteration)
+- [range](rules.md#ranges-should-only-be-cuddled-with-assignments-used-in-the-iteration)
+- [switch](rules.md#switch-statements-should-only-be-cuddled-with-variables-switched)
+- [type-switch](rules.md#type-switch-statements-should-only-be-cuddled-with-variables-switched)
+- [defer](rules.md#defer-statements-should-only-be-cuddled-with-expressions-on-same-variable)
+
+Can be configured to control the cuddling behavior of block statements (`if`,
+`for`, `switch` etc) with assignments or other blocks like for.
+
+> Default value: false
+
+Supported when true:
+
+```go
+x := true
+if true {
+    fmt.Println("didn't use cuddled variable")
+}
+```
+
+Required when false:
 
 ```go
 x := true
@@ -346,13 +366,3 @@ if true {
     fmt.Println("x is not used in this if block")
 }
 ```
-
-When set to true:
-
-```go
-x := true
-if true {
-    fmt.Println("didn't use cuddled variable")
-}
-```
-This rule ensures that `if` statements are aligned only with assignments used within the if statement itself, improving code readability.
