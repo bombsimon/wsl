@@ -12,8 +12,7 @@ func fn2() { // want "unnecessary whitespace decreases readability"
 }
 
 func fn3() {
-	// Space after comment - v5.0.0 BREAKING CHANGE
-
+	// Space after comment // want "unnecessary whitespace decreases readability"
 	fmt.Println("Hello, World")
 }
 

@@ -75,9 +75,23 @@ func (w *WSL) CheckUnnecessaryBlockLeadingNewline(body *ast.BlockStmt) {
 				// If comment starts at the same line as the opening position it
 				// should just extend the position for the fixer if needed.
 				// func fn() { // This comment starts at the same line as LBrace
-				if commentStartLine == openingPosLine {
+				switch {
+				// The comment is on the same line as current opening position.
+				// E.g. func fn() { // A comment
+				case commentStartLine == openingPosLine:
 					openingPos = comment.End()
-				} else {
+				// Opening position is the same as `{` and the comment is
+				// directly on the line after (no empty line)
+				case openingPosLine == w.lineFor(body.Lbrace) &&
+					commentStartLine == w.lineFor(body.Lbrace)+1:
+					openingPos = comment.End()
+				// The opening position has been updated, it's another comment.
+				case openingPosLine != w.lineFor(body.Lbrace):
+					openingPos = comment.End()
+				// The opening position is still { and the comment is not
+				// directly above - it must be an empty line which shouldn't be
+				// there.
+				default:
 					firstStmt = comment.Pos()
 				}
 			}
