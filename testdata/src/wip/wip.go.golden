@@ -1,0 +1,13 @@
+package testpkg
+
+import "fmt"
+
+func fn1() {
+	one := 1 // want "missing whitespace decreases readability"
+
+	if 1 == 1 {
+		fmt.Println(2)
+		_ = one
+	}
+}
+

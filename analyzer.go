@@ -39,7 +39,7 @@ func (wa *wslAnalyzer) run(pass *analysis.Pass) (interface{}, error) {
 			continue
 		}
 
-		wsl := New(file, pass.Fset, wa.config)
+		wsl := New(file, pass, wa.config)
 		wsl.Run()
 
 		for pos, fix := range wsl.Issues {

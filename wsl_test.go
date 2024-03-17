@@ -12,3 +12,10 @@ func TestDefaultConfig(t *testing.T) {
 
 	analysistest.RunWithSuggestedFixes(t, testdata, analyzer, "default_config")
 }
+
+func TestWIP(t *testing.T) {
+	testdata := analysistest.TestData()
+	analyzer := NewAnalyzer(nil)
+
+	analysistest.RunWithSuggestedFixes(t, testdata, analyzer, "wip")
+}
