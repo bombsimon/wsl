@@ -31,7 +31,7 @@ func (c *Cursor) Next() bool {
 }
 
 func (c *Cursor) Previous() bool {
-	if c.currentIdx == 0 {
+	if c.currentIdx <= 0 {
 		return false
 	}
 

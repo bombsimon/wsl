@@ -5,7 +5,9 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
+	"slices"
 
+	"github.com/davecgh/go-spew/spew"
 	"golang.org/x/tools/go/analysis"
 )
 
@@ -46,12 +48,12 @@ func New(file *ast.File, pass *analysis.Pass, _ *Configuration) *WSL {
 func (w *WSL) Run() {
 	for _, decl := range w.File.Decls {
 		if funcDecl, ok := decl.(*ast.FuncDecl); ok {
-			w.CheckFuncDecl(funcDecl)
+			w.CheckFunc(funcDecl)
 		}
 	}
 }
 
-func (w *WSL) CheckFuncDecl(funcDecl *ast.FuncDecl) {
+func (w *WSL) CheckFunc(funcDecl *ast.FuncDecl) {
 	if funcDecl.Body == nil {
 		return
 	}
@@ -60,8 +62,8 @@ func (w *WSL) CheckFuncDecl(funcDecl *ast.FuncDecl) {
 	w.CheckBlock(funcDecl.Body)
 }
 
-func (w *WSL) CheckIfStmt(stmt *ast.IfStmt, cursor *Cursor) {
-	cursor.Save()
+func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor) {
+	current := cursor.currentIdx
 
 	n := w.numberOfStatementsAbove(cursor)
 	if n > 0 {
@@ -74,22 +76,49 @@ func (w *WSL) CheckIfStmt(stmt *ast.IfStmt, cursor *Cursor) {
 
 	// TODO: If we're _not_ cuddled, check if the previous variable implements
 	// an error and if that's used in the if statement.
-	var previous ast.Node
-	if cursor.Previous() {
-		previous = cursor.Stmt()
-		if pi, ok := previous.(*ast.AssignStmt); ok {
-			for _, lhs := range pi.Lhs {
-				v, ok := lhs.(*ast.Ident)
-				if !ok {
-					continue
-				}
+	currentIdents := allIdents(cursor.Stmt())
 
-				fmt.Println(w.implementsErr(v))
+	shouldCuddleErr := true // TODO(config): Should be configurable
+	if shouldCuddleErr && n == 0 && cursor.Previous() {
+		previousIdents := allIdents(cursor.Stmt())
+		intersects := identIntersection(currentIdents, previousIdents)
+
+		if slices.ContainsFunc(intersects, func(ident *ast.Ident) bool {
+			return w.implementsErr(ident)
+		}) {
+			w.addError(
+				stmt.Pos(),
+				cursor.Stmt().End(),
+				stmt.Pos(),
+				MessageRemoveWhitespace,
+			)
+
+			// If we add the error at the same position but with a different fix
+			// range, only the fix range will be updated.
+			//
+			//   a := 1
+			//   err := fn()
+			//
+			//   if err != nil {}
+			//
+			// Should become
+			//
+			//   a := 1
+			//
+			//   err := fn()
+			//   if err != nil {}
+			if w.numberOfStatementsAbove(cursor) > 0 {
+				w.addError(
+					stmt.Pos(),
+					cursor.Stmt().Pos(),
+					cursor.Stmt().Pos(),
+					MessageRemoveWhitespace,
+				)
 			}
 		}
 	}
 
-	cursor.Reset()
+	cursor.currentIdx = current
 
 	// if
 	w.CheckBlock(stmt.Body)
@@ -97,7 +126,7 @@ func (w *WSL) CheckIfStmt(stmt *ast.IfStmt, cursor *Cursor) {
 	switch v := stmt.Else.(type) {
 	// else-if
 	case *ast.IfStmt:
-		w.CheckIfStmt(v, cursor)
+		w.CheckIf(v, cursor)
 	// else
 	case *ast.BlockStmt:
 		w.CheckBlock(v)
@@ -113,7 +142,7 @@ func (w *WSL) CheckBlock(block *ast.BlockStmt) {
 		switch s := cursor.Stmt().(type) {
 		// if a {} else if b {} else {}
 		case *ast.IfStmt:
-			w.CheckIfStmt(s, cursor)
+			w.CheckIf(s, cursor)
 		// for {} / for a; b; c {}
 		case *ast.ForStmt:
 		// for _, _ = range a {}
@@ -143,20 +172,22 @@ func (w *WSL) CheckBlock(block *ast.BlockStmt) {
 	}
 }
 
-// numberOfStatementsAbove will find out how many lines above statement at index
-// `i` there is without any empty lines.
-// lines.
+// numberOfStatementsAbove will find out how many lines above the cursor's
+// current statement there is without any newlines between.
 func (w *WSL) numberOfStatementsAbove(cursor *Cursor) int {
+	cursor.Save()
+	defer cursor.Reset()
+
 	statementsWithoutNewlines := 0
+	currentStmtStartLine := w.lineFor(cursor.Stmt().Pos())
 
-	for i := cursor.currentIdx; i > 0; i-- {
-		thisStatementStartLine := w.lineFor(cursor.statements[i].Pos())
-		previousStatementEndLine := w.lineFor(cursor.statements[i-1].End())
-
-		if thisStatementStartLine != previousStatementEndLine+1 {
+	for cursor.Previous() {
+		previousStmtEndLine := w.lineFor(cursor.Stmt().End())
+		if previousStmtEndLine != currentStmtStartLine-1 {
 			break
 		}
 
+		currentStmtStartLine = w.lineFor(cursor.Stmt().Pos())
 		statementsWithoutNewlines++
 	}
 
@@ -223,7 +254,11 @@ func (w *WSL) lineFor(pos token.Pos) int {
 
 func (w *WSL) implementsErr(node *ast.Ident) bool {
 	typeInfo := w.TypeInfo.TypeOf(node)
-	errorType := types.Universe.Lookup("error").Type().Underlying().(*types.Interface)
+
+	errorType, ok := types.Universe.Lookup("error").Type().Underlying().(*types.Interface)
+	if !ok {
+		return false
+	}
 
 	return types.Implements(typeInfo, errorType)
 }
@@ -243,4 +278,47 @@ func (w *WSL) addError(report, start, end token.Pos, message string) {
 	})
 
 	w.Issues[report] = issue
+}
+
+func allIdents(node ast.Node) []*ast.Ident {
+	idents := []*ast.Ident{}
+
+	if node == nil {
+		return idents
+	}
+
+	switch n := node.(type) {
+	case *ast.Ident:
+		return []*ast.Ident{n}
+	case *ast.AssignStmt:
+		for _, lhs := range n.Lhs {
+			idents = append(idents, allIdents(lhs)...)
+		}
+	case *ast.IfStmt:
+		idents = append(idents, allIdents(n.Cond)...)
+		// TODO: idents = append(idents, allIdents(n.Else)...)
+	case *ast.BinaryExpr:
+		idents = append(idents, allIdents(n.X)...)
+		idents = append(idents, allIdents(n.Y)...)
+	case *ast.BasicLit:
+	default:
+		spew.Dump(node)
+		fmt.Printf("%T\n", node)
+	}
+
+	return idents
+}
+
+func identIntersection(a, b []*ast.Ident) []*ast.Ident {
+	intersects := []*ast.Ident{}
+
+	for _, as := range a {
+		for _, bs := range b {
+			if as.Name == bs.Name {
+				intersects = append(intersects, as)
+			}
+		}
+	}
+
+	return intersects
 }
