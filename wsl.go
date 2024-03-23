@@ -68,11 +68,8 @@ func (w *WSL) CheckFunc(funcDecl *ast.FuncDecl) {
 }
 
 func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor) {
-	// TODO: This seems finicky, we don't want to do this.
-	current := cursor.currentIdx
+	cursor.Save()
 
-	// TODO: If we're _not_ cuddled, check if the previous variable implements
-	// an error and if that's used in the if statement.
 	currentIdents := allIdents(cursor.Stmt())
 
 	previousIdents := []*ast.Ident{}
@@ -146,7 +143,7 @@ func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor) {
 		}
 	}
 
-	cursor.currentIdx = current
+	cursor.Reset()
 
 	// if
 	w.CheckBlock(stmt.Body)

@@ -9,14 +9,15 @@ var ErrCursourOutObFounds = errors.New("out of bounds")
 
 type Cursor struct {
 	currentIdx int
-	savedIdx   int
 	statements []ast.Stmt
+	saves      []int
 }
 
 func NewCursor(i int, statements []ast.Stmt) *Cursor {
 	return &Cursor{
 		currentIdx: i,
 		statements: statements,
+		saves:      []int{},
 	}
 }
 
@@ -45,9 +46,15 @@ func (c *Cursor) Stmt() ast.Stmt {
 }
 
 func (c *Cursor) Save() {
-	c.savedIdx = c.currentIdx
+	c.saves = append(c.saves, c.currentIdx)
 }
 
 func (c *Cursor) Reset() {
-	c.currentIdx = c.savedIdx
+	if len(c.saves) == 0 {
+		return
+	}
+
+	idx := c.saves[len(c.saves)-1]
+	c.saves = c.saves[:len(c.saves)-1]
+	c.currentIdx = idx
 }
