@@ -16,7 +16,10 @@ const (
 	MessageRemoveWhitespace = "unnecessary whitespace decreases readability"
 )
 
-type Configuration struct{}
+type Configuration struct {
+	// Require no newline between error assignment and error check.
+	Errcheck bool
+}
 
 type FixRange struct {
 	FixRangeStart token.Pos
@@ -34,6 +37,7 @@ type WSL struct {
 	TypeInfo *types.Info
 	Comments ast.CommentMap
 	Issues   map[token.Pos]Issue // TODO: When do we have multiple reports?
+	Config   Configuration
 }
 
 func New(file *ast.File, pass *analysis.Pass, _ *Configuration) *WSL {
@@ -42,6 +46,7 @@ func New(file *ast.File, pass *analysis.Pass, _ *Configuration) *WSL {
 		File:     file,
 		TypeInfo: pass.TypesInfo,
 		Issues:   make(map[token.Pos]Issue),
+		Config:   Configuration{},
 	}
 }
 
@@ -63,26 +68,49 @@ func (w *WSL) CheckFunc(funcDecl *ast.FuncDecl) {
 }
 
 func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor) {
+	// TODO: This seems finicky, we don't want to do this.
 	current := cursor.currentIdx
-
-	n := w.numberOfStatementsAbove(cursor)
-	if n > 0 {
-		// TODO: Check if we're cuddled and if so that we do it as we should. Rules:
-		// * Only cuddle with _one_ assignment
-		// * Only cuddled with an assignment declared on the line above
-		// * OR a variable that is used first in the block
-		// * OR - if configured - anywhere in the block.
-	}
 
 	// TODO: If we're _not_ cuddled, check if the previous variable implements
 	// an error and if that's used in the if statement.
 	currentIdents := allIdents(cursor.Stmt())
 
-	shouldCuddleErr := true // TODO(config): Should be configurable
-	if shouldCuddleErr && n == 0 && cursor.Previous() {
-		previousIdents := allIdents(cursor.Stmt())
+	previousIdents := []*ast.Ident{}
+	if cursor.Previous() {
+		previousIdents = allIdents(cursor.Stmt())
+	}
+
+	n := w.numberOfStatementsAbove(cursor)
+	if n > 0 {
 		intersects := identIntersection(currentIdents, previousIdents)
 
+		// No idents above share name with one in the if statement.
+		if len(intersects) == 0 {
+			w.addError(
+				stmt.Pos(),
+				stmt.Pos(),
+				stmt.Pos(),
+				MessageAddWhitespace,
+			)
+		}
+
+		// Idents on the line above exist in the current condition so that
+		// should remain cuddled.
+		if len(intersects) > 0 {
+			w.addError(
+				cursor.Stmt().Pos(),
+				cursor.Stmt().Pos(),
+				cursor.Stmt().Pos(),
+				MessageAddWhitespace,
+			)
+		}
+		// TODO: Features:
+		// * Allow idents that is used first in the block
+		// * OR - if configured - anywhere in the block.
+	}
+
+	if w.Config.Errcheck && n == 0 && len(previousIdents) > 0 {
+		intersects := identIntersection(currentIdents, previousIdents)
 		if slices.ContainsFunc(intersects, func(ident *ast.Ident) bool {
 			return w.implementsErr(ident)
 		}) {

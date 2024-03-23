@@ -1,14 +1,1 @@
-
 package testpkg
-
-func fn1() {
-	two := 2
-
-	one := 1
-
-	if two == 2 { // want "missing whitespace decreases readability"
-		panic(err)
-	}
-
-	_ = one
-}
