@@ -75,11 +75,16 @@ func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor) {
 	previousIdents := []*ast.Ident{}
 	if cursor.Previous() {
 		previousIdents = allIdents(cursor.Stmt())
+		cursor.Next()
 	}
 
 	n := w.numberOfStatementsAbove(cursor)
 	if n > 0 {
 		intersects := identIntersection(currentIdents, previousIdents)
+
+		fmt.Println(currentIdents)
+		fmt.Println(previousIdents)
+		fmt.Println(intersects)
 
 		// No idents above share name with one in the if statement.
 		if len(intersects) == 0 {

@@ -41,6 +41,20 @@ func (c *Cursor) Previous() bool {
 	return true
 }
 
+func (c *Cursor) PeekNext() bool {
+	c.Save()
+	defer c.Reset()
+
+	return c.Next()
+}
+
+func (c *Cursor) PeekPrevious() bool {
+	c.Save()
+	defer c.Reset()
+
+	return c.Previous()
+}
+
 func (c *Cursor) Stmt() ast.Stmt {
 	return c.statements[c.currentIdx]
 }
