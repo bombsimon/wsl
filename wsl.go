@@ -174,6 +174,27 @@ type Configuration struct {
 	//
 	// is not allowed. This logic overrides ForceCuddleErrCheckAndAssign among others.
 	ForceExclusiveShortDeclarations bool
+
+	// AllowCuddleAssignmentNotUsedInBlock will allow variables that's not used
+	// in the block expression or first in the block to be cuddled. The default
+	// value is false but setting it to true will not cause any error. For
+	// example for if statement it will be like this:
+	//
+	// x := true
+	//
+	// if true {
+	//   fmt.Println("didn't use cuddled variable")
+	// }
+	//
+	// is allowed, but
+	//
+	// x := true
+	// if true {
+	//   fmt.Println("didn't use cuddled variable")
+	// }
+	//
+	// is not allowed if this is false.
+	AllowCuddleAssignmentNotUsedInBlock bool
 }
 
 // fix is a range to fixup.
@@ -506,6 +527,10 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 				continue
 			}
 
+			if p.config.AllowCuddleAssignmentNotUsedInBlock {
+				continue
+			}
+
 			p.addWhitespaceBeforeError(t, reasonOnlyCuddleWithUsedAssign)
 		case *ast.ReturnStmt:
 			if isLastStatementInBlockOfOnlyTwoLines() {
@@ -605,6 +630,10 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 				continue
 			}
 
+			if p.config.AllowCuddleAssignmentNotUsedInBlock {
+				continue
+			}
+
 			if !atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) {
 				if !atLeastOneInListsMatch(assignedOnLineAbove, calledOrAssignedFirstInBlock) {
 					p.addWhitespaceBeforeError(t, reasonRangeCuddledWithoutUse)
@@ -678,17 +707,25 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 				continue
 			}
 
+			if p.config.AllowCuddleAssignmentNotUsedInBlock {
+				continue
+			}
+
 			if !atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) {
 				p.addWhitespaceBeforeError(t, reasonDeferCuddledWithOtherVar)
 			}
 		case *ast.ForStmt:
-			if len(rightAndLeftHandSide) == 0 {
+			if len(rightAndLeftHandSide) == 0 && !p.config.AllowCuddleAssignmentNotUsedInBlock {
 				p.addWhitespaceBeforeError(t, reasonForWithoutCondition)
 				continue
 			}
 
 			if nStatementsBefore(2) {
 				reportNewlineTwoLinesAbove(t, statements[i-1], reasonOnlyOneCuddleBeforeFor)
+				continue
+			}
+
+			if p.config.AllowCuddleAssignmentNotUsedInBlock {
 				continue
 			}
 
@@ -735,6 +772,10 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 				continue
 			}
 
+			if p.config.AllowCuddleAssignmentNotUsedInBlock {
+				continue
+			}
+
 			if !atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) {
 				if len(rightAndLeftHandSide) == 0 {
 					p.addWhitespaceBeforeError(t, reasonAnonSwitchCuddled)
@@ -745,6 +786,10 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 		case *ast.TypeSwitchStmt:
 			if nStatementsBefore(2) {
 				reportNewlineTwoLinesAbove(t, statements[i-1], reasonOnlyOneCuddleBeforeTypeSwitch)
+				continue
+			}
+
+			if p.config.AllowCuddleAssignmentNotUsedInBlock {
 				continue
 			}
 
