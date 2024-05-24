@@ -2,6 +2,7 @@ package wsl
 
 import (
 	"flag"
+	"go/ast"
 	"strings"
 
 	"golang.org/x/tools/go/analysis"
@@ -75,6 +76,10 @@ func (wa *wslAnalyzer) flags() flag.FlagSet {
 
 func (wa *wslAnalyzer) run(pass *analysis.Pass) (interface{}, error) {
 	for _, file := range pass.Files {
+		if ast.IsGenerated(file) {
+			continue
+		}
+
 		filename := pass.Fset.PositionFor(file.Pos(), false).Filename
 		if !strings.HasSuffix(filename, ".go") {
 			continue
