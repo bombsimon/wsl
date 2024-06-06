@@ -82,10 +82,6 @@ func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor) {
 	if n > 0 {
 		intersects := identIntersection(currentIdents, previousIdents)
 
-		fmt.Println(currentIdents)
-		fmt.Println(previousIdents)
-		fmt.Println(intersects)
-
 		// No idents above share name with one in the if statement.
 		if len(intersects) == 0 {
 			w.addError(
@@ -99,6 +95,8 @@ func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor) {
 		// Idents on the line above exist in the current condition so that
 		// should remain cuddled.
 		if len(intersects) > 0 {
+			cursor.Previous()
+
 			w.addError(
 				cursor.Stmt().Pos(),
 				cursor.Stmt().Pos(),
