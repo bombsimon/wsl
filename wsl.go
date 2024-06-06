@@ -71,42 +71,58 @@ func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor) {
 	reset := cursor.Save()
 
 	currentIdents := allIdents(cursor.Stmt())
-
 	previousIdents := []*ast.Ident{}
+
+	var previousNode ast.Node = nil
+
 	if cursor.Previous() {
-		previousIdents = allIdents(cursor.Stmt())
-		cursor.Next()
+		previousNode = cursor.Stmt()
+		previousIdents = allIdents(previousNode)
+
+		cursor.Next() // Move forward again
 	}
 
+	_, prevIsAssign := previousNode.(*ast.AssignStmt)
+	_, prevIsDecl := previousNode.(*ast.DeclStmt)
 	n := w.numberOfStatementsAbove(cursor)
+
 	if n > 0 {
-		intersects := identIntersection(currentIdents, previousIdents)
+		if prevIsAssign || prevIsDecl {
+			intersects := identIntersection(currentIdents, previousIdents)
 
-		// No idents above share name with one in the if statement.
-		if len(intersects) == 0 {
+			// No idents above share name with one in the if statement.
+			if len(intersects) == 0 {
+				w.addError(
+					stmt.Pos(),
+					stmt.Pos(),
+					stmt.Pos(),
+					MessageAddWhitespace,
+				)
+			}
+
+			// Idents on the line above exist in the current condition so that
+			// should remain cuddled.
+			if len(intersects) > 0 {
+				cursor.Previous()
+
+				w.addError(
+					cursor.Stmt().Pos(),
+					cursor.Stmt().Pos(),
+					cursor.Stmt().Pos(),
+					MessageAddWhitespace,
+				)
+			}
+			// TODO: Features:
+			// * Allow idents that is used first in the block
+			// * OR - if configured - anywhere in the block.
+		} else {
 			w.addError(
-				stmt.Pos(),
-				stmt.Pos(),
-				stmt.Pos(),
+				cursor.Stmt().Pos(),
+				cursor.Stmt().Pos(),
+				cursor.Stmt().Pos(),
 				MessageAddWhitespace,
 			)
 		}
-
-		// Idents on the line above exist in the current condition so that
-		// should remain cuddled.
-		if len(intersects) > 0 {
-			cursor.Previous()
-
-			w.addError(
-				cursor.Stmt().Pos(),
-				cursor.Stmt().Pos(),
-				cursor.Stmt().Pos(),
-				MessageAddWhitespace,
-			)
-		}
-		// TODO: Features:
-		// * Allow idents that is used first in the block
-		// * OR - if configured - anywhere in the block.
 	}
 
 	if w.Config.Errcheck && n == 0 && len(previousIdents) > 0 {
@@ -148,6 +164,8 @@ func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor) {
 
 	reset()
 
+	w.CheckUnnecessaryBlockLeadingNewline(stmt.Body)
+
 	// if
 	w.CheckBlock(stmt.Body)
 
@@ -157,46 +175,52 @@ func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor) {
 		w.CheckIf(v, cursor)
 	// else
 	case *ast.BlockStmt:
+		w.CheckUnnecessaryBlockLeadingNewline(v)
 		w.CheckBlock(v)
 	}
 }
 
 func (w *WSL) CheckBlock(block *ast.BlockStmt) {
-	cursor := NewCursor(0, block.List)
+	cursor := NewCursor(-1, block.List)
 	for cursor.Next() {
 		fmt.Printf("%d: %T\n", cursor.currentIdx, cursor.Stmt())
+		w.CheckStmt(cursor.Stmt(), cursor)
+	}
+}
 
-		//nolint:gocritic // This is not commented out code, it's examples
-		switch s := cursor.Stmt().(type) {
-		// if a {} else if b {} else {}
-		case *ast.IfStmt:
-			w.CheckIf(s, cursor)
-		// for {} / for a; b; c {}
-		case *ast.ForStmt:
-		// for _, _ = range a {}
-		case *ast.RangeStmt:
-		// switch {} // switch a {}
-		case *ast.SwitchStmt:
-		// switch a.(type) {}
-		case *ast.TypeSwitchStmt:
-		// return a
-		case *ast.ReturnStmt:
-		// continue / break
-		case *ast.BranchStmt:
-		// var a
-		case *ast.DeclStmt:
-		// a := a
-		case *ast.AssignStmt:
-		// a++ / a--
-		case *ast.IncDecStmt:
-		// defer func() {}
-		case *ast.DeferStmt:
-		// go func() {}
-		case *ast.GoStmt:
-		case *ast.ExprStmt:
-		default:
-			fmt.Printf("Not implemented: %T\n", s)
-		}
+func (w *WSL) CheckStmt(stmt ast.Stmt, cursor *Cursor) {
+	//nolint:gocritic // This is not commented out code, it's examples
+	switch s := stmt.(type) {
+	// if a {} else if b {} else {}
+	case *ast.IfStmt:
+		w.CheckIf(s, cursor)
+	// for {} / for a; b; c {}
+	case *ast.ForStmt:
+	// for _, _ = range a {}
+	case *ast.RangeStmt:
+	// switch {} // switch a {}
+	case *ast.SwitchStmt:
+	// switch a.(type) {}
+	case *ast.TypeSwitchStmt:
+	// return a
+	case *ast.ReturnStmt:
+	// continue / break
+	case *ast.BranchStmt:
+	// var a
+	case *ast.DeclStmt:
+	// a := a
+	case *ast.AssignStmt:
+	// a++ / a--
+	case *ast.IncDecStmt:
+	// defer func() {}
+	case *ast.DeferStmt:
+	// go func() {}
+	case *ast.GoStmt:
+	case *ast.ExprStmt:
+	case *ast.BlockStmt:
+		w.CheckBlock(s)
+	default:
+		fmt.Printf("Not implemented: %T\n", s)
 	}
 }
 

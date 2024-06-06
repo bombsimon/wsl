@@ -27,3 +27,10 @@ func fn5() {
 	// Comment without space before or after.
 	fmt.Println("Hello, World")
 }
+
+func fn6() {
+	if true { // want "unnecessary whitespace decreases readability"
+
+		_ = 1
+	}
+}

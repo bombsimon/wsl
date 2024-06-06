@@ -25,3 +25,12 @@ func fn3() {
 		panic(err)
 	}
 }
+
+func fn4() {
+	if foo := 1; foo != 2 {
+		panic(foo)
+	}
+	if foo := 2; foo != 2 { // want "missing whitespace decreases readability"
+		panic(bar)
+	}
+}

@@ -1,10 +1,3 @@
 package testpkg
 
-func fn1() {
-	if foo := 1; foo != 2 {
-		panic(foo)
-	}
-	if foo := 2; foo != 2 { // want "missing whitespace decreases readability"
-		panic(bar)
-	}
-}
+func fn1() {}
