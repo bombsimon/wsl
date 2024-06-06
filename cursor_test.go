@@ -18,20 +18,20 @@ func TestSavestate(t *testing.T) {
 		&ast.AssignStmt{},
 	})
 
-	cursor.Save()
+	reset := cursor.Save()
 	cursor.Next()
 	cursor.Next()
 
 	func() {
-		cursor.Save()
-		defer cursor.Reset()
+		reset := cursor.Save()
+		defer reset()
 
 		cursor.Next()
 		cursor.Next()
 
 		func() {
-			cursor.Save()
-			defer cursor.Reset()
+			reset := cursor.Save()
+			defer reset()
 
 			cursor.Next()
 			cursor.Next()
@@ -44,6 +44,6 @@ func TestSavestate(t *testing.T) {
 
 	assert.Equal(t, 2, cursor.currentIdx)
 
-	cursor.Reset()
+	reset()
 	assert.Equal(t, 0, cursor.currentIdx)
 }

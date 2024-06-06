@@ -68,7 +68,7 @@ func (w *WSL) CheckFunc(funcDecl *ast.FuncDecl) {
 }
 
 func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor) {
-	cursor.Save()
+	reset := cursor.Save()
 
 	currentIdents := allIdents(cursor.Stmt())
 
@@ -146,7 +146,7 @@ func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor) {
 		}
 	}
 
-	cursor.Reset()
+	reset()
 
 	// if
 	w.CheckBlock(stmt.Body)
@@ -203,8 +203,8 @@ func (w *WSL) CheckBlock(block *ast.BlockStmt) {
 // numberOfStatementsAbove will find out how many lines above the cursor's
 // current statement there is without any newlines between.
 func (w *WSL) numberOfStatementsAbove(cursor *Cursor) int {
-	cursor.Save()
-	defer cursor.Reset()
+	reset := cursor.Save()
+	defer reset()
 
 	statementsWithoutNewlines := 0
 	currentStmtStartLine := w.lineFor(cursor.Stmt().Pos())
