@@ -174,6 +174,11 @@ type Configuration struct {
 	//
 	// is not allowed. This logic overrides ForceCuddleErrCheckAndAssign among others.
 	ForceExclusiveShortDeclarations bool
+
+	// IncludeGenerated will include generated files in the analysis and report
+	// errors even for generated files. Can be useful when developing
+	// generators.
+	IncludeGenerated bool
 }
 
 // fix is a range to fixup.
