@@ -583,7 +583,7 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 				}
 
 				p.addWhitespaceBeforeError(t, reasonExpressionCuddledWithDeclOrRet)
-			case *ast.IfStmt, *ast.RangeStmt, *ast.SwitchStmt:
+			case *ast.IfStmt, *ast.RangeStmt, *ast.SwitchStmt, *ast.TypeSwitchStmt, *ast.ForStmt:
 				p.addWhitespaceBeforeError(t, reasonExpressionCuddledWithBlock)
 			}
 

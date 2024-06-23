@@ -592,3 +592,16 @@ func AnonymousFunc() {
 		return nil // want "return statements should not be cuddled if block has more than two lines"
 	}())
 }
+
+// Issue #153
+func ExpressionForBlock() {
+	for i := 0; i < 4; i++ {
+		fmt.Println()
+	}
+	Up(3) // want "expressions should not be cuddled with blocks"
+
+	if autoheight != 3 {
+		t.Errorf("height should be 3 but is %d", autoheight)
+	}
+	Down(3) // want "expressions should not be cuddled with blocks"
+}
