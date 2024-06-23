@@ -4,6 +4,7 @@ import "errors"
 
 func fn1() {
 	err := errors.New("x")
+
 	if err != nil { // want "unnecessary whitespace decreases readability"
 		panic(err)
 	}
@@ -12,9 +13,24 @@ func fn1() {
 func fn2() {
 	one := 1
 	err := errors.New("x")
+
 	if err != nil { // want "unnecessary whitespace decreases readability"
 		panic(err)
 	}
+}
 
-	_ = 1
+func fn3() {
+	one := 1
+	err := errors.New("x") // want "missing whitespace decreases readability"
+	if err != nil {
+		panic(err)
+	}
+}
+
+func fn4() {
+	err := "not an error"
+
+	if err != nil {
+		panic(err)
+	}
 }

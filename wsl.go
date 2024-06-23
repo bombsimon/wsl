@@ -37,16 +37,16 @@ type WSL struct {
 	TypeInfo *types.Info
 	Comments ast.CommentMap
 	Issues   map[token.Pos]Issue // TODO: When do we have multiple reports?
-	Config   Configuration
+	Config   *Configuration
 }
 
-func New(file *ast.File, pass *analysis.Pass, _ *Configuration) *WSL {
+func New(file *ast.File, pass *analysis.Pass, cfg *Configuration) *WSL {
 	return &WSL{
 		Fset:     pass.Fset,
 		File:     file,
 		TypeInfo: pass.TypesInfo,
 		Issues:   make(map[token.Pos]Issue),
-		Config:   Configuration{},
+		Config:   cfg,
 	}
 }
 
@@ -73,7 +73,7 @@ func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor) {
 	currentIdents := allIdents(cursor.Stmt())
 	previousIdents := []*ast.Ident{}
 
-	var previousNode ast.Node = nil
+	var previousNode ast.Node
 
 	if cursor.Previous() {
 		previousNode = cursor.Stmt()
@@ -103,12 +103,10 @@ func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor) {
 			// Idents on the line above exist in the current condition so that
 			// should remain cuddled.
 			if len(intersects) > 0 {
-				cursor.Previous()
-
 				w.addError(
-					cursor.Stmt().Pos(),
-					cursor.Stmt().Pos(),
-					cursor.Stmt().Pos(),
+					previousNode.Pos(),
+					previousNode.Pos(),
+					previousNode.Pos(),
 					MessageAddWhitespace,
 				)
 			}
@@ -116,6 +114,8 @@ func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor) {
 			// * Allow idents that is used first in the block
 			// * OR - if configured - anywhere in the block.
 		} else {
+			// If we have a statement above and it's not an assignment or
+			// declaration we unconditionally add an error.
 			w.addError(
 				cursor.Stmt().Pos(),
 				cursor.Stmt().Pos(),
@@ -126,13 +126,12 @@ func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor) {
 	}
 
 	if w.Config.Errcheck && n == 0 && len(previousIdents) > 0 {
-		intersects := identIntersection(currentIdents, previousIdents)
-		if slices.ContainsFunc(intersects, func(ident *ast.Ident) bool {
+		if slices.ContainsFunc(previousIdents, func(ident *ast.Ident) bool {
 			return w.implementsErr(ident)
 		}) {
 			w.addError(
 				stmt.Pos(),
-				cursor.Stmt().End(),
+				previousNode.End(),
 				stmt.Pos(),
 				MessageRemoveWhitespace,
 			)
@@ -151,12 +150,14 @@ func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor) {
 			//
 			//   err := fn()
 			//   if err != nil {}
+			cursor.Previous()
+
 			if w.numberOfStatementsAbove(cursor) > 0 {
 				w.addError(
 					stmt.Pos(),
-					cursor.Stmt().Pos(),
-					cursor.Stmt().Pos(),
-					MessageRemoveWhitespace,
+					previousNode.Pos(),
+					previousNode.Pos(),
+					MessageAddWhitespace,
 				)
 			}
 		}
@@ -183,7 +184,7 @@ func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor) {
 func (w *WSL) CheckBlock(block *ast.BlockStmt) {
 	cursor := NewCursor(-1, block.List)
 	for cursor.Next() {
-		fmt.Printf("%d: %T\n", cursor.currentIdx, cursor.Stmt())
+		// fmt.Printf("%d: %T\n", cursor.currentIdx, cursor.Stmt())
 		w.CheckStmt(cursor.Stmt(), cursor)
 	}
 }
