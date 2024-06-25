@@ -63,3 +63,11 @@ func (c *Cursor) Save() func() {
 		c.currentIdx = idx
 	}
 }
+
+func (c *Cursor) Len() int {
+	return len(c.statements)
+}
+
+func (c *Cursor) Nth(n int) ast.Stmt {
+	return c.statements[n]
+}

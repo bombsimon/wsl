@@ -189,6 +189,28 @@ func (w *WSL) CheckBlock(block *ast.BlockStmt) {
 	}
 }
 
+func (w *WSL) CheckReturn(stmt *ast.ReturnStmt, cursor *Cursor) {
+	// There's only a return statement.
+	noStmts := cursor.Len()
+	if noStmts <= 1 {
+		return
+	}
+
+	// If the distance between the first statement and the return statement is
+	// less than 3 LOC we're allowed to cuddle.
+	firstStmts := cursor.Nth(0)
+	if w.lineFor(stmt.End())-w.lineFor(firstStmts.Pos()) < 2 {
+		return
+	}
+
+	w.addError(
+		stmt.Pos(),
+		stmt.Pos(),
+		stmt.Pos(),
+		MessageAddWhitespace,
+	)
+}
+
 func (w *WSL) CheckStmt(stmt ast.Stmt, cursor *Cursor) {
 	//nolint:gocritic // This is not commented out code, it's examples
 	switch s := stmt.(type) {
@@ -205,6 +227,7 @@ func (w *WSL) CheckStmt(stmt ast.Stmt, cursor *Cursor) {
 	case *ast.TypeSwitchStmt:
 	// return a
 	case *ast.ReturnStmt:
+		w.CheckReturn(s, cursor)
 	// continue / break
 	case *ast.BranchStmt:
 	// var a
