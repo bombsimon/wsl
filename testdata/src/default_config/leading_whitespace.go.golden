@@ -30,3 +30,13 @@ func fn6() {
 		_ = 1
 	}
 }
+
+func fn7() {
+	if true {
+		_ = 1
+	} else if true { // want "unnecessary whitespace decreases readability"
+		_ = 1
+	} else { // want "unnecessary whitespace decreases readability"
+		_ = 1
+	}
+}
