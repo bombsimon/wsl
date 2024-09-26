@@ -58,17 +58,9 @@ func (w *WSL) Run() {
 	}
 }
 
-func (w *WSL) CheckFunc(funcDecl *ast.FuncDecl) {
-	if funcDecl.Body == nil {
-		return
-	}
-
-	w.CheckUnnecessaryBlockLeadingNewline(funcDecl.Body)
-	w.CheckBlock(funcDecl.Body)
-}
-
-func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor) {
+func (w *WSL) CheckCuddling(stmt ast.Node, cursor *Cursor) {
 	reset := cursor.Save()
+	defer reset()
 
 	currentIdents := allIdents(cursor.Stmt())
 	previousIdents := []*ast.Ident{}
@@ -125,6 +117,10 @@ func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor) {
 		}
 	}
 
+	if _, ok := stmt.(*ast.IfStmt); !ok {
+		return
+	}
+
 	if w.Config.Errcheck && n == 0 && len(previousIdents) > 0 {
 		if slices.ContainsFunc(previousIdents, func(ident *ast.Ident) bool {
 			return w.implementsErr(ident)
@@ -162,9 +158,19 @@ func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor) {
 			}
 		}
 	}
+}
 
-	reset()
+func (w *WSL) CheckFunc(funcDecl *ast.FuncDecl) {
+	if funcDecl.Body == nil {
+		return
+	}
 
+	w.CheckUnnecessaryBlockLeadingNewline(funcDecl.Body)
+	w.CheckBlock(funcDecl.Body)
+}
+
+func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor) {
+	w.CheckCuddling(stmt, cursor)
 	w.CheckUnnecessaryBlockLeadingNewline(stmt.Body)
 
 	// if
@@ -179,6 +185,21 @@ func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor) {
 		w.CheckUnnecessaryBlockLeadingNewline(v)
 		w.CheckBlock(v)
 	}
+}
+
+func (w *WSL) CheckFor(stmt *ast.ForStmt, cursor *Cursor) {
+	w.CheckCuddling(stmt, cursor)
+	w.CheckBlock(stmt.Body)
+}
+
+func (w *WSL) CheckRange(stmt *ast.RangeStmt, cursor *Cursor) {
+	w.CheckCuddling(stmt, cursor)
+	w.CheckBlock(stmt.Body)
+}
+
+func (w *WSL) CheckSwitch(stmt *ast.SwitchStmt, cursor *Cursor) {
+	w.CheckCuddling(stmt, cursor)
+	w.CheckBlock(stmt.Body)
 }
 
 func (w *WSL) CheckBlock(block *ast.BlockStmt) {
@@ -219,10 +240,13 @@ func (w *WSL) CheckStmt(stmt ast.Stmt, cursor *Cursor) {
 		w.CheckIf(s, cursor)
 	// for {} / for a; b; c {}
 	case *ast.ForStmt:
+		w.CheckFor(s, cursor)
 	// for _, _ = range a {}
 	case *ast.RangeStmt:
+		w.CheckRange(s, cursor)
 	// switch {} // switch a {}
 	case *ast.SwitchStmt:
+		w.CheckSwitch(s, cursor)
 	// switch a.(type) {}
 	case *ast.TypeSwitchStmt:
 	// return a
@@ -241,6 +265,7 @@ func (w *WSL) CheckStmt(stmt ast.Stmt, cursor *Cursor) {
 	// go func() {}
 	case *ast.GoStmt:
 	case *ast.ExprStmt:
+	case *ast.CaseClause:
 	case *ast.BlockStmt:
 		w.CheckBlock(s)
 	default:
@@ -370,13 +395,35 @@ func allIdents(node ast.Node) []*ast.Ident {
 		for _, lhs := range n.Lhs {
 			idents = append(idents, allIdents(lhs)...)
 		}
+
+		// TODO: This should be here right?
+		for _, rhs := range n.Rhs {
+			idents = append(idents, allIdents(rhs)...)
+		}
 	case *ast.IfStmt:
 		idents = append(idents, allIdents(n.Cond)...)
 		// TODO: idents = append(idents, allIdents(n.Else)...)
 	case *ast.BinaryExpr:
 		idents = append(idents, allIdents(n.X)...)
 		idents = append(idents, allIdents(n.Y)...)
-	case *ast.BasicLit:
+	case *ast.RangeStmt:
+		idents = append(idents, allIdents(n.X)...)
+	case *ast.ForStmt:
+		idents = append(idents, allIdents(n.Init)...)
+		idents = append(idents, allIdents(n.Cond)...)
+		idents = append(idents, allIdents(n.Post)...)
+	case *ast.SwitchStmt:
+		idents = append(idents, allIdents(n.Init)...)
+		idents = append(idents, allIdents(n.Tag)...)
+	case *ast.CallExpr:
+		for _, arg := range n.Args {
+			idents = append(idents, allIdents(arg)...)
+		}
+	case *ast.CompositeLit:
+		for _, elt := range n.Elts {
+			idents = append(idents, allIdents(elt)...)
+		}
+	case *ast.BasicLit, *ast.IncDecStmt:
 	default:
 		spew.Dump(node)
 		fmt.Printf("%T\n", node)
