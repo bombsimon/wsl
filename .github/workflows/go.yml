@@ -13,9 +13,9 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: stable
-      - uses: golangci/golangci-lint-action@v4
+      - uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.57.2
+          version: v1.62.2
 
   tests:
     # run after golangci-lint action to not produce duplicated errors

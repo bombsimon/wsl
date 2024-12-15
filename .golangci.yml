@@ -39,36 +39,27 @@ linters:
   enable-all: true
   disable:
     - cyclop
-    - deadcode
     - depguard
     - dupl
     - dupword
-    - exhaustivestruct
     - exhaustruct
+    - exportloopref
     - forbidigo
     - funlen
     - gci
     - gocognit
     - gocyclo
     - godox
-    - golint
-    - gomnd
-    - ifshort
-    - interfacer
+    - mnd
     - lll
     - maintidx
-    - maligned
     - nakedret
     - nestif
     - nlreturn
-    - nosnakecase
     - paralleltest
     - prealloc
     - rowserrcheck
-    - scopelint
-    - structcheck
     - testpackage
-    - varcheck
     - varnamelen
     - wastedassign
 
