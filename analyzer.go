@@ -82,7 +82,7 @@ func (wa *wslAnalyzer) run(pass *analysis.Pass) (interface{}, error) {
 			continue
 		}
 
-		filename := pass.Fset.PositionFor(file.Pos(), false).Filename
+		filename := pass.Fset.Position(file.Pos()).Filename
 		if !strings.HasSuffix(filename, ".go") {
 			continue
 		}
