@@ -353,7 +353,7 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 				return false
 			}
 
-			for j := 0; j < n; j++ {
+			for j := range n {
 				s1 := statements[i+j]
 				s2 := statements[i+j+1]
 
