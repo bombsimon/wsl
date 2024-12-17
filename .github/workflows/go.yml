@@ -41,6 +41,9 @@ jobs:
       - name: Test code
         run: go test -race -v ./...
 
+      - name: Run
+        run: go run ./cmd/wsl/ ./...
+
   coverage:
     runs-on: ubuntu-latest
     steps:

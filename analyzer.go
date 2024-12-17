@@ -91,7 +91,8 @@ func (wa *wslAnalyzer) run(pass *analysis.Pass) (interface{}, error) {
 		processor.parseAST()
 
 		for pos, fix := range processor.result {
-			textEdits := []analysis.TextEdit{}
+			var textEdits []analysis.TextEdit
+
 			for _, f := range fix.fixRanges {
 				textEdits = append(textEdits, analysis.TextEdit{
 					Pos:     f.fixRangeStart,
