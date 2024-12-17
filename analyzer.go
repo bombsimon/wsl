@@ -84,8 +84,11 @@ func (wa *wslAnalyzer) run(pass *analysis.Pass) (interface{}, error) {
 			continue
 		}
 
+		// if the file is related to cgo the filename of the unadjusted position is a not a '.go' file.
 		fn := pass.Fset.PositionFor(file.Pos(), false).Filename
 
+		// The file is skipped if the "unadjusted" file is a Go file, and it's a generated file (ex: "_test.go" file).
+		// The other non-Go files are skipped by the first 'if' with the adjusted position.
 		if !wa.config.IncludeGenerated && ast.IsGenerated(file) && strings.HasSuffix(fn, ".go") {
 			continue
 		}
