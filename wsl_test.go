@@ -16,9 +16,30 @@ func TestWIP(t *testing.T) {
 
 func TestDefaultConfig(t *testing.T) {
 	testdata := analysistest.TestData()
-	analyzer := NewAnalyzer(nil)
 
-	analysistest.RunWithSuggestedFixes(t, testdata, analyzer, "default_config")
+	testCases := []struct {
+		dir string
+	}{
+		{dir: "defer"},
+		{dir: "doc_examples"},
+		{dir: "else_if"},
+		{dir: "fix_advanced"},
+		{dir: "fix_cuddle_blocks"},
+		{dir: "generated"},
+		{dir: "generated_file"},
+		{dir: "generic_handling"},
+		{dir: "multiline_case"},
+		{dir: "remove_whitespace"},
+	}
+
+	for _, test := range testCases {
+		t.Run(test.dir, func(t *testing.T) {
+			t.Parallel()
+
+			analyzer := NewAnalyzer(nil)
+			analysistest.RunWithSuggestedFixes(t, testdata, analyzer, filepath.Join("default_config", test.dir))
+		})
+	}
 }
 
 func TestWithConfig(t *testing.T) {
