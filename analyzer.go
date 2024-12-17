@@ -3,6 +3,7 @@ package wsl
 import (
 	"flag"
 	"go/ast"
+	"go/token"
 	"strings"
 
 	"golang.org/x/tools/go/analysis"
@@ -82,7 +83,7 @@ func (wa *wslAnalyzer) run(pass *analysis.Pass) (interface{}, error) {
 			continue
 		}
 
-		filename := pass.Fset.PositionFor(file.Pos(), false).Filename
+		filename := getFilename(pass.Fset, file)
 		if !strings.HasSuffix(filename, ".go") {
 			continue
 		}
@@ -127,7 +128,7 @@ type multiStringValue struct {
 // Set implements the flag.Value interface and will overwrite the pointer to the
 // slice with a new pointer after splitting the flag by comma.
 func (m *multiStringValue) Set(value string) error {
-	s := []string{}
+	var s []string
 
 	for _, v := range strings.Split(value, ",") {
 		s = append(s, strings.TrimSpace(v))
@@ -145,4 +146,13 @@ func (m *multiStringValue) String() string {
 	}
 
 	return strings.Join(*m.slicePtr, ", ")
+}
+
+func getFilename(fset *token.FileSet, file *ast.File) string {
+	filename := fset.PositionFor(file.Pos(), true).Filename
+	if !strings.HasSuffix(filename, ".go") {
+		return fset.PositionFor(file.Pos(), false).Filename
+	}
+
+	return filename
 }
