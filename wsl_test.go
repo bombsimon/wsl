@@ -32,6 +32,8 @@ func TestDefaultConfig(t *testing.T) {
 		{dir: "generic_handling"},
 		{dir: "multiline_case"},
 		{dir: "remove_whitespace"},
+		{dir: "line_directive"},
+		{dir: "cgo"},
 	}
 
 	for _, test := range testCases {
