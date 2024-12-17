@@ -79,9 +79,9 @@ func (wa *wslAnalyzer) flags() flag.FlagSet {
 
 func (wa *wslAnalyzer) run(pass *analysis.Pass) (interface{}, error) {
 	for _, file := range pass.Files {
-		if !wa.config.IncludeGenerated && ast.IsGenerated(file) {
-			continue
-		}
+		// if !wa.config.IncludeGenerated && ast.IsGenerated(file) {
+		// 	continue
+		// }
 
 		filename := getFilename(pass.Fset, file)
 		if !strings.HasSuffix(filename, ".go") {

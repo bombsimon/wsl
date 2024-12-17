@@ -33,7 +33,6 @@ func TestDefaultConfig(t *testing.T) {
 		{dir: "multiline_case"},
 		{dir: "remove_whitespace"},
 		{dir: "line_directive"},
-		{dir: "cgo"},
 	}
 
 	for _, test := range testCases {
@@ -44,6 +43,13 @@ func TestDefaultConfig(t *testing.T) {
 			analysistest.RunWithSuggestedFixes(t, testdata, analyzer, filepath.Join("default_config", test.dir))
 		})
 	}
+}
+
+func TestCGo(t *testing.T) {
+	testdata := analysistest.TestData()
+
+	analyzer := NewAnalyzer(nil)
+	analysistest.Run(t, testdata, analyzer, filepath.Join("default_config", "cgo"))
 }
 
 func TestWithConfig(t *testing.T) {
