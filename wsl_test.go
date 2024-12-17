@@ -15,6 +15,8 @@ func TestWIP(t *testing.T) {
 }
 
 func TestDefaultConfig(t *testing.T) {
+	t.Parallel()
+
 	testdata := analysistest.TestData()
 
 	testCases := []struct {

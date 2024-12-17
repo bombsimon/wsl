@@ -13,7 +13,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: stable
-      - uses: golangci/golangci-lint-action@v4
+      - uses: golangci/golangci-lint-action@v6
         with:
           version: v1.62.2
 
@@ -40,6 +40,9 @@ jobs:
 
       - name: Test code
         run: go test -race -v ./...
+
+      - name: Run
+        run: go run ./cmd/wsl/ ./...
 
   coverage:
     runs-on: ubuntu-latest
