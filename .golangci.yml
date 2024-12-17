@@ -59,7 +59,8 @@ linters:
     - paralleltest
     - prealloc
     - rowserrcheck
-    - tparallel
+    - scopelint
+    - structcheck
     - testpackage
     - varnamelen
     - wastedassign
@@ -68,5 +69,4 @@ issues:
   exclude-use-default: true
   max-issues-per-linter: 0
   max-same-issues: 0
-
 # vim: set sw=2 ts=2 et:
