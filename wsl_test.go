@@ -15,8 +15,6 @@ func TestWIP(t *testing.T) {
 }
 
 func TestDefaultConfig(t *testing.T) {
-	t.Parallel()
-
 	testdata := analysistest.TestData()
 
 	testCases := []struct {
@@ -32,6 +30,7 @@ func TestDefaultConfig(t *testing.T) {
 		{dir: "generic_handling"},
 		{dir: "multiline_case"},
 		{dir: "remove_whitespace"},
+		{dir: "line_directive"},
 	}
 
 	for _, test := range testCases {
@@ -42,6 +41,13 @@ func TestDefaultConfig(t *testing.T) {
 			analysistest.RunWithSuggestedFixes(t, testdata, analyzer, filepath.Join("default_config", test.dir))
 		})
 	}
+}
+
+func TestCGo(t *testing.T) {
+	testdata := analysistest.TestData()
+
+	analyzer := NewAnalyzer(nil)
+	analysistest.Run(t, testdata, analyzer, filepath.Join("default_config", "cgo"))
 }
 
 func TestWithConfig(t *testing.T) {
