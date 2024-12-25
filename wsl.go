@@ -210,6 +210,24 @@ func (w *WSL) CheckTypeSwitch(stmt *ast.TypeSwitchStmt, cursor *Cursor) {
 	w.CheckBlock(stmt.Body)
 }
 
+func (w *WSL) CheckBranch(stmt *ast.BranchStmt, cursor *Cursor) {
+	if w.numberOfStatementsAbove(cursor) == 0 {
+		return
+	}
+
+	lastStmtInBlock := cursor.statements[len(cursor.statements)-1]
+	if stmt == lastStmtInBlock && len(cursor.statements) <= 2 {
+		return
+	}
+
+	w.addError(
+		stmt.Pos(),
+		stmt.Pos(),
+		stmt.Pos(),
+		MessageAddWhitespace,
+	)
+}
+
 func (w *WSL) CheckBlock(block *ast.BlockStmt) {
 	cursor := NewCursor(-1, block.List)
 	for cursor.Next() {
@@ -263,6 +281,7 @@ func (w *WSL) CheckStmt(stmt ast.Stmt, cursor *Cursor) {
 		w.CheckReturn(s, cursor)
 	// continue / break
 	case *ast.BranchStmt:
+		w.CheckBranch(s, cursor)
 	// var a
 	case *ast.DeclStmt:
 	// a := a
@@ -448,7 +467,7 @@ func allIdents(node ast.Node) []*ast.Ident {
 		for _, elt := range n.Elts {
 			idents = append(idents, allIdents(elt)...)
 		}
-	case *ast.BasicLit, *ast.IncDecStmt:
+	case *ast.BasicLit, *ast.IncDecStmt, *ast.BranchStmt:
 	default:
 		spew.Dump(node)
 		fmt.Printf("%T\n", node)
