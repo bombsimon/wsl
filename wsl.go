@@ -92,19 +92,22 @@ func (w *WSL) CheckCuddling(stmt ast.Node, cursor *Cursor) {
 				)
 			}
 
-			// Idents on the line above exist in the current condition so that
-			// should remain cuddled.
-			if len(intersects) > 0 {
-				w.addError(
-					previousNode.Pos(),
-					previousNode.Pos(),
-					previousNode.Pos(),
-					MessageAddWhitespace,
-				)
+			// Just one statement above and we have intersection
+			if n > 1 {
+				// Idents on the line above exist in the current condition so that
+				// should remain cuddled.
+				if len(intersects) > 0 {
+					w.addError(
+						previousNode.Pos(),
+						previousNode.Pos(),
+						previousNode.Pos(),
+						MessageAddWhitespace,
+					)
+				}
+				// TODO: Features:
+				// * Allow idents that is used first in the block
+				// * OR - if configured - anywhere in the block.
 			}
-			// TODO: Features:
-			// * Allow idents that is used first in the block
-			// * OR - if configured - anywhere in the block.
 		} else {
 			// If we have a statement above and it's not an assignment or
 			// declaration we unconditionally add an error.
@@ -202,6 +205,11 @@ func (w *WSL) CheckSwitch(stmt *ast.SwitchStmt, cursor *Cursor) {
 	w.CheckBlock(stmt.Body)
 }
 
+func (w *WSL) CheckTypeSwitch(stmt *ast.TypeSwitchStmt, cursor *Cursor) {
+	w.CheckCuddling(stmt, cursor)
+	w.CheckBlock(stmt.Body)
+}
+
 func (w *WSL) CheckBlock(block *ast.BlockStmt) {
 	cursor := NewCursor(-1, block.List)
 	for cursor.Next() {
@@ -249,6 +257,7 @@ func (w *WSL) CheckStmt(stmt ast.Stmt, cursor *Cursor) {
 		w.CheckSwitch(s, cursor)
 	// switch a.(type) {}
 	case *ast.TypeSwitchStmt:
+		w.CheckTypeSwitch(s, cursor)
 	// return a
 	case *ast.ReturnStmt:
 		w.CheckReturn(s, cursor)
@@ -391,7 +400,18 @@ func allIdents(node ast.Node) []*ast.Ident {
 	switch n := node.(type) {
 	case *ast.Ident:
 		return []*ast.Ident{n}
+	case *ast.ExprStmt:
+		idents = append(idents, allIdents(n.X)...)
 	case *ast.AssignStmt:
+		// TODO: For TypeSwitchStatements, this can be a false positive by
+		// allowing shadowing and "tricking" usage;
+		// var v any
+
+		// notV := 1
+		// switch notV := v.(type) {}
+		//
+		// This would trick wsl to see `notV` used in both type switch and on
+		// line above - faulty(?)
 		for _, lhs := range n.Lhs {
 			idents = append(idents, allIdents(lhs)...)
 		}
@@ -415,6 +435,11 @@ func allIdents(node ast.Node) []*ast.Ident {
 	case *ast.SwitchStmt:
 		idents = append(idents, allIdents(n.Init)...)
 		idents = append(idents, allIdents(n.Tag)...)
+	case *ast.TypeSwitchStmt:
+		idents = append(idents, allIdents(n.Init)...)
+		idents = append(idents, allIdents(n.Assign)...)
+	case *ast.TypeAssertExpr:
+		idents = append(idents, allIdents(n.X)...)
 	case *ast.CallExpr:
 		for _, arg := range n.Args {
 			idents = append(idents, allIdents(arg)...)
