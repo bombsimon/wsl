@@ -16,10 +16,17 @@ const (
 	MessageRemoveWhitespace = "unnecessary whitespace decreases readability"
 )
 
+// CheckType is a type that represents a checker to run.
 type CheckType int
 
+// Each checker is represented by a CheckType that is used to enable or disable
+// the check.
 const (
-	CheckTypeDecl CheckType = iota
+	CheckDecl CheckType = iota
+	CheckBreak
+	CheckContinue
+	CheckIf
+	CheckLeadingWhitespace
 )
 
 type Configuration struct {
@@ -30,8 +37,13 @@ type Configuration struct {
 
 func NewConfig() *Configuration {
 	return &Configuration{
+		Errcheck: false,
 		Checks: map[CheckType]struct{}{
-			CheckTypeDecl: {},
+			CheckBreak:             {},
+			CheckContinue:          {},
+			CheckDecl:              {},
+			CheckIf:                {},
+			CheckLeadingWhitespace: {},
 		},
 	}
 }
@@ -188,6 +200,10 @@ func (w *WSL) CheckFunc(funcDecl *ast.FuncDecl) {
 }
 
 func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor) {
+	if _, ok := w.Config.Checks[CheckIf]; !ok {
+		return
+	}
+
 	w.CheckCuddling(stmt, cursor)
 	w.CheckUnnecessaryBlockLeadingNewline(stmt.Body)
 
@@ -226,6 +242,14 @@ func (w *WSL) CheckTypeSwitch(stmt *ast.TypeSwitchStmt, cursor *Cursor) {
 }
 
 func (w *WSL) CheckBranch(stmt *ast.BranchStmt, cursor *Cursor) {
+	if _, ok := w.Config.Checks[CheckBreak]; !ok && stmt.Tok == token.BREAK {
+		return
+	}
+
+	if _, ok := w.Config.Checks[CheckContinue]; !ok && stmt.Tok == token.CONTINUE {
+		return
+	}
+
 	if w.numberOfStatementsAbove(cursor) == 0 {
 		return
 	}
@@ -244,7 +268,7 @@ func (w *WSL) CheckBranch(stmt *ast.BranchStmt, cursor *Cursor) {
 }
 
 func (w *WSL) CheckDecl(stmt *ast.DeclStmt, cursor *Cursor) {
-	if _, ok := w.Config.Checks[CheckTypeDecl]; !ok {
+	if _, ok := w.Config.Checks[CheckDecl]; !ok {
 		return
 	}
 
@@ -352,6 +376,10 @@ func (w *WSL) numberOfStatementsAbove(cursor *Cursor) int {
 }
 
 func (w *WSL) CheckUnnecessaryBlockLeadingNewline(body *ast.BlockStmt) {
+	if _, ok := w.Config.Checks[CheckLeadingWhitespace]; !ok {
+		return
+	}
+
 	// No statements in the block, let's leave it as is.
 	if len(body.List) == 0 {
 		return

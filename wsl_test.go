@@ -30,12 +30,12 @@ func TestWithConfig(t *testing.T) {
 		{
 			subdir: "no_check_decl",
 			configFn: func(config *Configuration) {
-				config.Errcheck = true
+				delete(config.Checks, CheckDecl)
 			},
 		},
 	} {
 		t.Run(tc.subdir, func(t *testing.T) {
-			config := &Configuration{}
+			config := NewConfig()
 			tc.configFn(config)
 
 			analyzer := NewAnalyzer(config)
