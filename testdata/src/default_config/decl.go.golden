@@ -1,0 +1,11 @@
+package testpkg
+
+func fn1() {
+	var a = 1
+
+	var b = 2 // want "missing whitespace decreases readability"
+
+	const c = 3
+
+	const d = 4 // want "missing whitespace decreases readability"
+}

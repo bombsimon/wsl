@@ -9,7 +9,7 @@ import (
 
 func TestDefaultConfig(t *testing.T) {
 	testdata := analysistest.TestData()
-	analyzer := NewAnalyzer(&Configuration{})
+	analyzer := NewAnalyzer(NewConfig())
 
 	analysistest.RunWithSuggestedFixes(t, testdata, analyzer, "default_config")
 }
@@ -27,6 +27,12 @@ func TestWithConfig(t *testing.T) {
 				config.Errcheck = true
 			},
 		},
+		{
+			subdir: "no_check_decl",
+			configFn: func(config *Configuration) {
+				config.Errcheck = true
+			},
+		},
 	} {
 		t.Run(tc.subdir, func(t *testing.T) {
 			config := &Configuration{}
@@ -40,7 +46,7 @@ func TestWithConfig(t *testing.T) {
 
 func TestWIP(t *testing.T) {
 	testdata := analysistest.TestData()
-	analyzer := NewAnalyzer(&Configuration{})
+	analyzer := NewAnalyzer(NewConfig())
 
 	analysistest.RunWithSuggestedFixes(t, testdata, analyzer, "wip")
 }

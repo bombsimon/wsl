@@ -16,9 +16,24 @@ const (
 	MessageRemoveWhitespace = "unnecessary whitespace decreases readability"
 )
 
+type CheckType int
+
+const (
+	CheckTypeDecl CheckType = iota
+)
+
 type Configuration struct {
 	// Require no newline between error assignment and error check.
 	Errcheck bool
+	Checks   map[CheckType]struct{}
+}
+
+func NewConfig() *Configuration {
+	return &Configuration{
+		Checks: map[CheckType]struct{}{
+			CheckTypeDecl: {},
+		},
+	}
 }
 
 type FixRange struct {
@@ -228,6 +243,18 @@ func (w *WSL) CheckBranch(stmt *ast.BranchStmt, cursor *Cursor) {
 	)
 }
 
+func (w *WSL) CheckDecl(stmt *ast.DeclStmt, cursor *Cursor) {
+	if _, ok := w.Config.Checks[CheckTypeDecl]; !ok {
+		return
+	}
+
+	if w.numberOfStatementsAbove(cursor) == 0 {
+		return
+	}
+
+	w.CheckCuddling(stmt, cursor)
+}
+
 func (w *WSL) CheckBlock(block *ast.BlockStmt) {
 	cursor := NewCursor(-1, block.List)
 	for cursor.Next() {
@@ -284,6 +311,7 @@ func (w *WSL) CheckStmt(stmt ast.Stmt, cursor *Cursor) {
 		w.CheckBranch(s, cursor)
 	// var a
 	case *ast.DeclStmt:
+		w.CheckDecl(s, cursor)
 	// a := a
 	case *ast.AssignStmt:
 	// a++ / a--
@@ -421,6 +449,16 @@ func allIdents(node ast.Node) []*ast.Ident {
 		return []*ast.Ident{n}
 	case *ast.ExprStmt:
 		idents = append(idents, allIdents(n.X)...)
+	case *ast.DeclStmt:
+		idents = append(idents, allIdents(n.Decl)...)
+	case *ast.GenDecl:
+		for _, spec := range n.Specs {
+			idents = append(idents, allIdents(spec)...)
+		}
+	case *ast.ValueSpec:
+		for _, name := range n.Names {
+			idents = append(idents, allIdents(name)...)
+		}
 	case *ast.AssignStmt:
 		// TODO: For TypeSwitchStatements, this can be a false positive by
 		// allowing shadowing and "tricking" usage;
