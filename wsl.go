@@ -195,7 +195,6 @@ func (w *WSL) CheckFunc(funcDecl *ast.FuncDecl) {
 		return
 	}
 
-	w.CheckUnnecessaryBlockLeadingNewline(funcDecl.Body)
 	w.CheckBlock(funcDecl.Body)
 }
 
@@ -205,7 +204,6 @@ func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor) {
 	}
 
 	w.CheckCuddling(stmt, cursor)
-	w.CheckUnnecessaryBlockLeadingNewline(stmt.Body)
 
 	// if
 	w.CheckBlock(stmt.Body)
@@ -216,7 +214,6 @@ func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor) {
 		w.CheckIf(v, cursor)
 	// else
 	case *ast.BlockStmt:
-		w.CheckUnnecessaryBlockLeadingNewline(v)
 		w.CheckBlock(v)
 	}
 }
@@ -280,6 +277,8 @@ func (w *WSL) CheckDecl(stmt *ast.DeclStmt, cursor *Cursor) {
 }
 
 func (w *WSL) CheckBlock(block *ast.BlockStmt) {
+	w.CheckUnnecessaryBlockLeadingNewline(block)
+
 	cursor := NewCursor(-1, block.List)
 	for cursor.Next() {
 		// fmt.Printf("%d: %T\n", cursor.currentIdx, cursor.Stmt())
@@ -307,6 +306,33 @@ func (w *WSL) CheckReturn(stmt *ast.ReturnStmt, cursor *Cursor) {
 		stmt.Pos(),
 		MessageAddWhitespace,
 	)
+}
+
+func (w *WSL) CheckAssign(stmt *ast.AssignStmt, cursor *Cursor) {
+	defer cursor.Save()()
+
+	var previousNode ast.Node
+
+	if cursor.Previous() {
+		previousNode = cursor.Stmt()
+		cursor.Next() // Move forward again
+	}
+
+	_, prevIsAssign := previousNode.(*ast.AssignStmt)
+	_, prevIsDecl := previousNode.(*ast.DeclStmt)
+
+	if w.numberOfStatementsAbove(cursor) > 0 && previousNode != nil && !prevIsAssign && !prevIsDecl {
+		w.addError(
+			stmt.Pos(),
+			stmt.Pos(),
+			stmt.Pos(),
+			MessageAddWhitespace,
+		)
+	}
+
+	for _, expr := range stmt.Rhs {
+		w.CheckExpr(expr, cursor)
+	}
 }
 
 func (w *WSL) CheckStmt(stmt ast.Stmt, cursor *Cursor) {
@@ -338,6 +364,7 @@ func (w *WSL) CheckStmt(stmt ast.Stmt, cursor *Cursor) {
 		w.CheckDecl(s, cursor)
 	// a := a
 	case *ast.AssignStmt:
+		w.CheckAssign(s, cursor)
 	// a++ / a--
 	case *ast.IncDecStmt:
 	// defer func() {}
@@ -349,7 +376,23 @@ func (w *WSL) CheckStmt(stmt ast.Stmt, cursor *Cursor) {
 	case *ast.BlockStmt:
 		w.CheckBlock(s)
 	default:
-		fmt.Printf("Not implemented: %T\n", s)
+		fmt.Printf("Not implemented stmt: %T\n", s)
+	}
+}
+
+func (w *WSL) CheckExpr(expr ast.Expr, cursor *Cursor) {
+	switch s := expr.(type) {
+	// func() {}
+	case *ast.FuncLit:
+		w.CheckBlock(s.Body)
+	// Call(args...)
+	case *ast.CallExpr:
+		for _, e := range s.Args {
+			w.CheckExpr(e, cursor)
+		}
+	case *ast.BasicLit, *ast.CompositeLit:
+	default:
+		fmt.Printf("Not implemented expr: %T\n", s)
 	}
 }
 
@@ -533,7 +576,7 @@ func allIdents(node ast.Node) []*ast.Ident {
 		for _, elt := range n.Elts {
 			idents = append(idents, allIdents(elt)...)
 		}
-	case *ast.BasicLit, *ast.IncDecStmt, *ast.BranchStmt:
+	case *ast.BasicLit, *ast.FuncLit, *ast.IncDecStmt, *ast.BranchStmt:
 	default:
 		spew.Dump(node)
 		fmt.Printf("%T\n", node)
