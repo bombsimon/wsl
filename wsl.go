@@ -85,7 +85,7 @@ func (w *WSL) Run() {
 	}
 }
 
-func (w *WSL) CheckCuddling(stmt ast.Node, cursor *Cursor) {
+func (w *WSL) CheckCuddling(stmt ast.Node, cursor *Cursor, maxAllowedStatements int) {
 	reset := cursor.Save()
 	defer reset()
 
@@ -119,8 +119,10 @@ func (w *WSL) CheckCuddling(stmt ast.Node, cursor *Cursor) {
 				)
 			}
 
-			// Just one statement above and we have intersection
-			if n > 1 {
+			// Check the maximum number of allowed statements above, and if not
+			// disabled (-1) check that the previous one intersects with the
+			// current one.
+			if maxAllowedStatements != -1 && n > maxAllowedStatements {
 				// Idents on the line above exist in the current condition so that
 				// should remain cuddled.
 				if len(intersects) > 0 {
@@ -203,7 +205,7 @@ func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor) {
 		return
 	}
 
-	w.CheckCuddling(stmt, cursor)
+	w.CheckCuddling(stmt, cursor, 1)
 
 	// if
 	w.CheckBlock(stmt.Body)
@@ -219,23 +221,28 @@ func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor) {
 }
 
 func (w *WSL) CheckFor(stmt *ast.ForStmt, cursor *Cursor) {
-	w.CheckCuddling(stmt, cursor)
+	w.CheckCuddling(stmt, cursor, 1)
 	w.CheckBlock(stmt.Body)
 }
 
 func (w *WSL) CheckRange(stmt *ast.RangeStmt, cursor *Cursor) {
-	w.CheckCuddling(stmt, cursor)
+	w.CheckCuddling(stmt, cursor, 1)
 	w.CheckBlock(stmt.Body)
 }
 
 func (w *WSL) CheckSwitch(stmt *ast.SwitchStmt, cursor *Cursor) {
-	w.CheckCuddling(stmt, cursor)
+	w.CheckCuddling(stmt, cursor, 1)
 	w.CheckBlock(stmt.Body)
 }
 
 func (w *WSL) CheckTypeSwitch(stmt *ast.TypeSwitchStmt, cursor *Cursor) {
-	w.CheckCuddling(stmt, cursor)
+	w.CheckCuddling(stmt, cursor, 1)
 	w.CheckBlock(stmt.Body)
+}
+
+func (w *WSL) CheckExprStmt(stmt *ast.ExprStmt, cursor *Cursor) {
+	w.CheckCuddling(stmt, cursor, -1)
+	w.CheckExpr(stmt.X, cursor)
 }
 
 func (w *WSL) CheckBranch(stmt *ast.BranchStmt, cursor *Cursor) {
@@ -273,7 +280,7 @@ func (w *WSL) CheckDecl(stmt *ast.DeclStmt, cursor *Cursor) {
 		return
 	}
 
-	w.CheckCuddling(stmt, cursor)
+	w.CheckCuddling(stmt, cursor, 1)
 }
 
 func (w *WSL) CheckBlock(block *ast.BlockStmt) {
@@ -372,6 +379,7 @@ func (w *WSL) CheckStmt(stmt ast.Stmt, cursor *Cursor) {
 	// go func() {}
 	case *ast.GoStmt:
 	case *ast.ExprStmt:
+		w.CheckExprStmt(s, cursor)
 	case *ast.CaseClause:
 	case *ast.BlockStmt:
 		w.CheckBlock(s)
@@ -390,7 +398,7 @@ func (w *WSL) CheckExpr(expr ast.Expr, cursor *Cursor) {
 		for _, e := range s.Args {
 			w.CheckExpr(e, cursor)
 		}
-	case *ast.BasicLit, *ast.CompositeLit:
+	case *ast.BasicLit, *ast.CompositeLit, *ast.Ident:
 	default:
 		fmt.Printf("Not implemented expr: %T\n", s)
 	}
