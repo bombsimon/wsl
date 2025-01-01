@@ -103,10 +103,11 @@ func (w *WSL) CheckCuddling(stmt ast.Node, cursor *Cursor, maxAllowedStatements 
 
 	_, prevIsAssign := previousNode.(*ast.AssignStmt)
 	_, prevIsDecl := previousNode.(*ast.DeclStmt)
+	_, currIsDefer := stmt.(*ast.DeferStmt)
 	n := w.numberOfStatementsAbove(cursor)
 
 	if n > 0 {
-		if prevIsAssign || prevIsDecl {
+		if prevIsAssign || prevIsDecl || currIsDefer {
 			intersects := identIntersection(currentIdents, previousIdents)
 
 			// No idents above share name with one in the if statement.
@@ -266,6 +267,18 @@ func (w *WSL) CheckGo(stmt *ast.GoStmt, cursor *Cursor) {
 	w.CheckExpr(stmt.Call, cursor)
 }
 
+func (w *WSL) CheckDefer(stmt *ast.DeferStmt, cursor *Cursor) {
+	previousNode := cursor.PreviousNode()
+
+	// We can cuddle any amount `defer` statements so only check cuddling if the
+	// previous one isn't a `defer` call.
+	if _, ok := previousNode.(*ast.DeferStmt); !ok {
+		w.CheckCuddling(stmt, cursor, 1)
+	}
+
+	w.CheckExpr(stmt.Call, cursor)
+}
+
 func (w *WSL) CheckBranch(stmt *ast.BranchStmt, cursor *Cursor) {
 	if _, ok := w.Config.Checks[CheckBreak]; !ok && stmt.Tok == token.BREAK {
 		return
@@ -389,6 +402,7 @@ func (w *WSL) CheckStmt(stmt ast.Stmt, cursor *Cursor) {
 	case *ast.IncDecStmt:
 	// defer func() {}
 	case *ast.DeferStmt:
+		w.CheckDefer(s, cursor)
 	// go func() {}
 	case *ast.GoStmt:
 		w.CheckGo(s, cursor)
@@ -550,6 +564,8 @@ func allIdents(node ast.Node) []*ast.Ident {
 		}
 	case *ast.GoStmt:
 		idents = append(idents, allIdents(n.Call)...)
+	case *ast.DeferStmt:
+		idents = append(idents, allIdents(n.Call)...)
 	case *ast.ValueSpec:
 		for _, name := range n.Names {
 			idents = append(idents, allIdents(name)...)
@@ -611,7 +627,7 @@ func allIdents(node ast.Node) []*ast.Ident {
 		*ast.ArrayType:
 	default:
 		spew.Dump(node)
-		fmt.Printf("%T\n", node)
+		fmt.Printf("missing ident detection for %T\n", node)
 	}
 
 	return idents
