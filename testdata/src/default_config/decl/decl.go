@@ -6,4 +6,7 @@ func fn1() {
 
 	const c = 3
 	const d = 4 // want "missing whitespace decreases readability"
+
+	_ = a
+	_ = b
 }

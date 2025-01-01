@@ -1,5 +1,9 @@
 package testpkg
 
+func Fn() any {
+	return nil
+}
+
 func fn1() {
 	var v any
 
@@ -11,14 +15,17 @@ func fn1() {
 }
 
 func fn2() {
-	var v any
-	v = 1
+	var a any
+	a = 1
 
-	one := 1
-	switch v.(type) { // want "missing whitespace decreases readability"
+	b := 1
+
+	switch a.(type) { // want "missing whitespace decreases readability"
 	case int:
 	case string:
 	}
+
+	_ = b
 }
 
 func fn3(in any) {
@@ -26,19 +33,24 @@ func fn3(in any) {
 		return
 	}
 
-	switch v := in.(type) {
+	switch a := in.(type) {
 	case string:
 		return
 	default:
+		_ = a
 	}
 }
 
 func fn4(in any) {
-	one := getOne()
-	two := getTwo() // want "missing whitespace decreases readability"
-	switch two.(type) {
+	a := Fn()
+
+	b := Fn() // want "missing whitespace decreases readability"
+	switch b.(type) {
 	case string:
 		return
 	default:
+
+		_ = a
 	}
 }
+

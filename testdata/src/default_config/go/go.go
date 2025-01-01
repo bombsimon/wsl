@@ -2,12 +2,20 @@ package testpkg
 
 import "fmt"
 
+func NewT() func() {
+	return func() {}
+}
+
+func Fn(_ int) {}
+
 func Go() {
 	fooFunc := func() {}
 	go fooFunc()
 
 	barFunc := func() {}
 	go fooFunc() // want "missing whitespace decreases readability"
+
+	_ = barFunc
 
 	go func() {
 		fmt.Println("hey")
@@ -18,11 +26,15 @@ func Go() {
 		fmt.Println("hey")
 	}()
 
+	_ = cuddled
+
 	argToGo := 1
-	go takesArg(argToGo)
+	go Fn(argToGo)
 
 	notArgToGo := 1
-	go takesArg(argToGo) // want "missing whitespace decreases readability"
+	go Fn(argToGo) // want "missing whitespace decreases readability"
+
+	_ = notArgToGo
 
 	t1 := NewT()
 	t2 := NewT()
@@ -42,4 +54,12 @@ func Go() {
 	t5 := NewT() // want "missing whitespace decreases readability"
 	go t5()
 	go t4()
+
+	_ = t1
+	_ = t2
+	_ = t3
+	_ = t4
+	_ = t5
+	_ = multiCuddle1
+	_ = multiCuddle2
 }

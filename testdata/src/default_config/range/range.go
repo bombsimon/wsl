@@ -1,0 +1,26 @@
+package testpkg
+
+func fn1() {
+	a := []int{}
+	b := []int{} // want "missing whitespace decreases readability"
+	for range b {
+		panic(a)
+	}
+}
+
+func fn2() {
+	b := []int{}
+	a := []int{}
+	for range b { // want "missing whitespace decreases readability"
+		panic(a)
+	}
+}
+
+func fn3() {
+	for range make([]int, 0) {
+		panic("")
+	}
+	for range make([]int, 0) { // want "missing whitespace decreases readability"
+		panic("")
+	}
+}

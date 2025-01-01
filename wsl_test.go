@@ -1,6 +1,7 @@
 package wsl
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -8,10 +9,19 @@ import (
 )
 
 func TestDefaultConfig(t *testing.T) {
-	testdata := analysistest.TestData()
-	analyzer := NewAnalyzer(NewConfig())
+	dirs, err := os.ReadDir("./testdata/src/default_config")
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	analysistest.RunWithSuggestedFixes(t, testdata, analyzer, "default_config")
+	for _, tc := range dirs {
+		t.Run(tc.Name(), func(t *testing.T) {
+			testdata := analysistest.TestData()
+			analyzer := NewAnalyzer(NewConfig())
+
+			analysistest.RunWithSuggestedFixes(t, testdata, analyzer, filepath.Join("default_config", tc.Name()))
+		})
+	}
 }
 
 func TestWithConfig(t *testing.T) {
@@ -42,11 +52,4 @@ func TestWithConfig(t *testing.T) {
 			analysistest.RunWithSuggestedFixes(t, testdata, analyzer, filepath.Join("with_config", tc.subdir))
 		})
 	}
-}
-
-func TestWIP(t *testing.T) {
-	testdata := analysistest.TestData()
-	analyzer := NewAnalyzer(NewConfig())
-
-	analysistest.RunWithSuggestedFixes(t, testdata, analyzer, "wip")
 }

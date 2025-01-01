@@ -2,17 +2,24 @@ package testpkg
 
 import "fmt"
 
+func Call(fn func()) func() {
+	return fn
+}
+
 func fn1() { // want "unnecessary whitespace decreases readability"
+
 	fmt.Println("Hello, World")
 }
 
 func fn2() { // want "unnecessary whitespace decreases readability"
+
 	// Space before comment.
 	fmt.Println("Hello, World")
 }
 
 func fn3() {
 	// Space after comment // want "unnecessary whitespace decreases readability"
+
 	fmt.Println("Hello, World")
 }
 
@@ -34,6 +41,7 @@ func fn51() {
 
 func fn6() {
 	if true { // want "unnecessary whitespace decreases readability"
+
 		_ = 1
 	}
 }
@@ -42,44 +50,59 @@ func fn7() {
 	if true {
 		_ = 1
 	} else if true { // want "unnecessary whitespace decreases readability"
+
 		_ = 1
 	} else { // want "unnecessary whitespace decreases readability"
+
 		_ = 1
 	}
 }
 
 func fn8(a string, b any, s []string) { // want "unnecessary whitespace decreases readability"
+
 	if true { // want "unnecessary whitespace decreases readability"
+
 		_ = 1
 	} else if true { // want "unnecessary whitespace decreases readability"
+
 		_ = 1
 	}
 
 	for i := 0; i < 1; i++ { // want "unnecessary whitespace decreases readability"
+
 		_ = 1
 	}
 
-	for n := range 10 { // want "unnecessary whitespace decreases readability"
-		_ = 1
+	for n := range []int{} { // want "unnecessary whitespace decreases readability"
+
+		_ = n
 	}
 
 	for range s { // want "unnecessary whitespace decreases readability"
+
 		_ = 1
 	}
 
 	switch a { // want "unnecessary whitespace decreases readability"
+
 	case "a":
 	}
 
 	switch b.(type) { // want "unnecessary whitespace decreases readability"
+
 	case int:
 	}
 
 	f := func() { // want "unnecessary whitespace decreases readability"
+
 		_ = 1
 	}
 
 	f2 := Call(func() { // want "unnecessary whitespace decreases readability"
+
 		_ = 1
 	})
+
+	_ = f
+	_ = f2
 }

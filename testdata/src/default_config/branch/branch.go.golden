@@ -3,7 +3,7 @@ package testpkg
 import "fmt"
 
 func fn1() {
-	for i := range 10 {
+	for range []int{} {
 		if true {
 			fmt.Println("")
 
@@ -39,7 +39,7 @@ func fn1() {
 }
 
 func fn2() {
-	for i := range 10 {
+	for range []int{} {
 		if true {
 			fmt.Println("")
 			fmt.Println("")

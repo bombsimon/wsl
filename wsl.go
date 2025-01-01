@@ -241,7 +241,14 @@ func (w *WSL) CheckTypeSwitch(stmt *ast.TypeSwitchStmt, cursor *Cursor) {
 }
 
 func (w *WSL) CheckExprStmt(stmt *ast.ExprStmt, cursor *Cursor) {
-	w.CheckCuddling(stmt, cursor, -1)
+	previousNode := cursor.PreviousNode()
+
+	// We can cuddle any amount call statements so only check cuddling if the
+	// previous one isn't a function call.
+	if _, ok := previousNode.(*ast.ExprStmt); !ok {
+		w.CheckCuddling(stmt, cursor, -1)
+	}
+
 	w.CheckExpr(stmt.X, cursor)
 }
 
@@ -405,7 +412,7 @@ func (w *WSL) CheckExpr(expr ast.Expr, cursor *Cursor) {
 		for _, e := range s.Args {
 			w.CheckExpr(e, cursor)
 		}
-	case *ast.BasicLit, *ast.CompositeLit, *ast.Ident:
+	case *ast.BasicLit, *ast.CompositeLit, *ast.Ident, *ast.UnaryExpr:
 	default:
 		fmt.Printf("Not implemented expr: %T\n", s)
 	}
@@ -575,6 +582,10 @@ func allIdents(node ast.Node) []*ast.Ident {
 		idents = append(idents, allIdents(n.Y)...)
 	case *ast.RangeStmt:
 		idents = append(idents, allIdents(n.X)...)
+	case *ast.SelectorExpr:
+		idents = append(idents, allIdents(n.X)...)
+	case *ast.UnaryExpr:
+		idents = append(idents, allIdents(n.X)...)
 	case *ast.ForStmt:
 		idents = append(idents, allIdents(n.Init)...)
 		idents = append(idents, allIdents(n.Cond)...)
@@ -596,7 +607,8 @@ func allIdents(node ast.Node) []*ast.Ident {
 		for _, elt := range n.Elts {
 			idents = append(idents, allIdents(elt)...)
 		}
-	case *ast.BasicLit, *ast.FuncLit, *ast.IncDecStmt, *ast.BranchStmt:
+	case *ast.BasicLit, *ast.FuncLit, *ast.IncDecStmt, *ast.BranchStmt,
+		*ast.ArrayType:
 	default:
 		spew.Dump(node)
 		fmt.Printf("%T\n", node)

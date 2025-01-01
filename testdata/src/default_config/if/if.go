@@ -1,0 +1,36 @@
+package testpkg
+
+import "errors"
+
+func fn1() {
+	a := 1
+	b := 2 // want "missing whitespace decreases readability"
+	if b == 2 {
+		panic(a)
+	}
+}
+
+func fn2() {
+	b := 2
+	a := 1
+	if b == 2 { // want "missing whitespace decreases readability"
+		panic(a)
+	}
+}
+
+func fn3() {
+	err := errors.New("error")
+
+	if err != nil {
+		panic(err)
+	}
+}
+
+func fn4() {
+	if a := 1; a != 2 {
+		panic(a)
+	}
+	if a := 2; a != 2 { // want "missing whitespace decreases readability"
+		panic(a)
+	}
+}
