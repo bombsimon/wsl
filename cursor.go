@@ -39,6 +39,17 @@ func (c *Cursor) Previous() bool {
 	return true
 }
 
+func (c *Cursor) PreviousNode() ast.Node {
+	defer c.Save()()
+
+	var previousNode ast.Node
+	if c.Previous() {
+		previousNode = c.Stmt()
+	}
+
+	return previousNode
+}
+
 func (c *Cursor) PeekNext() bool {
 	reset := c.Save()
 	defer reset()

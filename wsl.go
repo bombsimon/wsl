@@ -245,6 +245,20 @@ func (w *WSL) CheckExprStmt(stmt *ast.ExprStmt, cursor *Cursor) {
 	w.CheckExpr(stmt.X, cursor)
 }
 
+func (w *WSL) CheckGo(stmt *ast.GoStmt, cursor *Cursor) {
+	previousNode := cursor.PreviousNode()
+
+	// We can cuddle any amount `go` statements so only check cuddling if the
+	// previous one isn't a `go` call.
+	// We don't even have to check if it's actually cuddled or just the previous
+	// one because even if it's not but is a `go` statement it's valid.
+	if _, ok := previousNode.(*ast.GoStmt); !ok {
+		w.CheckCuddling(stmt, cursor, 1)
+	}
+
+	w.CheckExpr(stmt.Call, cursor)
+}
+
 func (w *WSL) CheckBranch(stmt *ast.BranchStmt, cursor *Cursor) {
 	if _, ok := w.Config.Checks[CheckBreak]; !ok && stmt.Tok == token.BREAK {
 		return
@@ -316,15 +330,7 @@ func (w *WSL) CheckReturn(stmt *ast.ReturnStmt, cursor *Cursor) {
 }
 
 func (w *WSL) CheckAssign(stmt *ast.AssignStmt, cursor *Cursor) {
-	defer cursor.Save()()
-
-	var previousNode ast.Node
-
-	if cursor.Previous() {
-		previousNode = cursor.Stmt()
-		cursor.Next() // Move forward again
-	}
-
+	previousNode := cursor.PreviousNode()
 	_, prevIsAssign := previousNode.(*ast.AssignStmt)
 	_, prevIsDecl := previousNode.(*ast.DeclStmt)
 
@@ -378,6 +384,7 @@ func (w *WSL) CheckStmt(stmt ast.Stmt, cursor *Cursor) {
 	case *ast.DeferStmt:
 	// go func() {}
 	case *ast.GoStmt:
+		w.CheckGo(s, cursor)
 	case *ast.ExprStmt:
 		w.CheckExprStmt(s, cursor)
 	case *ast.CaseClause:
@@ -534,6 +541,8 @@ func allIdents(node ast.Node) []*ast.Ident {
 		for _, spec := range n.Specs {
 			idents = append(idents, allIdents(spec)...)
 		}
+	case *ast.GoStmt:
+		idents = append(idents, allIdents(n.Call)...)
 	case *ast.ValueSpec:
 		for _, name := range n.Names {
 			idents = append(idents, allIdents(name)...)
@@ -552,7 +561,9 @@ func allIdents(node ast.Node) []*ast.Ident {
 			idents = append(idents, allIdents(lhs)...)
 		}
 
-		// TODO: This should be here right?
+		// This must be here to see if a variable is used on the RHS, e.g.
+		// a := 1
+		// b = append(b, fmt.Sprintf("%s", a))
 		for _, rhs := range n.Rhs {
 			idents = append(idents, allIdents(rhs)...)
 		}
@@ -577,6 +588,7 @@ func allIdents(node ast.Node) []*ast.Ident {
 	case *ast.TypeAssertExpr:
 		idents = append(idents, allIdents(n.X)...)
 	case *ast.CallExpr:
+		idents = append(idents, allIdents(n.Fun)...)
 		for _, arg := range n.Args {
 			idents = append(idents, allIdents(arg)...)
 		}
