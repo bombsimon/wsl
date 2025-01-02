@@ -22,11 +22,20 @@ type CheckType int
 // Each checker is represented by a CheckType that is used to enable or disable
 // the check.
 const (
-	CheckDecl CheckType = iota
+	CheckAssign CheckType = iota
 	CheckBreak
 	CheckContinue
+	CheckDecl
+	CheckDefer
+	CheckExpr
+	CheckFor
+	CheckGo
 	CheckIf
 	CheckLeadingWhitespace
+	CheckRange
+	CheckReturn
+	CheckSwitch
+	CheckTypeSwitch
 )
 
 type Configuration struct {
@@ -39,11 +48,20 @@ func NewConfig() *Configuration {
 	return &Configuration{
 		Errcheck: false,
 		Checks: map[CheckType]struct{}{
+			CheckAssign:            {},
 			CheckBreak:             {},
 			CheckContinue:          {},
 			CheckDecl:              {},
+			CheckDefer:             {},
+			CheckExpr:              {},
+			CheckFor:               {},
+			CheckGo:                {},
 			CheckIf:                {},
 			CheckLeadingWhitespace: {},
+			CheckRange:             {},
+			CheckReturn:            {},
+			CheckSwitch:            {},
+			CheckTypeSwitch:        {},
 		},
 	}
 }
@@ -202,11 +220,9 @@ func (w *WSL) CheckFunc(funcDecl *ast.FuncDecl) {
 }
 
 func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor) {
-	if _, ok := w.Config.Checks[CheckIf]; !ok {
-		return
+	if _, ok := w.Config.Checks[CheckIf]; ok {
+		w.CheckCuddling(stmt, cursor, 1)
 	}
-
-	w.CheckCuddling(stmt, cursor, 1)
 
 	// if
 	w.CheckBlock(stmt.Body)
@@ -222,26 +238,52 @@ func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor) {
 }
 
 func (w *WSL) CheckFor(stmt *ast.ForStmt, cursor *Cursor) {
+	defer w.CheckBlock(stmt.Body)
+
+	if _, ok := w.Config.Checks[CheckFor]; !ok {
+		return
+	}
+
 	w.CheckCuddling(stmt, cursor, 1)
-	w.CheckBlock(stmt.Body)
 }
 
 func (w *WSL) CheckRange(stmt *ast.RangeStmt, cursor *Cursor) {
+	defer w.CheckBlock(stmt.Body)
+
+	if _, ok := w.Config.Checks[CheckRange]; !ok {
+		return
+	}
+
 	w.CheckCuddling(stmt, cursor, 1)
-	w.CheckBlock(stmt.Body)
 }
 
 func (w *WSL) CheckSwitch(stmt *ast.SwitchStmt, cursor *Cursor) {
+	defer w.CheckBlock(stmt.Body)
+
+	if _, ok := w.Config.Checks[CheckSwitch]; !ok {
+		return
+	}
+
 	w.CheckCuddling(stmt, cursor, 1)
-	w.CheckBlock(stmt.Body)
 }
 
 func (w *WSL) CheckTypeSwitch(stmt *ast.TypeSwitchStmt, cursor *Cursor) {
+	defer w.CheckBlock(stmt.Body)
+
+	if _, ok := w.Config.Checks[CheckTypeSwitch]; !ok {
+		return
+	}
+
 	w.CheckCuddling(stmt, cursor, 1)
-	w.CheckBlock(stmt.Body)
 }
 
 func (w *WSL) CheckExprStmt(stmt *ast.ExprStmt, cursor *Cursor) {
+	defer w.CheckExpr(stmt.X, cursor)
+
+	if _, ok := w.Config.Checks[CheckExpr]; !ok {
+		return
+	}
+
 	previousNode := cursor.PreviousNode()
 
 	// We can cuddle any amount call statements so only check cuddling if the
@@ -249,11 +291,15 @@ func (w *WSL) CheckExprStmt(stmt *ast.ExprStmt, cursor *Cursor) {
 	if _, ok := previousNode.(*ast.ExprStmt); !ok {
 		w.CheckCuddling(stmt, cursor, -1)
 	}
-
-	w.CheckExpr(stmt.X, cursor)
 }
 
 func (w *WSL) CheckGo(stmt *ast.GoStmt, cursor *Cursor) {
+	defer w.CheckExpr(stmt.Call, cursor)
+
+	if _, ok := w.Config.Checks[CheckGo]; !ok {
+		return
+	}
+
 	previousNode := cursor.PreviousNode()
 
 	// We can cuddle any amount `go` statements so only check cuddling if the
@@ -263,11 +309,15 @@ func (w *WSL) CheckGo(stmt *ast.GoStmt, cursor *Cursor) {
 	if _, ok := previousNode.(*ast.GoStmt); !ok {
 		w.CheckCuddling(stmt, cursor, 1)
 	}
-
-	w.CheckExpr(stmt.Call, cursor)
 }
 
 func (w *WSL) CheckDefer(stmt *ast.DeferStmt, cursor *Cursor) {
+	defer w.CheckExpr(stmt.Call, cursor)
+
+	if _, ok := w.Config.Checks[CheckDefer]; !ok {
+		return
+	}
+
 	previousNode := cursor.PreviousNode()
 
 	// We can cuddle any amount `defer` statements so only check cuddling if the
@@ -275,8 +325,6 @@ func (w *WSL) CheckDefer(stmt *ast.DeferStmt, cursor *Cursor) {
 	if _, ok := previousNode.(*ast.DeferStmt); !ok {
 		w.CheckCuddling(stmt, cursor, 1)
 	}
-
-	w.CheckExpr(stmt.Call, cursor)
 }
 
 func (w *WSL) CheckBranch(stmt *ast.BranchStmt, cursor *Cursor) {
@@ -328,6 +376,10 @@ func (w *WSL) CheckBlock(block *ast.BlockStmt) {
 }
 
 func (w *WSL) CheckReturn(stmt *ast.ReturnStmt, cursor *Cursor) {
+	if _, ok := w.Config.Checks[CheckReturn]; !ok {
+		return
+	}
+
 	// There's only a return statement.
 	noStmts := cursor.Len()
 	if noStmts <= 1 {
@@ -350,17 +402,19 @@ func (w *WSL) CheckReturn(stmt *ast.ReturnStmt, cursor *Cursor) {
 }
 
 func (w *WSL) CheckAssign(stmt *ast.AssignStmt, cursor *Cursor) {
-	previousNode := cursor.PreviousNode()
-	_, prevIsAssign := previousNode.(*ast.AssignStmt)
-	_, prevIsDecl := previousNode.(*ast.DeclStmt)
+	if _, ok := w.Config.Checks[CheckAssign]; ok {
+		previousNode := cursor.PreviousNode()
+		_, prevIsAssign := previousNode.(*ast.AssignStmt)
+		_, prevIsDecl := previousNode.(*ast.DeclStmt)
 
-	if w.numberOfStatementsAbove(cursor) > 0 && previousNode != nil && !prevIsAssign && !prevIsDecl {
-		w.addError(
-			stmt.Pos(),
-			stmt.Pos(),
-			stmt.Pos(),
-			MessageAddWhitespace,
-		)
+		if w.numberOfStatementsAbove(cursor) > 0 && previousNode != nil && !prevIsAssign && !prevIsDecl {
+			w.addError(
+				stmt.Pos(),
+				stmt.Pos(),
+				stmt.Pos(),
+				MessageAddWhitespace,
+			)
+		}
 	}
 
 	for _, expr := range stmt.Rhs {
