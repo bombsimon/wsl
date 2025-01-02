@@ -24,6 +24,7 @@ type CheckType int
 const (
 	CheckAssign CheckType = iota
 	CheckBreak
+	CheckCase
 	CheckContinue
 	CheckDecl
 	CheckDefer
@@ -51,6 +52,7 @@ func NewConfig() *Configuration {
 		Checks: map[CheckType]struct{}{
 			CheckAssign:             {},
 			CheckBreak:              {},
+			CheckCase:               {},
 			CheckContinue:           {},
 			CheckDecl:               {},
 			CheckDefer:              {},
@@ -368,7 +370,7 @@ func (w *WSL) CheckDecl(stmt *ast.DeclStmt, cursor *Cursor) {
 }
 
 func (w *WSL) CheckBlock(block *ast.BlockStmt) {
-	w.CheckUnnecessaryBlockLeadingNewline(block)
+	w.CheckBlockLeadingNewline(block)
 	w.CheckUnnecessaryBlockTrailingNewline(block)
 
 	cursor := NewCursor(-1, block.List)
@@ -425,6 +427,14 @@ func (w *WSL) CheckAssign(stmt *ast.AssignStmt, cursor *Cursor) {
 	}
 }
 
+func (w *WSL) CheckCase(stmt *ast.CaseClause, cursor *Cursor) {
+	w.CheckCaseLeadingNewline(stmt)
+
+	if _, ok := w.Config.Checks[CheckCase]; !ok {
+		return
+	}
+}
+
 func (w *WSL) CheckStmt(stmt ast.Stmt, cursor *Cursor) {
 	//nolint:gocritic // This is not commented out code, it's examples
 	switch s := stmt.(type) {
@@ -466,6 +476,7 @@ func (w *WSL) CheckStmt(stmt ast.Stmt, cursor *Cursor) {
 	case *ast.ExprStmt:
 		w.CheckExprStmt(s, cursor)
 	case *ast.CaseClause:
+		w.CheckCase(s, cursor)
 	case *ast.BlockStmt:
 		w.CheckBlock(s)
 	default:
@@ -511,21 +522,30 @@ func (w *WSL) numberOfStatementsAbove(cursor *Cursor) int {
 	return statementsWithoutNewlines
 }
 
-func (w *WSL) CheckUnnecessaryBlockLeadingNewline(body *ast.BlockStmt) {
+func (w *WSL) CheckBlockLeadingNewline(body *ast.BlockStmt) {
+	comments := ast.NewCommentMap(w.Fset, body, w.File.Comments)
+	w.CheckNewline(body.Lbrace, body.List, comments)
+}
+
+func (w *WSL) CheckCaseLeadingNewline(case_ *ast.CaseClause) {
+	comments := ast.NewCommentMap(w.Fset, case_, w.File.Comments)
+	w.CheckNewline(case_.Colon, case_.Body, comments)
+}
+
+func (w *WSL) CheckNewline(startPos token.Pos, body []ast.Stmt, comments ast.CommentMap) {
 	if _, ok := w.Config.Checks[CheckLeadingWhitespace]; !ok {
 		return
 	}
 
 	// No statements in the block, let's leave it as is.
-	if len(body.List) == 0 {
+	if len(body) == 0 {
 		return
 	}
 
-	lbraceLine := w.lineFor(body.Lbrace)
-	openingPos := body.Lbrace + 1
-	firstStmt := body.List[0].Pos()
+	openLine := w.lineFor(startPos)
+	openingPos := startPos + 1
+	firstStmt := body[0].Pos()
 
-	comments := ast.NewCommentMap(w.Fset, body, w.File.Comments)
 	for _, commentGroup := range comments {
 		for _, comment := range commentGroup {
 			// The comment starts after the current opening position (originally
@@ -545,11 +565,11 @@ func (w *WSL) CheckUnnecessaryBlockLeadingNewline(body *ast.BlockStmt) {
 					openingPos = comment.End()
 				// Opening position is the same as `{` and the comment is
 				// directly on the line after (no empty line)
-				case openingPosLine == lbraceLine &&
-					commentStartLine == lbraceLine+1:
+				case openingPosLine == openLine &&
+					commentStartLine == openLine+1:
 					openingPos = comment.End()
 				// The opening position has been updated, it's another comment.
-				case openingPosLine != lbraceLine:
+				case openingPosLine != openLine:
 					openingPos = comment.End()
 				// The opening position is still { and the comment is not
 				// directly above - it must be an empty line which shouldn't be

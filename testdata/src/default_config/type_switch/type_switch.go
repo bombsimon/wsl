@@ -47,7 +47,6 @@ func fn4(in any) {
 	case string:
 		return
 	default:
-
 		_ = a
 	}
 }

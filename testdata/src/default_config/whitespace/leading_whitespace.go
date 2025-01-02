@@ -106,3 +106,22 @@ func fn8(a string, b any, s []string) { // want "unnecessary whitespace decrease
 	_ = f
 	_ = f2
 }
+
+func fn9() {
+	switch {
+	case 1: // want "unnecessary whitespace decreases readability"
+
+		_ = 1
+
+	case 2:
+		// This is a comment // want "unnecessary whitespace decreases readability"
+
+		_ = 2
+
+	default: // want "unnecessary whitespace decreases readability"
+
+		_ = 3
+
+	}
+}
+
