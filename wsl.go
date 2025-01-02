@@ -32,6 +32,7 @@ const (
 	CheckGo
 	CheckIf
 	CheckLeadingWhitespace
+	CheckTrailingWhitespace
 	CheckRange
 	CheckReturn
 	CheckSwitch
@@ -48,20 +49,21 @@ func NewConfig() *Configuration {
 	return &Configuration{
 		Errcheck: false,
 		Checks: map[CheckType]struct{}{
-			CheckAssign:            {},
-			CheckBreak:             {},
-			CheckContinue:          {},
-			CheckDecl:              {},
-			CheckDefer:             {},
-			CheckExpr:              {},
-			CheckFor:               {},
-			CheckGo:                {},
-			CheckIf:                {},
-			CheckLeadingWhitespace: {},
-			CheckRange:             {},
-			CheckReturn:            {},
-			CheckSwitch:            {},
-			CheckTypeSwitch:        {},
+			CheckAssign:             {},
+			CheckBreak:              {},
+			CheckContinue:           {},
+			CheckDecl:               {},
+			CheckDefer:              {},
+			CheckExpr:               {},
+			CheckFor:                {},
+			CheckGo:                 {},
+			CheckIf:                 {},
+			CheckLeadingWhitespace:  {},
+			CheckTrailingWhitespace: {},
+			CheckRange:              {},
+			CheckReturn:             {},
+			CheckSwitch:             {},
+			CheckTypeSwitch:         {},
 		},
 	}
 }
@@ -367,6 +369,7 @@ func (w *WSL) CheckDecl(stmt *ast.DeclStmt, cursor *Cursor) {
 
 func (w *WSL) CheckBlock(block *ast.BlockStmt) {
 	w.CheckUnnecessaryBlockLeadingNewline(block)
+	w.CheckUnnecessaryBlockTrailingNewline(block)
 
 	cursor := NewCursor(-1, block.List)
 	for cursor.Next() {
@@ -563,6 +566,44 @@ func (w *WSL) CheckUnnecessaryBlockLeadingNewline(body *ast.BlockStmt) {
 
 	if openingPosLine != firstStmtLine-1 {
 		w.addError(openingPos, openingPos, firstStmt, MessageRemoveWhitespace)
+	}
+}
+
+func (w *WSL) CheckUnnecessaryBlockTrailingNewline(body *ast.BlockStmt) {
+	if _, ok := w.Config.Checks[CheckTrailingWhitespace]; !ok {
+		return
+	}
+
+	// No statements in the block, let's leave it as is.
+	if len(body.List) == 0 {
+		return
+	}
+
+	lastStmt := body.List[len(body.List)-1]
+
+	// We don't want to force removal of the empty line for the last case since
+	// it can be use for consistency and readability.
+	if _, ok := lastStmt.(*ast.CaseClause); ok {
+		return
+	}
+
+	closingPos := body.Rbrace
+	lastStmtOrComment := lastStmt.End()
+
+	comments := ast.NewCommentMap(w.Fset, body, w.File.Comments)
+	for _, commentGroup := range comments {
+		for _, comment := range commentGroup {
+			if comment.End() < closingPos && comment.Pos() > lastStmtOrComment {
+				lastStmtOrComment = comment.End()
+			}
+		}
+	}
+
+	closingPosLine := w.Fset.PositionFor(closingPos, false).Line
+	lastStmtLine := w.Fset.PositionFor(lastStmtOrComment, false).Line
+
+	if closingPosLine != lastStmtLine+1 {
+		w.addError(closingPos, lastStmtOrComment, closingPos, MessageRemoveWhitespace)
 	}
 }
 
