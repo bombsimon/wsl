@@ -1,5 +1,17 @@
 package testpkg
 
+type T struct {
+	I int
+}
+
+func NewT() *T {
+	return &T{}
+}
+
+func (*T) Fn() int {
+	return 1
+}
+
 func strictAppend() {
 	s := []string{}
 	s = append(s, "a")
@@ -18,4 +30,12 @@ func incDec() {
 	y := x
 
 	_ = y
+}
+
+func assignAndCall() {
+	t1 := NewT()
+	t2 := NewT()
+
+	t1.Fn()
+	t2.I = t1.Fn()
 }
