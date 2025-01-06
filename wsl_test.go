@@ -34,7 +34,7 @@ func TestWithConfig(t *testing.T) {
 		{
 			subdir: "if_errcheck",
 			configFn: func(config *Configuration) {
-				config.Errcheck = true
+				config.Checks[CheckErr] = struct{}{}
 			},
 		},
 		{

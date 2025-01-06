@@ -23,12 +23,14 @@ type CheckType int
 // the check.
 const (
 	CheckAssign CheckType = iota
+	CheckAppend
 	CheckBreak
 	CheckCase
 	CheckContinue
 	CheckDecl
 	CheckDefer
 	CheckExpr
+	CheckErr
 	CheckFor
 	CheckGo
 	CheckIf
@@ -41,16 +43,14 @@ const (
 )
 
 type Configuration struct {
-	// Require no newline between error assignment and error check.
-	Errcheck bool
-	Checks   map[CheckType]struct{}
+	Checks map[CheckType]struct{}
 }
 
 func NewConfig() *Configuration {
 	return &Configuration{
-		Errcheck: false,
 		Checks: map[CheckType]struct{}{
 			CheckAssign:             {},
+			CheckAppend:             {},
 			CheckBreak:              {},
 			CheckCase:               {},
 			CheckContinue:           {},
@@ -123,95 +123,110 @@ func (w *WSL) CheckCuddling(stmt ast.Node, cursor *Cursor, maxAllowedStatements 
 		cursor.Next() // Move forward again
 	}
 
+	numStmtsAbove := w.numberOfStatementsAbove(cursor)
+
+	// If we don't have any statements above, we only care about potential error
+	// cuddling (for if statements) so check that.
+	if numStmtsAbove == 0 {
+		w.checkError(numStmtsAbove, stmt, previousNode, previousIdents, cursor)
+		return
+	}
+
 	_, prevIsAssign := previousNode.(*ast.AssignStmt)
 	_, prevIsDecl := previousNode.(*ast.DeclStmt)
 	_, currIsDefer := stmt.(*ast.DeferStmt)
-	n := w.numberOfStatementsAbove(cursor)
 
-	if n > 0 {
-		if prevIsAssign || prevIsDecl || currIsDefer {
-			intersects := identIntersection(currentIdents, previousIdents)
+	// We're cuddled but not with an assign, declare or defer statement which is
+	// never allowed.
+	if !prevIsAssign && !prevIsDecl && !currIsDefer {
+		w.addError(cursor.Stmt().Pos(), cursor.Stmt().Pos(), cursor.Stmt().Pos(), MessageAddWhitespace)
+		return
+	}
 
-			// No idents above share name with one in the if statement.
-			if len(intersects) == 0 {
-				w.addError(
-					stmt.Pos(),
-					stmt.Pos(),
-					stmt.Pos(),
-					MessageAddWhitespace,
-				)
-			}
+	// TODO: Features:
+	// * Allow idents that is used first in the block
+	// * OR - if configured - anywhere in the block.
 
-			// Check the maximum number of allowed statements above, and if not
-			// disabled (-1) check that the previous one intersects with the
-			// current one.
-			if maxAllowedStatements != -1 && n > maxAllowedStatements {
-				// Idents on the line above exist in the current condition so that
-				// should remain cuddled.
-				if len(intersects) > 0 {
-					w.addError(
-						previousNode.Pos(),
-						previousNode.Pos(),
-						previousNode.Pos(),
-						MessageAddWhitespace,
-					)
-				}
-				// TODO: Features:
-				// * Allow idents that is used first in the block
-				// * OR - if configured - anywhere in the block.
-			}
-		} else {
-			// If we have a statement above and it's not an assignment or
-			// declaration we unconditionally add an error.
+	// We're cuddled but the line immediately above doesn't contain any
+	// variables used in this statement.
+	intersects := identIntersection(currentIdents, previousIdents)
+	if len(intersects) == 0 {
+		w.addError(stmt.Pos(), stmt.Pos(), stmt.Pos(), MessageAddWhitespace)
+		return
+	}
+
+	// Check the maximum number of allowed statements above, and if not
+	// disabled (-1) check that the previous one intersects with the
+	// current one.
+	if maxAllowedStatements != -1 && numStmtsAbove > maxAllowedStatements {
+		// Idents on the line above exist in the current condition so that
+		// should remain cuddled.
+		if len(intersects) > 0 {
 			w.addError(
-				cursor.Stmt().Pos(),
-				cursor.Stmt().Pos(),
-				cursor.Stmt().Pos(),
+				previousNode.Pos(),
+				previousNode.Pos(),
+				previousNode.Pos(),
 				MessageAddWhitespace,
 			)
 		}
 	}
+}
 
-	if _, ok := stmt.(*ast.IfStmt); !ok {
+func (w *WSL) checkError(
+	stmtsAbove int,
+	ifStmt ast.Node,
+	previousNode ast.Node,
+	previousIdents []*ast.Ident,
+	cursor *Cursor,
+) {
+	if _, ok := ifStmt.(*ast.IfStmt); !ok {
 		return
 	}
 
-	if w.Config.Errcheck && n == 0 && len(previousIdents) > 0 {
-		if slices.ContainsFunc(previousIdents, func(ident *ast.Ident) bool {
-			return w.implementsErr(ident)
-		}) {
-			w.addError(
-				stmt.Pos(),
-				previousNode.End(),
-				stmt.Pos(),
-				MessageRemoveWhitespace,
-			)
+	if _, ok := w.Config.Checks[CheckErr]; !ok {
+		return
+	}
 
-			// If we add the error at the same position but with a different fix
-			// range, only the fix range will be updated.
-			//
-			//   a := 1
-			//   err := fn()
-			//
-			//   if err != nil {}
-			//
-			// Should become
-			//
-			//   a := 1
-			//
-			//   err := fn()
-			//   if err != nil {}
-			cursor.Previous()
+	if stmtsAbove > 0 || len(previousIdents) == 0 {
+		return
+	}
 
-			if w.numberOfStatementsAbove(cursor) > 0 {
-				w.addError(
-					stmt.Pos(),
-					previousNode.Pos(),
-					previousNode.Pos(),
-					MessageAddWhitespace,
-				)
-			}
-		}
+	if !slices.ContainsFunc(previousIdents, func(ident *ast.Ident) bool {
+		return w.implementsErr(ident)
+	}) {
+		return
+	}
+
+	w.addError(
+		ifStmt.Pos(),
+		previousNode.End(),
+		ifStmt.Pos(),
+		MessageRemoveWhitespace,
+	)
+
+	// If we add the error at the same position but with a different fix
+	// range, only the fix range will be updated.
+	//
+	//   a := 1
+	//   err := fn()
+	//
+	//   if err != nil {}
+	//
+	// Should become
+	//
+	//   a := 1
+	//
+	//   err := fn()
+	//   if err != nil {}
+	cursor.Previous()
+
+	if w.numberOfStatementsAbove(cursor) > 0 {
+		w.addError(
+			ifStmt.Pos(),
+			previousNode.Pos(),
+			previousNode.Pos(),
+			MessageAddWhitespace,
+		)
 	}
 }
 
@@ -371,7 +386,7 @@ func (w *WSL) CheckDecl(stmt *ast.DeclStmt, cursor *Cursor) {
 
 func (w *WSL) CheckBlock(block *ast.BlockStmt) {
 	w.CheckBlockLeadingNewline(block)
-	w.CheckUnnecessaryBlockTrailingNewline(block)
+	w.CheckTrailingNewline(block)
 
 	cursor := NewCursor(-1, block.List)
 	for cursor.Next() {
@@ -407,23 +422,65 @@ func (w *WSL) CheckReturn(stmt *ast.ReturnStmt, cursor *Cursor) {
 }
 
 func (w *WSL) CheckAssign(stmt *ast.AssignStmt, cursor *Cursor) {
-	if _, ok := w.Config.Checks[CheckAssign]; ok {
-		previousNode := cursor.PreviousNode()
-		_, prevIsAssign := previousNode.(*ast.AssignStmt)
-		_, prevIsDecl := previousNode.(*ast.DeclStmt)
+	defer func() {
+		for _, expr := range stmt.Rhs {
+			w.CheckExpr(expr, cursor)
+		}
+	}()
 
-		if w.numberOfStatementsAbove(cursor) > 0 && previousNode != nil && !prevIsAssign && !prevIsDecl {
-			w.addError(
-				stmt.Pos(),
-				stmt.Pos(),
-				stmt.Pos(),
-				MessageAddWhitespace,
-			)
+	if _, ok := w.Config.Checks[CheckAssign]; !ok {
+		return
+	}
+
+	previousNode := cursor.PreviousNode()
+	_, prevIsAssign := previousNode.(*ast.AssignStmt)
+	_, prevIsDecl := previousNode.(*ast.DeclStmt)
+
+	if w.numberOfStatementsAbove(cursor) > 0 && previousNode != nil && !prevIsAssign && !prevIsDecl {
+		w.addError(
+			stmt.Pos(),
+			stmt.Pos(),
+			stmt.Pos(),
+			MessageAddWhitespace,
+		)
+	}
+
+	w.strictAppendCheck(stmt, previousNode)
+}
+
+func (w *WSL) strictAppendCheck(stmt *ast.AssignStmt, previousNode ast.Node) {
+	if _, ok := w.Config.Checks[CheckAppend]; !ok {
+		return
+	}
+
+	var appendNode *ast.CallExpr
+	for _, expr := range stmt.Rhs {
+		e, ok := expr.(*ast.CallExpr)
+		if !ok {
+			continue
+		}
+
+		if f, ok := e.Fun.(*ast.Ident); ok && f.Name == "append" {
+			appendNode = e
+			break
 		}
 	}
 
-	for _, expr := range stmt.Rhs {
-		w.CheckExpr(expr, cursor)
+	if appendNode == nil {
+		return
+	}
+
+	appendIdents := allIdents(appendNode)
+	previousIdents := allIdents(previousNode)
+	intersects := identIntersection(appendIdents, previousIdents)
+
+	if len(intersects) == 0 {
+		w.addError(
+			stmt.Pos(),
+			stmt.Pos(),
+			stmt.Pos(),
+			MessageAddWhitespace,
+		)
 	}
 }
 
@@ -432,6 +489,11 @@ func (w *WSL) CheckCase(stmt *ast.CaseClause, cursor *Cursor) {
 
 	if _, ok := w.Config.Checks[CheckCase]; !ok {
 		return
+	}
+
+	cursor = NewCursor(-1, stmt.Body)
+	for cursor.Next() {
+		w.CheckStmt(cursor.Stmt(), cursor)
 	}
 }
 
@@ -473,10 +535,13 @@ func (w *WSL) CheckStmt(stmt ast.Stmt, cursor *Cursor) {
 	// go func() {}
 	case *ast.GoStmt:
 		w.CheckGo(s, cursor)
+	// e.g. someFn()
 	case *ast.ExprStmt:
 		w.CheckExprStmt(s, cursor)
+	// case:
 	case *ast.CaseClause:
 		w.CheckCase(s, cursor)
+	// { }
 	case *ast.BlockStmt:
 		w.CheckBlock(s)
 	default:
@@ -524,15 +589,15 @@ func (w *WSL) numberOfStatementsAbove(cursor *Cursor) int {
 
 func (w *WSL) CheckBlockLeadingNewline(body *ast.BlockStmt) {
 	comments := ast.NewCommentMap(w.Fset, body, w.File.Comments)
-	w.CheckNewline(body.Lbrace, body.List, comments)
+	w.CheckLeadingNewline(body.Lbrace, body.List, comments)
 }
 
 func (w *WSL) CheckCaseLeadingNewline(case_ *ast.CaseClause) {
 	comments := ast.NewCommentMap(w.Fset, case_, w.File.Comments)
-	w.CheckNewline(case_.Colon, case_.Body, comments)
+	w.CheckLeadingNewline(case_.Colon, case_.Body, comments)
 }
 
-func (w *WSL) CheckNewline(startPos token.Pos, body []ast.Stmt, comments ast.CommentMap) {
+func (w *WSL) CheckLeadingNewline(startPos token.Pos, body []ast.Stmt, comments ast.CommentMap) {
 	if _, ok := w.Config.Checks[CheckLeadingWhitespace]; !ok {
 		return
 	}
@@ -589,7 +654,7 @@ func (w *WSL) CheckNewline(startPos token.Pos, body []ast.Stmt, comments ast.Com
 	}
 }
 
-func (w *WSL) CheckUnnecessaryBlockTrailingNewline(body *ast.BlockStmt) {
+func (w *WSL) CheckTrailingNewline(body *ast.BlockStmt) {
 	if _, ok := w.Config.Checks[CheckTrailingWhitespace]; !ok {
 		return
 	}
