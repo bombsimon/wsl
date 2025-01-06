@@ -108,8 +108,20 @@ func (w *WSL) Run() {
 }
 
 func (w *WSL) CheckCuddling(stmt ast.Node, cursor *Cursor, maxAllowedStatements int) {
-	reset := cursor.Save()
-	defer reset()
+	w.checkCuddlingWithDecl(stmt, cursor, maxAllowedStatements, true)
+}
+
+func (w *WSL) CheckCuddlingNoDecl(stmt ast.Node, cursor *Cursor, maxAllowedStatements int) {
+	w.checkCuddlingWithDecl(stmt, cursor, maxAllowedStatements, false)
+}
+
+func (w *WSL) checkCuddlingWithDecl(
+	stmt ast.Node,
+	cursor *Cursor,
+	maxAllowedStatements int,
+	declIsValid bool,
+) {
+	defer cursor.Save()()
 
 	currentIdents := allIdents(cursor.Stmt())
 	previousIdents := []*ast.Ident{}
@@ -136,6 +148,10 @@ func (w *WSL) CheckCuddling(stmt ast.Node, cursor *Cursor, maxAllowedStatements 
 	_, prevIsDecl := previousNode.(*ast.DeclStmt)
 	_, prevIsIncDec := previousNode.(*ast.IncDecStmt)
 	_, currIsDefer := stmt.(*ast.DeferStmt)
+
+	if !declIsValid {
+		prevIsDecl = false
+	}
 
 	// We're cuddled but not with an assign, declare or defer statement which is
 	// never allowed.
@@ -402,12 +418,7 @@ func (w *WSL) CheckBranch(stmt *ast.BranchStmt, cursor *Cursor) {
 		return
 	}
 
-	w.addError(
-		stmt.Pos(),
-		stmt.Pos(),
-		stmt.Pos(),
-		MessageAddWhitespace,
-	)
+	w.addError(stmt.Pos(), stmt.Pos(), stmt.Pos(), MessageAddWhitespace)
 }
 
 func (w *WSL) CheckDecl(stmt *ast.DeclStmt, cursor *Cursor) {
@@ -419,7 +430,7 @@ func (w *WSL) CheckDecl(stmt *ast.DeclStmt, cursor *Cursor) {
 		return
 	}
 
-	w.CheckCuddling(stmt, cursor, 1)
+	w.CheckCuddlingNoDecl(stmt, cursor, 1)
 }
 
 func (w *WSL) CheckBlock(block *ast.BlockStmt) {
@@ -428,7 +439,6 @@ func (w *WSL) CheckBlock(block *ast.BlockStmt) {
 
 	cursor := NewCursor(-1, block.List)
 	for cursor.Next() {
-		// fmt.Printf("%d: %T\n", cursor.currentIdx, cursor.Stmt())
 		w.CheckStmt(cursor.Stmt(), cursor)
 	}
 }
@@ -603,8 +613,7 @@ func (w *WSL) CheckExpr(expr ast.Expr, cursor *Cursor) {
 // numberOfStatementsAbove will find out how many lines above the cursor's
 // current statement there is without any newlines between.
 func (w *WSL) numberOfStatementsAbove(cursor *Cursor) int {
-	reset := cursor.Save()
-	defer reset()
+	defer cursor.Save()()
 
 	statementsWithoutNewlines := 0
 	currentStmtStartLine := w.lineFor(cursor.Stmt().Pos())
@@ -784,6 +793,10 @@ func allIdents(node ast.Node) []*ast.Ident {
 	case *ast.ValueSpec:
 		for _, name := range n.Names {
 			idents = append(idents, allIdents(name)...)
+		}
+
+		for _, value := range n.Values {
+			idents = append(idents, allIdents(value)...)
 		}
 	case *ast.AssignStmt:
 		// TODO: For TypeSwitchStatements, this can be a false positive by

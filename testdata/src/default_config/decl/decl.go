@@ -10,3 +10,8 @@ func fn1() {
 	_ = a
 	_ = b
 }
+
+func fn2() {
+	var a = 1
+	var b = a // want "missing whitespace decreases readability"
+}
