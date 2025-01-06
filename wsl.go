@@ -134,11 +134,12 @@ func (w *WSL) CheckCuddling(stmt ast.Node, cursor *Cursor, maxAllowedStatements 
 
 	_, prevIsAssign := previousNode.(*ast.AssignStmt)
 	_, prevIsDecl := previousNode.(*ast.DeclStmt)
+	_, prevIsIncDec := previousNode.(*ast.IncDecStmt)
 	_, currIsDefer := stmt.(*ast.DeferStmt)
 
 	// We're cuddled but not with an assign, declare or defer statement which is
 	// never allowed.
-	if !prevIsAssign && !prevIsDecl && !currIsDefer {
+	if !prevIsAssign && !prevIsDecl && !currIsDefer && !prevIsIncDec {
 		w.addError(cursor.Stmt().Pos(), cursor.Stmt().Pos(), cursor.Stmt().Pos(), MessageAddWhitespace)
 		return
 	}
@@ -169,6 +170,25 @@ func (w *WSL) CheckCuddling(stmt ast.Node, cursor *Cursor, maxAllowedStatements 
 				MessageAddWhitespace,
 			)
 		}
+	}
+}
+
+func (w *WSL) CheckCuddlingWithoutIntersection(stmt ast.Node, cursor *Cursor) {
+	previousNode := cursor.PreviousNode()
+
+	_, prevIsAssign := previousNode.(*ast.AssignStmt)
+	_, prevIsDecl := previousNode.(*ast.DeclStmt)
+	_, prevIsIncDec := previousNode.(*ast.IncDecStmt)
+
+	prevIsValidType := previousNode == nil || prevIsAssign || prevIsDecl || prevIsIncDec
+
+	if w.numberOfStatementsAbove(cursor) > 0 && !prevIsValidType {
+		w.addError(
+			stmt.Pos(),
+			stmt.Pos(),
+			stmt.Pos(),
+			MessageAddWhitespace,
+		)
 	}
 }
 
@@ -432,26 +452,22 @@ func (w *WSL) CheckAssign(stmt *ast.AssignStmt, cursor *Cursor) {
 		return
 	}
 
-	previousNode := cursor.PreviousNode()
-	_, prevIsAssign := previousNode.(*ast.AssignStmt)
-	_, prevIsDecl := previousNode.(*ast.DeclStmt)
-
-	if w.numberOfStatementsAbove(cursor) > 0 && previousNode != nil && !prevIsAssign && !prevIsDecl {
-		w.addError(
-			stmt.Pos(),
-			stmt.Pos(),
-			stmt.Pos(),
-			MessageAddWhitespace,
-		)
-	}
-
-	w.strictAppendCheck(stmt, previousNode)
+	w.CheckCuddlingWithoutIntersection(stmt, cursor)
+	w.strictAppendCheck(stmt, cursor)
 }
 
-func (w *WSL) strictAppendCheck(stmt *ast.AssignStmt, previousNode ast.Node) {
+func (w *WSL) CheckIncDec(stmt *ast.IncDecStmt, cursor *Cursor) {
+	defer w.CheckExpr(stmt.X, cursor)
+
+	w.CheckCuddlingWithoutIntersection(stmt, cursor)
+}
+
+func (w *WSL) strictAppendCheck(stmt *ast.AssignStmt, cursor *Cursor) {
 	if _, ok := w.Config.Checks[CheckAppend]; !ok {
 		return
 	}
+
+	previousNode := cursor.PreviousNode()
 
 	var appendNode *ast.CallExpr
 	for _, expr := range stmt.Rhs {
@@ -529,6 +545,7 @@ func (w *WSL) CheckStmt(stmt ast.Stmt, cursor *Cursor) {
 		w.CheckAssign(s, cursor)
 	// a++ / a--
 	case *ast.IncDecStmt:
+		w.CheckIncDec(s, cursor)
 	// defer func() {}
 	case *ast.DeferStmt:
 		w.CheckDefer(s, cursor)

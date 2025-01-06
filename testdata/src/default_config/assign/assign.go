@@ -10,3 +10,12 @@ func strictAppend() {
 	s = append(s, "d") // want "missing whitespace decreases readability"
 	s = append(s, y)
 }
+
+func incDec() {
+	x := 1
+	x++
+	x--
+	y := x
+
+	_ = y
+}
