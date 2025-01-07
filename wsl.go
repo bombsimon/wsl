@@ -42,6 +42,24 @@ const (
 	CheckTypeSwitch
 )
 
+/*
+Configuration migration
+
+- StrictAppend                     | Deprecate. Replaced with `CheckAppend`
+- AllowAssignAndCallCuddle         | TBD deprecate. Implemented, not configurable
+- AllowAssignAndAnythingCuddle     | Deprecated. Replaced with `CheckAssign`
+- AllowMultiLineAssignCuddle       | Deprecate.
+- ForceCaseTrailingWhitespaceLimit | TODO
+- AllowTrailingComment             | TBD deprecate. Should be seen same as leading (allowed)
+- AllowSeparatedLeadingComment     | Deprecate. Always allowed.
+- AllowCuddleDeclaration           | Deprecate. Use `CheckDecl` instead.
+- AllowCuddleWithCalls             | TBD deprecate. Should not be needed. Was added to support mutex unlocking
+- AllowCuddleWithRHS               | TBD deprecate. Should not be needed. Not clear why separate from above
+- ForceCuddleErrCheckAndAssign     | Deprecate. Replaced with `CheckErr`
+- ErrorVariableNames               | Deprecate. We're now looking if the variable implements the error interface
+- ForceExclusiveShortDeclarations  | TODO
+- IncludeGenerated                 | TODO
+*/
 type Configuration struct {
 	Checks map[CheckType]struct{}
 }
@@ -149,6 +167,9 @@ func (w *WSL) checkCuddlingWithDecl(
 	_, prevIsIncDec := previousNode.(*ast.IncDecStmt)
 	_, currIsDefer := stmt.(*ast.DeferStmt)
 
+	// Most of the time we allow cuddling with declarations (var) if it's just
+	// one statement but not always so this can be disabled, e.g. for
+	// delclarations themselves.
 	if !declIsValid {
 		prevIsDecl = false
 	}
@@ -196,6 +217,13 @@ func (w *WSL) CheckCuddlingWithoutIntersection(stmt ast.Node, cursor *Cursor) {
 	_, prevIsDecl := previousNode.(*ast.DeclStmt)
 	_, prevIsIncDec := previousNode.(*ast.IncDecStmt)
 	_, currIsAssign := stmt.(*ast.AssignStmt)
+
+	// Most of the time we allow cuddling with declarations (var) if it's just
+	// one statement but not always so this can be disabled, e.g. for
+	// delclarations themselves.
+	if _, ok := w.Config.Checks[CheckDecl]; ok {
+		prevIsDecl = false
+	}
 
 	prevIsValidType := previousNode == nil || prevIsAssign || prevIsDecl || prevIsIncDec
 
