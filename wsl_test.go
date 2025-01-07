@@ -34,13 +34,13 @@ func TestWithConfig(t *testing.T) {
 		{
 			subdir: "if_errcheck",
 			configFn: func(config *Configuration) {
-				config.Checks[CheckErr] = struct{}{}
+				config.Checks.Add(CheckErr)
 			},
 		},
 		{
 			subdir: "no_check_decl",
 			configFn: func(config *Configuration) {
-				delete(config.Checks, CheckDecl)
+				config.Checks.Remove(CheckDecl)
 			},
 		},
 	} {

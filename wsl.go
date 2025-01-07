@@ -16,78 +16,6 @@ const (
 	MessageRemoveWhitespace = "unnecessary whitespace decreases readability"
 )
 
-// CheckType is a type that represents a checker to run.
-type CheckType int
-
-// Each checker is represented by a CheckType that is used to enable or disable
-// the check.
-const (
-	CheckAssign CheckType = iota
-	CheckAppend
-	CheckBreak
-	CheckCase
-	CheckContinue
-	CheckDecl
-	CheckDefer
-	CheckExpr
-	CheckErr
-	CheckFor
-	CheckGo
-	CheckIf
-	CheckLeadingWhitespace
-	CheckTrailingWhitespace
-	CheckRange
-	CheckReturn
-	CheckSwitch
-	CheckTypeSwitch
-)
-
-/*
-Configuration migration
-
-- StrictAppend                     | Deprecate. Replaced with `CheckAppend`
-- AllowAssignAndCallCuddle         | TBD deprecate. Implemented, not configurable
-- AllowAssignAndAnythingCuddle     | Deprecated. Replaced with `CheckAssign`
-- AllowMultiLineAssignCuddle       | Deprecate.
-- ForceCaseTrailingWhitespaceLimit | TODO
-- AllowTrailingComment             | TBD deprecate. Should be seen same as leading (allowed)
-- AllowSeparatedLeadingComment     | Deprecate. Always allowed.
-- AllowCuddleDeclaration           | Deprecate. Use `CheckDecl` instead.
-- AllowCuddleWithCalls             | TBD deprecate. Should not be needed. Was added to support mutex unlocking
-- AllowCuddleWithRHS               | TBD deprecate. Should not be needed. Not clear why separate from above
-- ForceCuddleErrCheckAndAssign     | Deprecate. Replaced with `CheckErr`
-- ErrorVariableNames               | Deprecate. We're now looking if the variable implements the error interface
-- ForceExclusiveShortDeclarations  | TODO
-- IncludeGenerated                 | TODO
-*/
-type Configuration struct {
-	Checks map[CheckType]struct{}
-}
-
-func NewConfig() *Configuration {
-	return &Configuration{
-		Checks: map[CheckType]struct{}{
-			CheckAssign:             {},
-			CheckAppend:             {},
-			CheckBreak:              {},
-			CheckCase:               {},
-			CheckContinue:           {},
-			CheckDecl:               {},
-			CheckDefer:              {},
-			CheckExpr:               {},
-			CheckFor:                {},
-			CheckGo:                 {},
-			CheckIf:                 {},
-			CheckLeadingWhitespace:  {},
-			CheckTrailingWhitespace: {},
-			CheckRange:              {},
-			CheckReturn:             {},
-			CheckSwitch:             {},
-			CheckTypeSwitch:         {},
-		},
-	}
-}
-
 type FixRange struct {
 	FixRangeStart token.Pos
 	FixRangeEnd   token.Pos
@@ -200,12 +128,7 @@ func (w *WSL) checkCuddlingWithDecl(
 		// Idents on the line above exist in the current condition so that
 		// should remain cuddled.
 		if len(intersects) > 0 {
-			w.addError(
-				previousNode.Pos(),
-				previousNode.Pos(),
-				previousNode.Pos(),
-				MessageAddWhitespace,
-			)
+			w.addError(previousNode.Pos(), previousNode.Pos(), previousNode.Pos(), MessageAddWhitespace)
 		}
 	}
 }
@@ -227,7 +150,8 @@ func (w *WSL) CheckCuddlingWithoutIntersection(stmt ast.Node, cursor *Cursor) {
 
 	prevIsValidType := previousNode == nil || prevIsAssign || prevIsDecl || prevIsIncDec
 
-	// TODO: This is `allow-assign-and-call`, should we deprecate it?
+	// TODO: This is `allow-assign-and-call`/`AllowAssignAndCallCuddle`, should
+	// we deprecate it?
 	// ref: https://github.com/bombsimon/wsl/blob/52299dcd5c1c2a8baf77b4be4508937486d43656/wsl.go#L559-L563
 	// 1. It's not actually checking call - just that we have intersections
 	// 2. It's a bit too niche I think, either we support assign and call (or
@@ -245,12 +169,7 @@ func (w *WSL) CheckCuddlingWithoutIntersection(stmt ast.Node, cursor *Cursor) {
 	}
 
 	if w.numberOfStatementsAbove(cursor) > 0 && !prevIsValidType {
-		w.addError(
-			stmt.Pos(),
-			stmt.Pos(),
-			stmt.Pos(),
-			MessageAddWhitespace,
-		)
+		w.addError(stmt.Pos(), stmt.Pos(), stmt.Pos(), MessageAddWhitespace)
 	}
 }
 
@@ -279,12 +198,7 @@ func (w *WSL) checkError(
 		return
 	}
 
-	w.addError(
-		ifStmt.Pos(),
-		previousNode.End(),
-		ifStmt.Pos(),
-		MessageRemoveWhitespace,
-	)
+	w.addError(ifStmt.Pos(), previousNode.End(), ifStmt.Pos(), MessageRemoveWhitespace)
 
 	// If we add the error at the same position but with a different fix
 	// range, only the fix range will be updated.
@@ -303,12 +217,7 @@ func (w *WSL) checkError(
 	cursor.Previous()
 
 	if w.numberOfStatementsAbove(cursor) > 0 {
-		w.addError(
-			ifStmt.Pos(),
-			previousNode.Pos(),
-			previousNode.Pos(),
-			MessageAddWhitespace,
-		)
+		w.addError(ifStmt.Pos(), previousNode.Pos(), previousNode.Pos(), MessageAddWhitespace)
 	}
 }
 
@@ -489,12 +398,7 @@ func (w *WSL) CheckReturn(stmt *ast.ReturnStmt, cursor *Cursor) {
 		return
 	}
 
-	w.addError(
-		stmt.Pos(),
-		stmt.Pos(),
-		stmt.Pos(),
-		MessageAddWhitespace,
-	)
+	w.addError(stmt.Pos(), stmt.Pos(), stmt.Pos(), MessageAddWhitespace)
 }
 
 func (w *WSL) CheckAssign(stmt *ast.AssignStmt, cursor *Cursor) {
@@ -547,12 +451,7 @@ func (w *WSL) strictAppendCheck(stmt *ast.AssignStmt, cursor *Cursor) {
 	intersects := identIntersection(appendIdents, previousIdents)
 
 	if len(intersects) == 0 {
-		w.addError(
-			stmt.Pos(),
-			stmt.Pos(),
-			stmt.Pos(),
-			MessageAddWhitespace,
-		)
+		w.addError(stmt.Pos(), stmt.Pos(), stmt.Pos(), MessageAddWhitespace)
 	}
 }
 
