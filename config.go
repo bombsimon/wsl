@@ -33,6 +33,7 @@ const (
 	CheckReturn
 	CheckSwitch
 	CheckTypeSwitch
+	CheckWholeBlock
 )
 
 /*
@@ -127,6 +128,7 @@ func DefaultChecks() CheckSet {
 func AllChecks() CheckSet {
 	c := DefaultChecks()
 	c.Add(CheckErr)
+	c.Add(CheckWholeBlock)
 
 	return c
 }
@@ -179,6 +181,8 @@ func CheckFromString(s string) (CheckType, error) {
 		return CheckSwitch, nil
 	case "type-switch":
 		return CheckTypeSwitch, nil
+	case "whole-block":
+		return CheckWholeBlock, nil
 	default:
 		return CheckInvalid, fmt.Errorf("invalid check '%s'", s)
 	}

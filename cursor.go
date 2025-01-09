@@ -10,12 +10,20 @@ var ErrCursourOutObFounds = errors.New("out of bounds")
 type Cursor struct {
 	currentIdx int
 	statements []ast.Stmt
+	idents     map[string]struct{}
 }
 
-func NewCursor(i int, statements []ast.Stmt) *Cursor {
+func NewCursor(statements []ast.Stmt) *Cursor {
 	return &Cursor{
-		currentIdx: i,
+		currentIdx: -1,
 		statements: statements,
+		idents:     make(map[string]struct{}),
+	}
+}
+
+func (c *Cursor) AddIdents(idents []*ast.Ident) {
+	for _, i := range idents {
+		c.idents[i.Name] = struct{}{}
 	}
 }
 

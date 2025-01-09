@@ -8,7 +8,7 @@ import (
 )
 
 func TestSavestate(t *testing.T) {
-	cursor := NewCursor(0, []ast.Stmt{
+	cursor := NewCursor([]ast.Stmt{
 		&ast.AssignStmt{},
 		&ast.AssignStmt{},
 		&ast.AssignStmt{},
@@ -36,14 +36,14 @@ func TestSavestate(t *testing.T) {
 			cursor.Next()
 			cursor.Next()
 
-			assert.Equal(t, 6, cursor.currentIdx)
+			assert.Equal(t, 5, cursor.currentIdx)
 		}()
 
-		assert.Equal(t, 4, cursor.currentIdx)
+		assert.Equal(t, 3, cursor.currentIdx)
 	}()
 
-	assert.Equal(t, 2, cursor.currentIdx)
+	assert.Equal(t, 1, cursor.currentIdx)
 
 	reset()
-	assert.Equal(t, 0, cursor.currentIdx)
+	assert.Equal(t, -1, cursor.currentIdx)
 }

@@ -43,6 +43,12 @@ func TestWithConfig(t *testing.T) {
 				config.Checks.Remove(CheckDecl)
 			},
 		},
+		{
+			subdir: "whole_block",
+			configFn: func(config *Configuration) {
+				config.Checks.Add(CheckWholeBlock)
+			},
+		},
 	} {
 		t.Run(tc.subdir, func(t *testing.T) {
 			config := NewConfig()

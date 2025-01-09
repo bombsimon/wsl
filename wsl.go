@@ -111,7 +111,21 @@ func (w *WSL) checkCuddlingWithDecl(
 
 	// TODO: Features:
 	// * Allow idents that is used first in the block
-	// * OR - if configured - anywhere in the block.
+
+	// FEATURE: Enable identifier used anywhere in block.
+	// The cursor has already parsed the block we're comparing so let's see if
+	// the ident is used anywhere in the block.
+	if _, ok := w.Config.Checks[CheckWholeBlock]; ok {
+		anyIntersects := identsInMap(previousIdents, cursor.idents)
+		if len(anyIntersects) > 0 {
+			// fmt.Printf("Valid since we have %v any in the block\n", previousIdents)
+			if numStmtsAbove > maxAllowedStatements {
+				w.addError(previousNode.Pos(), previousNode.Pos(), previousNode.Pos(), MessageAddWhitespace)
+			}
+
+			return
+		}
+	}
 
 	// We're cuddled but the line immediately above doesn't contain any
 	// variables used in this statement.
@@ -230,12 +244,8 @@ func (w *WSL) CheckFunc(funcDecl *ast.FuncDecl) {
 }
 
 func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor) {
-	if _, ok := w.Config.Checks[CheckIf]; ok {
-		w.CheckCuddling(stmt, cursor, 1)
-	}
-
 	// if
-	w.CheckBlock(stmt.Body)
+	cursor.idents = w.CheckBlock(stmt.Body)
 
 	switch v := stmt.Else.(type) {
 	// else-if
@@ -243,7 +253,15 @@ func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor) {
 		w.CheckIf(v, cursor)
 	// else
 	case *ast.BlockStmt:
-		w.CheckBlock(v)
+		elseIdents := w.CheckBlock(v)
+
+		for k, v := range elseIdents {
+			cursor.idents[k] = v
+		}
+	}
+
+	if _, ok := w.Config.Checks[CheckIf]; ok {
+		w.CheckCuddling(stmt, cursor, 1)
 	}
 }
 
@@ -258,7 +276,7 @@ func (w *WSL) CheckFor(stmt *ast.ForStmt, cursor *Cursor) {
 }
 
 func (w *WSL) CheckRange(stmt *ast.RangeStmt, cursor *Cursor) {
-	defer w.CheckBlock(stmt.Body)
+	cursor.idents = w.CheckBlock(stmt.Body)
 
 	if _, ok := w.Config.Checks[CheckRange]; !ok {
 		return
@@ -268,7 +286,7 @@ func (w *WSL) CheckRange(stmt *ast.RangeStmt, cursor *Cursor) {
 }
 
 func (w *WSL) CheckSwitch(stmt *ast.SwitchStmt, cursor *Cursor) {
-	defer w.CheckBlock(stmt.Body)
+	cursor.idents = w.CheckBlock(stmt.Body)
 
 	if _, ok := w.Config.Checks[CheckSwitch]; !ok {
 		return
@@ -278,7 +296,7 @@ func (w *WSL) CheckSwitch(stmt *ast.SwitchStmt, cursor *Cursor) {
 }
 
 func (w *WSL) CheckTypeSwitch(stmt *ast.TypeSwitchStmt, cursor *Cursor) {
-	defer w.CheckBlock(stmt.Body)
+	cursor.idents = w.CheckBlock(stmt.Body)
 
 	if _, ok := w.Config.Checks[CheckTypeSwitch]; !ok {
 		return
@@ -370,14 +388,17 @@ func (w *WSL) CheckDecl(stmt *ast.DeclStmt, cursor *Cursor) {
 	w.CheckCuddlingNoDecl(stmt, cursor, 1)
 }
 
-func (w *WSL) CheckBlock(block *ast.BlockStmt) {
+func (w *WSL) CheckBlock(block *ast.BlockStmt) map[string]struct{} {
 	w.CheckBlockLeadingNewline(block)
 	w.CheckTrailingNewline(block)
 
-	cursor := NewCursor(-1, block.List)
+	cursor := NewCursor(block.List)
 	for cursor.Next() {
 		w.CheckStmt(cursor.Stmt(), cursor)
+		cursor.AddIdents(allIdents(cursor.Stmt()))
 	}
+
+	return cursor.idents
 }
 
 func (w *WSL) CheckReturn(stmt *ast.ReturnStmt, cursor *Cursor) {
@@ -462,7 +483,7 @@ func (w *WSL) CheckCase(stmt *ast.CaseClause, cursor *Cursor) {
 		return
 	}
 
-	cursor = NewCursor(-1, stmt.Body)
+	cursor = NewCursor(stmt.Body)
 	for cursor.Next() {
 		w.CheckStmt(cursor.Stmt(), cursor)
 	}
@@ -515,7 +536,7 @@ func (w *WSL) CheckStmt(stmt ast.Stmt, cursor *Cursor) {
 		w.CheckCase(s, cursor)
 	// { }
 	case *ast.BlockStmt:
-		w.CheckBlock(s)
+		cursor.idents = w.CheckBlock(s)
 	default:
 		fmt.Printf("Not implemented stmt: %T\n", s)
 	}
@@ -525,7 +546,7 @@ func (w *WSL) CheckExpr(expr ast.Expr, cursor *Cursor) {
 	switch s := expr.(type) {
 	// func() {}
 	case *ast.FuncLit:
-		w.CheckBlock(s.Body)
+		cursor.idents = w.CheckBlock(s.Body)
 	// Call(args...)
 	case *ast.CallExpr:
 		for _, e := range s.Args {
@@ -778,7 +799,17 @@ func allIdents(node ast.Node) []*ast.Ident {
 		for _, elt := range n.Elts {
 			idents = append(idents, allIdents(elt)...)
 		}
-	case *ast.BasicLit, *ast.FuncLit, *ast.IncDecStmt, *ast.BranchStmt,
+	case *ast.IncDecStmt:
+		idents = allIdents(n.X)
+	case *ast.CaseClause:
+		for _, expr := range n.List {
+			idents = append(idents, allIdents(expr)...)
+		}
+	case *ast.ReturnStmt:
+		for _, r := range n.Results {
+			idents = append(idents, allIdents(r)...)
+		}
+	case *ast.BasicLit, *ast.FuncLit, *ast.BranchStmt,
 		*ast.ArrayType:
 	default:
 		spew.Dump(node)
@@ -796,6 +827,18 @@ func identIntersection(a, b []*ast.Ident) []*ast.Ident {
 			if as.Name == bs.Name {
 				intersects = append(intersects, as)
 			}
+		}
+	}
+
+	return intersects
+}
+
+func identsInMap(a []*ast.Ident, m map[string]struct{}) []*ast.Ident {
+	intersects := []*ast.Ident{}
+
+	for _, as := range a {
+		if _, ok := m[as.Name]; ok {
+			intersects = append(intersects, as)
 		}
 	}
 

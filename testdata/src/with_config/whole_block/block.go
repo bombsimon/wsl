@@ -1,0 +1,39 @@
+package testpkg
+
+func Fn(_ int) {}
+
+func fn1() {
+	a := 1
+	if true {
+		if false {
+			b := 2
+			if true { // want "missing whitespace decreases readability"
+				Fn(a)
+			}
+
+			_ = b
+		}
+	}
+
+	y := 2
+	if true { // want "missing whitespace decreases readability"
+		if false {
+			a = 1
+			if true {
+				Fn(a)
+			}
+		}
+	}
+
+	i := 0
+	if true {
+		_ = 1
+		_ = 2
+		_ = 3
+
+		i++
+	}
+
+	_ = x
+	_ = y
+}
