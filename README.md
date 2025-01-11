@@ -11,25 +11,22 @@ the start and the end of blocks.
 ## Usage
 
 > **Note**: This linter provides a fixer that can fix most issues with the
-> `--fix` flag. However, currently `golangci-lint` [does not support suggested
-> fixes][suggested-fixes-issue] so the `--fix`
-> flag in `golangci-lint` will **not** work.
+> `--fix` flag.
 
-`wsl` uses the [analysis]
-package meaning it will operate on package level with the default analysis flags
-and way of working.
+`wsl` uses the [analysis] package meaning it will operate on package level with
+the default analysis flags and way of working.
 
 ```sh
 wsl --help
 wsl [flags] </path/to/package/...>
 
-wsl --allow-cuddle-declarations --fix ./...
+wsl --disable-all --enable break,continue --fix ./...
 ```
 
 `wsl` is also integrated in [`golangci-lint`][golangci-lint]
 
 ```sh
-golangci-lint run --no-config --disable-all --enable wsl
+golangci-lint run --no-config --disable-all --enable wsl --fix
 ```
 
 ## Issues and configuration

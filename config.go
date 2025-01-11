@@ -18,7 +18,6 @@ const (
 	CheckAssign
 	CheckAppend
 	CheckBreak
-	CheckCase
 	CheckContinue
 	CheckDecl
 	CheckDefer
@@ -33,6 +32,7 @@ const (
 	CheckReturn
 	CheckSwitch
 	CheckTypeSwitch
+	CheckFirstInBlock
 	CheckWholeBlock
 )
 
@@ -108,7 +108,6 @@ func DefaultChecks() CheckSet {
 		CheckAssign:             {},
 		CheckAppend:             {},
 		CheckBreak:              {},
-		CheckCase:               {},
 		CheckContinue:           {},
 		CheckDecl:               {},
 		CheckDefer:              {},
@@ -128,6 +127,7 @@ func DefaultChecks() CheckSet {
 func AllChecks() CheckSet {
 	c := DefaultChecks()
 	c.Add(CheckErr)
+	c.Add(CheckFirstInBlock)
 	c.Add(CheckWholeBlock)
 
 	return c
@@ -153,8 +153,6 @@ func CheckFromString(s string) (CheckType, error) {
 		return CheckAppend, nil
 	case "break":
 		return CheckBreak, nil
-	case "case":
-		return CheckCase, nil
 	case "continue":
 		return CheckContinue, nil
 	case "decl":
@@ -182,6 +180,8 @@ func CheckFromString(s string) (CheckType, error) {
 	case "type-switch":
 		return CheckTypeSwitch, nil
 	case "whole-block":
+		return CheckWholeBlock, nil
+	case "first-in-block":
 		return CheckWholeBlock, nil
 	default:
 		return CheckInvalid, fmt.Errorf("invalid check '%s'", s)

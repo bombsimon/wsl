@@ -53,17 +53,18 @@ func (w *WSL) Run() {
 	}
 }
 
-func (w *WSL) CheckCuddling(stmt ast.Node, cursor *Cursor, maxAllowedStatements int) {
-	w.checkCuddlingWithDecl(stmt, cursor, maxAllowedStatements, true)
+func (w *WSL) CheckCuddling(stmt ast.Node, cursor *Cursor, blockCursor *Cursor, maxAllowedStatements int) {
+	w.checkCuddlingWithDecl(stmt, cursor, blockCursor, maxAllowedStatements, true)
 }
 
-func (w *WSL) CheckCuddlingNoDecl(stmt ast.Node, cursor *Cursor, maxAllowedStatements int) {
-	w.checkCuddlingWithDecl(stmt, cursor, maxAllowedStatements, false)
+func (w *WSL) CheckCuddlingNoDecl(stmt ast.Node, cursor *Cursor, blockCursor *Cursor, maxAllowedStatements int) {
+	w.checkCuddlingWithDecl(stmt, cursor, blockCursor, maxAllowedStatements, false)
 }
 
 func (w *WSL) checkCuddlingWithDecl(
 	stmt ast.Node,
 	cursor *Cursor,
+	blockCursor *Cursor,
 	maxAllowedStatements int,
 	declIsValid bool,
 ) {
@@ -109,21 +110,45 @@ func (w *WSL) checkCuddlingWithDecl(
 		return
 	}
 
-	// TODO: Features:
-	// * Allow idents that is used first in the block
+	_, firstInBlock := w.Config.Checks[CheckFirstInBlock]
+	_, wholeBlock := w.Config.Checks[CheckWholeBlock]
 
-	// FEATURE: Enable identifier used anywhere in block.
-	// The cursor has already parsed the block we're comparing so let's see if
-	// the ident is used anywhere in the block.
-	if _, ok := w.Config.Checks[CheckWholeBlock]; ok {
-		anyIntersects := identsInMap(previousIdents, cursor.idents)
+	// FEATURE: Allow identifier used anywhere in block (including recursive
+	// blocks).
+	if wholeBlock {
+		anyIntersects := identsInMap(previousIdents, blockCursor.idents)
 		if len(anyIntersects) > 0 {
-			// fmt.Printf("Valid since we have %v any in the block\n", previousIdents)
+			// We have matches, but too many statements above.
 			if numStmtsAbove > maxAllowedStatements {
 				w.addError(previousNode.Pos(), previousNode.Pos(), previousNode.Pos(), MessageAddWhitespace)
 			}
 
 			return
+		}
+	}
+
+	// FEATURE: Allow identifiers used first in block. Configurable to allow
+	// multiple levels.
+	if firstInBlock {
+		// TODO: Make configurable
+		maxDepth := 1
+
+		for i := 0; i < maxDepth; i++ {
+			if i > len(blockCursor.firstIdents) {
+				firstIntersect := identIntersection(
+					currentIdents,
+					blockCursor.firstIdents[i],
+				)
+
+				if len(firstIntersect) > 0 {
+					// We have matches, but too many statements above.
+					if numStmtsAbove > maxAllowedStatements {
+						w.addError(previousNode.Pos(), previousNode.Pos(), previousNode.Pos(), MessageAddWhitespace)
+					}
+
+					return
+				}
+			}
 		}
 	}
 
@@ -157,7 +182,7 @@ func (w *WSL) CheckCuddlingWithoutIntersection(stmt ast.Node, cursor *Cursor) {
 
 	// Most of the time we allow cuddling with declarations (var) if it's just
 	// one statement but not always so this can be disabled, e.g. for
-	// delclarations themselves.
+	// declarations themselves.
 	if _, ok := w.Config.Checks[CheckDecl]; ok {
 		prevIsDecl = false
 	}
@@ -235,6 +260,45 @@ func (w *WSL) checkError(
 	}
 }
 
+func (w *WSL) CheckBlockAndExtend(
+	node ast.Node,
+	blockStmt *ast.BlockStmt,
+	cursor *Cursor,
+	check CheckType,
+) {
+	blockCursor := w.CheckBlock(blockStmt)
+
+	if _, ok := w.Config.Checks[check]; ok {
+		w.CheckCuddling(node, cursor, blockCursor, 1)
+	}
+
+	cursor.Extend(blockCursor)
+}
+
+func (w *WSL) CheckExprAndExtend(
+	node ast.Node,
+	expr ast.Expr,
+	cursor *Cursor,
+	predicate func(ast.Node) (int, bool),
+	check CheckType,
+) {
+	maybeBlockCursor := w.CheckExpr(expr, cursor)
+
+	if _, ok := w.Config.Checks[check]; ok {
+		previousNode := cursor.PreviousNode()
+
+		// We can cuddle any amount `go` statements so only check cuddling if the
+		// previous one isn't a `go` call.
+		// We don't even have to check if it's actually cuddled or just the previous
+		// one because even if it's not but is a `go` statement it's valid.
+		if n, ok := predicate(previousNode); ok {
+			w.CheckCuddling(node, cursor, maybeBlockCursor, n)
+		}
+	}
+
+	cursor.Extend(maybeBlockCursor)
+}
+
 func (w *WSL) CheckFunc(funcDecl *ast.FuncDecl) {
 	if funcDecl.Body == nil {
 		return
@@ -245,114 +309,81 @@ func (w *WSL) CheckFunc(funcDecl *ast.FuncDecl) {
 
 func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor) {
 	// if
-	cursor.idents = w.CheckBlock(stmt.Body)
+	blockCursor := w.CheckBlock(stmt.Body)
 
 	switch v := stmt.Else.(type) {
 	// else-if
 	case *ast.IfStmt:
-		w.CheckIf(v, cursor)
+		// We use our new cursor created for this if-block to check nested if.
+		w.CheckIf(v, blockCursor)
+		blockCursor.Retain()
+
 	// else
 	case *ast.BlockStmt:
-		elseIdents := w.CheckBlock(v)
-
-		for k, v := range elseIdents {
-			cursor.idents[k] = v
-		}
+		// Merge the idents from the else branch.
+		blockCursor.Merge(w.CheckBlock(v))
 	}
 
 	if _, ok := w.Config.Checks[CheckIf]; ok {
-		w.CheckCuddling(stmt, cursor, 1)
+		w.CheckCuddling(stmt, cursor, blockCursor, 1)
 	}
+
+	cursor.Extend(blockCursor)
 }
 
 func (w *WSL) CheckFor(stmt *ast.ForStmt, cursor *Cursor) {
-	defer w.CheckBlock(stmt.Body)
-
-	if _, ok := w.Config.Checks[CheckFor]; !ok {
-		return
-	}
-
-	w.CheckCuddling(stmt, cursor, 1)
+	w.CheckBlockAndExtend(stmt, stmt.Body, cursor, CheckFor)
 }
 
 func (w *WSL) CheckRange(stmt *ast.RangeStmt, cursor *Cursor) {
-	cursor.idents = w.CheckBlock(stmt.Body)
-
-	if _, ok := w.Config.Checks[CheckRange]; !ok {
-		return
-	}
-
-	w.CheckCuddling(stmt, cursor, 1)
+	w.CheckBlockAndExtend(stmt, stmt.Body, cursor, CheckRange)
 }
 
 func (w *WSL) CheckSwitch(stmt *ast.SwitchStmt, cursor *Cursor) {
-	cursor.idents = w.CheckBlock(stmt.Body)
-
-	if _, ok := w.Config.Checks[CheckSwitch]; !ok {
-		return
-	}
-
-	w.CheckCuddling(stmt, cursor, 1)
+	w.CheckBlockAndExtend(stmt, stmt.Body, cursor, CheckSwitch)
 }
 
 func (w *WSL) CheckTypeSwitch(stmt *ast.TypeSwitchStmt, cursor *Cursor) {
-	cursor.idents = w.CheckBlock(stmt.Body)
-
-	if _, ok := w.Config.Checks[CheckTypeSwitch]; !ok {
-		return
-	}
-
-	w.CheckCuddling(stmt, cursor, 1)
+	w.CheckBlockAndExtend(stmt, stmt.Body, cursor, CheckTypeSwitch)
 }
 
 func (w *WSL) CheckExprStmt(stmt *ast.ExprStmt, cursor *Cursor) {
-	defer w.CheckExpr(stmt.X, cursor)
-
-	if _, ok := w.Config.Checks[CheckExpr]; !ok {
-		return
-	}
-
-	previousNode := cursor.PreviousNode()
-
-	// We can cuddle any amount call statements so only check cuddling if the
-	// previous one isn't a function call.
-	if _, ok := previousNode.(*ast.ExprStmt); !ok {
-		w.CheckCuddling(stmt, cursor, -1)
-	}
+	w.CheckExprAndExtend(
+		stmt,
+		stmt.X,
+		cursor,
+		func(n ast.Node) (int, bool) {
+			_, ok := n.(*ast.ExprStmt)
+			return -1, !ok
+		},
+		CheckExpr,
+	)
 }
 
 func (w *WSL) CheckGo(stmt *ast.GoStmt, cursor *Cursor) {
-	defer w.CheckExpr(stmt.Call, cursor)
-
-	if _, ok := w.Config.Checks[CheckGo]; !ok {
-		return
-	}
-
-	previousNode := cursor.PreviousNode()
-
-	// We can cuddle any amount `go` statements so only check cuddling if the
-	// previous one isn't a `go` call.
-	// We don't even have to check if it's actually cuddled or just the previous
-	// one because even if it's not but is a `go` statement it's valid.
-	if _, ok := previousNode.(*ast.GoStmt); !ok {
-		w.CheckCuddling(stmt, cursor, 1)
-	}
+	w.CheckExprAndExtend(
+		stmt,
+		stmt.Call,
+		cursor,
+		func(n ast.Node) (int, bool) {
+			_, ok := n.(*ast.GoStmt)
+			return 1, !ok
+		},
+		CheckGo,
+	)
 }
 
 func (w *WSL) CheckDefer(stmt *ast.DeferStmt, cursor *Cursor) {
-	defer w.CheckExpr(stmt.Call, cursor)
-
-	if _, ok := w.Config.Checks[CheckDefer]; !ok {
-		return
-	}
-
-	previousNode := cursor.PreviousNode()
-
-	// We can cuddle any amount `defer` statements so only check cuddling if the
-	// previous one isn't a `defer` call.
-	if _, ok := previousNode.(*ast.DeferStmt); !ok {
-		w.CheckCuddling(stmt, cursor, 1)
-	}
+	w.CheckExprAndExtend(
+		stmt,
+		stmt.Call,
+		cursor,
+		func(n ast.Node) (int, bool) {
+			_, ok := n.(*ast.DeferStmt)
+			return 1, !ok
+		},
+		CheckDefer,
+	)
 }
 
 func (w *WSL) CheckBranch(stmt *ast.BranchStmt, cursor *Cursor) {
@@ -368,6 +399,7 @@ func (w *WSL) CheckBranch(stmt *ast.BranchStmt, cursor *Cursor) {
 		return
 	}
 
+	// TODO: Should this be lines or statements?
 	lastStmtInBlock := cursor.statements[len(cursor.statements)-1]
 	if stmt == lastStmtInBlock && len(cursor.statements) <= 2 {
 		return
@@ -385,20 +417,20 @@ func (w *WSL) CheckDecl(stmt *ast.DeclStmt, cursor *Cursor) {
 		return
 	}
 
-	w.CheckCuddlingNoDecl(stmt, cursor, 1)
+	w.CheckCuddlingNoDecl(stmt, cursor, &Cursor{}, 1)
 }
 
-func (w *WSL) CheckBlock(block *ast.BlockStmt) map[string]struct{} {
+func (w *WSL) CheckBlock(block *ast.BlockStmt) *Cursor {
 	w.CheckBlockLeadingNewline(block)
 	w.CheckTrailingNewline(block)
 
-	cursor := NewCursor(block.List)
-	for cursor.Next() {
-		w.CheckStmt(cursor.Stmt(), cursor)
-		cursor.AddIdents(allIdents(cursor.Stmt()))
-	}
+	return w.checkBody(block.List)
+}
 
-	return cursor.idents
+func (w *WSL) CheckCase(stmt *ast.CaseClause, cursor *Cursor) {
+	w.CheckCaseLeadingNewline(stmt)
+
+	cursor.Extend(w.checkBody(stmt.Body))
 }
 
 func (w *WSL) CheckReturn(stmt *ast.ReturnStmt, cursor *Cursor) {
@@ -476,17 +508,18 @@ func (w *WSL) strictAppendCheck(stmt *ast.AssignStmt, cursor *Cursor) {
 	}
 }
 
-func (w *WSL) CheckCase(stmt *ast.CaseClause, cursor *Cursor) {
-	w.CheckCaseLeadingNewline(stmt)
+func (w *WSL) checkBody(body []ast.Stmt) *Cursor {
+	cursor := NewCursor(body)
+	isFirst := true
 
-	if _, ok := w.Config.Checks[CheckCase]; !ok {
-		return
-	}
-
-	cursor = NewCursor(stmt.Body)
 	for cursor.Next() {
 		w.CheckStmt(cursor.Stmt(), cursor)
+
+		cursor.AddIdents(allIdents(cursor.Stmt()), isFirst)
+		isFirst = false
 	}
+
+	return cursor
 }
 
 func (w *WSL) CheckStmt(stmt ast.Stmt, cursor *Cursor) {
@@ -536,26 +569,31 @@ func (w *WSL) CheckStmt(stmt ast.Stmt, cursor *Cursor) {
 		w.CheckCase(s, cursor)
 	// { }
 	case *ast.BlockStmt:
-		cursor.idents = w.CheckBlock(s)
+		w.CheckBlock(s)
 	default:
 		fmt.Printf("Not implemented stmt: %T\n", s)
 	}
 }
 
-func (w *WSL) CheckExpr(expr ast.Expr, cursor *Cursor) {
+func (w *WSL) CheckExpr(expr ast.Expr, cursor *Cursor) *Cursor {
 	switch s := expr.(type) {
 	// func() {}
 	case *ast.FuncLit:
-		cursor.idents = w.CheckBlock(s.Body)
+		return w.CheckBlock(s.Body)
 	// Call(args...)
 	case *ast.CallExpr:
+		c := w.CheckExpr(s.Fun, cursor)
 		for _, e := range s.Args {
-			w.CheckExpr(e, cursor)
+			c.Extend(w.CheckExpr(e, cursor))
 		}
+
+		return c
 	case *ast.BasicLit, *ast.CompositeLit, *ast.Ident, *ast.UnaryExpr:
 	default:
 		fmt.Printf("Not implemented expr: %T\n", s)
 	}
+
+	return NewCursor([]ast.Stmt{})
 }
 
 // numberOfStatementsAbove will find out how many lines above the cursor's
