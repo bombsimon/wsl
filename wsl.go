@@ -129,14 +129,11 @@ func (w *WSL) checkCuddlingWithDecl(
 
 	// FEATURE: Allow identifiers used first in block. Configurable to allow
 	// multiple levels.
-	if firstInBlock {
-		// TODO: Make configurable
-		maxDepth := 1
-
-		for i := 0; i < maxDepth; i++ {
-			if i > len(blockCursor.firstIdents) {
+	if !wholeBlock && firstInBlock {
+		for i := 0; i < w.Config.FirstBlockMaxDepth; i++ {
+			if i < len(blockCursor.firstIdents) {
 				firstIntersect := identIntersection(
-					currentIdents,
+					previousIdents,
 					blockCursor.firstIdents[i],
 				)
 

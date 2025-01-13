@@ -49,6 +49,20 @@ func TestWithConfig(t *testing.T) {
 				config.Checks.Add(CheckWholeBlock)
 			},
 		},
+		{
+			subdir: "first_in_block_n1",
+			configFn: func(config *Configuration) {
+				config.Checks.Add(CheckFirstInBlock)
+				config.FirstBlockMaxDepth = 1
+			},
+		},
+		{
+			subdir: "first_in_block_n5",
+			configFn: func(config *Configuration) {
+				config.Checks.Add(CheckFirstInBlock)
+				config.FirstBlockMaxDepth = 5
+			},
+		},
 	} {
 		t.Run(tc.subdir, func(t *testing.T) {
 			config := NewConfig()

@@ -55,12 +55,14 @@ Configuration migration
 - IncludeGenerated                 | Done.
 */
 type Configuration struct {
-	Checks CheckSet
+	FirstBlockMaxDepth int
+	Checks             CheckSet
 }
 
 func NewConfig() *Configuration {
 	return &Configuration{
-		Checks: DefaultChecks(),
+		FirstBlockMaxDepth: 1,
+		Checks:             DefaultChecks(),
 	}
 }
 
