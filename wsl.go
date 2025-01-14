@@ -515,6 +515,7 @@ func (w *WSL) strictAppendCheck(stmt *ast.AssignStmt, cursor *Cursor) {
 	previousNode := cursor.PreviousNode()
 
 	var appendNode *ast.CallExpr
+
 	for _, expr := range stmt.Rhs {
 		e, ok := expr.(*ast.CallExpr)
 		if !ok {
@@ -882,6 +883,28 @@ func allIdents(node ast.Node) []*ast.Ident {
 		for _, r := range n.Results {
 			idents = append(idents, allIdents(r)...)
 		}
+	case *ast.KeyValueExpr:
+		idents = append(idents, allIdents(n.Key)...)
+		idents = append(idents, allIdents(n.Value)...)
+	case *ast.MapType:
+		idents = append(idents, allIdents(n.Key)...)
+		idents = append(idents, allIdents(n.Value)...)
+	case *ast.StarExpr:
+		idents = append(idents, allIdents(n.X)...)
+	case *ast.IndexExpr:
+		idents = append(idents, allIdents(n.X)...)
+		idents = append(idents, allIdents(n.Index)...)
+	case *ast.SliceExpr:
+		idents = append(idents, allIdents(n.X)...)
+		idents = append(idents, allIdents(n.Low)...)
+		idents = append(idents, allIdents(n.High)...)
+		idents = append(idents, allIdents(n.Max)...)
+	case *ast.FieldList:
+		for _, f := range n.List {
+			idents = append(idents, allIdents(f)...)
+		}
+	case *ast.StructType:
+		idents = append(idents, allIdents(n.Fields)...)
 	case *ast.BasicLit, *ast.FuncLit, *ast.BranchStmt,
 		*ast.ArrayType:
 	default:
