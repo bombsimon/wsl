@@ -424,7 +424,45 @@ func (w *WSL) CheckBlock(block *ast.BlockStmt) *Cursor {
 func (w *WSL) CheckCase(stmt *ast.CaseClause, cursor *Cursor) {
 	w.CheckCaseLeadingNewline(stmt)
 
+	if w.Config.CaseMaxLines != 0 {
+		w.checkCaseTrailingNewline(stmt, cursor)
+	}
+
 	cursor.Extend(w.checkBody(stmt.Body))
+}
+
+func (w *WSL) checkCaseTrailingNewline(stmt *ast.CaseClause, cursor *Cursor) {
+	if len(stmt.Body) == 0 {
+		return
+	}
+
+	defer cursor.Save()()
+
+	if !cursor.Next() {
+		return
+	}
+
+	nextCase, ok := cursor.Stmt().(*ast.CaseClause)
+	if !ok {
+		return
+	}
+
+	firstStmt := stmt.Body[0]
+	lastStmt := stmt.Body[len(stmt.Body)-1]
+	totalLines := w.lineFor(lastStmt.End()) - w.lineFor(firstStmt.Pos()) + 1
+
+	// Not exceeding max lines to require newline.
+	if totalLines <= w.Config.CaseMaxLines {
+		return
+	}
+
+	// Next case is not immediately after the last statement so must be newline
+	// already.
+	if w.lineFor(nextCase.Pos()) > w.lineFor(lastStmt.End())+1 {
+		return
+	}
+
+	w.addError(lastStmt.End(), nextCase.Pos(), nextCase.Pos(), MessageAddWhitespace)
 }
 
 func (w *WSL) CheckReturn(stmt *ast.ReturnStmt, cursor *Cursor) {

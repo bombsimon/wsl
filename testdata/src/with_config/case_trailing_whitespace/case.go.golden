@@ -1,0 +1,28 @@
+package testpkg
+
+func fn1(n int) {
+	switch n {
+	case 1:
+		n++
+	case 2:
+		n++
+		n++
+	case 3:
+		n++
+		n++
+		n++ // want "missing whitespace decreases readability"
+
+	case 4:
+		n++
+		n++
+		n++
+		n++
+		// Just a comment
+	default:
+		n++
+		n++
+		n++
+		n++
+	}
+}
+

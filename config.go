@@ -41,7 +41,7 @@ Configuration migration
 - AllowAssignAndCallCuddle         | TBD deprecate. Implemented, not configurable
 - AllowAssignAndAnythingCuddle     | Deprecated. Replaced with `CheckAssign`
 - AllowMultiLineAssignCuddle       | Deprecate.
-- ForceCaseTrailingWhitespaceLimit | TODO
+- ForceCaseTrailingWhitespaceLimit | Done.
 - AllowTrailingComment             | TBD deprecate. Should be seen same as leading (allowed)
 - AllowSeparatedLeadingComment     | Deprecate. Always allowed.
 - AllowCuddleDeclaration           | Deprecate. Use `CheckDecl` instead.
@@ -56,6 +56,7 @@ type Configuration struct {
 	AllowFirstInBlock    bool
 	AllowWholeBlock      bool
 	FirstInBlockMaxDepth int
+	CaseMaxLines         int
 	Checks               CheckSet
 }
 
@@ -64,6 +65,7 @@ func NewConfig() *Configuration {
 		AllowFirstInBlock:    false,
 		AllowWholeBlock:      false,
 		FirstInBlockMaxDepth: 1,
+		CaseMaxLines:         0,
 		Checks:               DefaultChecks(),
 	}
 }

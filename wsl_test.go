@@ -63,6 +63,12 @@ func TestWithConfig(t *testing.T) {
 				config.FirstInBlockMaxDepth = 5
 			},
 		},
+		{
+			subdir: "case_trailing_whitespace",
+			configFn: func(config *Configuration) {
+				config.CaseMaxLines = 2
+			},
+		},
 	} {
 		t.Run(tc.subdir, func(t *testing.T) {
 			config := NewConfig()
