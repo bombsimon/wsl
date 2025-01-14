@@ -32,8 +32,6 @@ const (
 	CheckReturn
 	CheckSwitch
 	CheckTypeSwitch
-	CheckFirstInBlock
-	CheckWholeBlock
 )
 
 /*
@@ -55,14 +53,18 @@ Configuration migration
 - IncludeGenerated                 | Done.
 */
 type Configuration struct {
-	FirstBlockMaxDepth int
-	Checks             CheckSet
+	AllowFirstInBlock    bool
+	AllowWholeBlock      bool
+	FirstInBlockMaxDepth int
+	Checks               CheckSet
 }
 
 func NewConfig() *Configuration {
 	return &Configuration{
-		FirstBlockMaxDepth: 1,
-		Checks:             DefaultChecks(),
+		AllowFirstInBlock:    false,
+		AllowWholeBlock:      false,
+		FirstInBlockMaxDepth: 1,
+		Checks:               DefaultChecks(),
 	}
 }
 
@@ -129,8 +131,6 @@ func DefaultChecks() CheckSet {
 func AllChecks() CheckSet {
 	c := DefaultChecks()
 	c.Add(CheckErr)
-	c.Add(CheckFirstInBlock)
-	c.Add(CheckWholeBlock)
 
 	return c
 }
@@ -181,10 +181,6 @@ func CheckFromString(s string) (CheckType, error) {
 		return CheckSwitch, nil
 	case "type-switch":
 		return CheckTypeSwitch, nil
-	case "whole-block":
-		return CheckWholeBlock, nil
-	case "first-in-block":
-		return CheckWholeBlock, nil
 	default:
 		return CheckInvalid, fmt.Errorf("invalid check '%s'", s)
 	}

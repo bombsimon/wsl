@@ -110,12 +110,9 @@ func (w *WSL) checkCuddlingWithDecl(
 		return
 	}
 
-	_, firstInBlock := w.Config.Checks[CheckFirstInBlock]
-	_, wholeBlock := w.Config.Checks[CheckWholeBlock]
-
 	// FEATURE: Allow identifier used anywhere in block (including recursive
 	// blocks).
-	if wholeBlock {
+	if w.Config.AllowWholeBlock {
 		anyIntersects := identsInMap(previousIdents, blockCursor.idents)
 		if len(anyIntersects) > 0 {
 			// We have matches, but too many statements above.
@@ -129,8 +126,8 @@ func (w *WSL) checkCuddlingWithDecl(
 
 	// FEATURE: Allow identifiers used first in block. Configurable to allow
 	// multiple levels.
-	if !wholeBlock && firstInBlock {
-		for i := 0; i < w.Config.FirstBlockMaxDepth; i++ {
+	if !w.Config.AllowWholeBlock && w.Config.AllowFirstInBlock {
+		for i := 0; i < w.Config.FirstInBlockMaxDepth; i++ {
 			if i < len(blockCursor.firstIdents) {
 				firstIntersect := identIntersection(
 					previousIdents,
@@ -585,7 +582,9 @@ func (w *WSL) CheckExpr(expr ast.Expr, cursor *Cursor) *Cursor {
 		}
 
 		return c
-	case *ast.BasicLit, *ast.CompositeLit, *ast.Ident, *ast.UnaryExpr:
+	case *ast.BasicLit, *ast.CompositeLit, *ast.Ident,
+		*ast.UnaryExpr, *ast.SelectorExpr:
+		cursor.AddIdents(allIdents(s), false)
 	default:
 		fmt.Printf("Not implemented expr: %T\n", s)
 	}
@@ -782,12 +781,13 @@ func allIdents(node ast.Node) []*ast.Ident {
 			idents = append(idents, allIdents(value)...)
 		}
 	case *ast.AssignStmt:
-		// TODO: For TypeSwitchStatements, this can be a false positive by
+		// NOTE: For TypeSwitchStatements, this can be a false positive by
 		// allowing shadowing and "tricking" usage;
-		// var v any
-
-		// notV := 1
-		// switch notV := v.(type) {}
+		//
+		// 	   var v any
+		//
+		// 	   notV := 1
+		// 	   switch notV := v.(type) {}
 		//
 		// This would trick wsl to see `notV` used in both type switch and on
 		// line above - faulty(?)
