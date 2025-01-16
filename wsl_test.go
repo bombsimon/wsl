@@ -69,6 +69,12 @@ func TestWithConfig(t *testing.T) {
 				config.CaseMaxLines = 2
 			},
 		},
+		{
+			subdir: "exclusive_short_decl",
+			configFn: func(config *Configuration) {
+				config.Checks.Add(CheckAssignExclusive)
+			},
+		},
 	} {
 		t.Run(tc.subdir, func(t *testing.T) {
 			config := NewConfig()

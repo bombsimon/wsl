@@ -16,6 +16,7 @@ type CheckType int
 const (
 	CheckInvalid CheckType = iota
 	CheckAssign
+	CheckAssignExclusive
 	CheckAppend
 	CheckBreak
 	CheckContinue
@@ -49,7 +50,7 @@ Configuration migration
 - AllowCuddleWithRHS               | TBD deprecate. Should not be needed. Not clear why separate from above
 - ForceCuddleErrCheckAndAssign     | Deprecate. Replaced with `CheckErr`
 - ErrorVariableNames               | Deprecate. We're now looking if the variable implements the error interface
-- ForceExclusiveShortDeclarations  | TODO
+- ForceExclusiveShortDeclarations  | Done.
 - IncludeGenerated                 | Done.
 */
 type Configuration struct {
@@ -134,6 +135,7 @@ func DefaultChecks() CheckSet {
 
 func AllChecks() CheckSet {
 	c := DefaultChecks()
+	c.Add(CheckAssignExclusive)
 	c.Add(CheckErr)
 
 	return c
@@ -155,6 +157,8 @@ func CheckFromString(s string) (CheckType, error) {
 	switch strings.ToLower(s) {
 	case "assign":
 		return CheckAssign, nil
+	case "assign-exclusive":
+		return CheckAssignExclusive, nil
 	case "append":
 		return CheckAppend, nil
 	case "break":
