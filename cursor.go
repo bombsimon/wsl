@@ -28,7 +28,7 @@ var ErrCursourOutObFounds = errors.New("out of bounds")
 //		   }
 //
 // idents will be a map containing [a, b, c, d] and first identifiers will be
-// [[a, b], [c]]
+// [[a, b], [c]].
 type Cursor struct {
 	currentIdx  int
 	statements  []ast.Stmt
@@ -65,9 +65,7 @@ func (c *Cursor) Merge(otherCursor *Cursor) {
 		if len(c.firstIdents) == 0 {
 			c.firstIdents = append(c.firstIdents, otherFirstIdents)
 		} else {
-			for _, v := range otherFirstIdents {
-				c.firstIdents[0] = append(c.firstIdents[0], v)
-			}
+			c.firstIdents[0] = append(c.firstIdents[0], otherFirstIdents...)
 		}
 	}
 

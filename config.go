@@ -1,6 +1,7 @@
 package wsl
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -80,7 +81,7 @@ func (c *Configuration) Update(
 	disable []string,
 ) error {
 	if enableAll && disableAll {
-		return fmt.Errorf("can't use both `enable-all` and `disable-all`")
+		return errors.New("can't use both `enable-all` and `disable-all`")
 	}
 
 	if enableAll {

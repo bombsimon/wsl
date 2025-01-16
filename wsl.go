@@ -53,11 +53,11 @@ func (w *WSL) Run() {
 	}
 }
 
-func (w *WSL) CheckCuddling(stmt ast.Node, cursor *Cursor, blockCursor *Cursor, maxAllowedStatements int) {
+func (w *WSL) CheckCuddling(stmt ast.Node, cursor, blockCursor *Cursor, maxAllowedStatements int) {
 	w.checkCuddlingWithDecl(stmt, cursor, blockCursor, maxAllowedStatements, true)
 }
 
-func (w *WSL) CheckCuddlingNoDecl(stmt ast.Node, cursor *Cursor, blockCursor *Cursor, maxAllowedStatements int) {
+func (w *WSL) CheckCuddlingNoDecl(stmt ast.Node, cursor, blockCursor *Cursor, maxAllowedStatements int) {
 	w.checkCuddlingWithDecl(stmt, cursor, blockCursor, maxAllowedStatements, false)
 }
 
@@ -127,7 +127,7 @@ func (w *WSL) checkCuddlingWithDecl(
 	// FEATURE: Allow identifiers used first in block. Configurable to allow
 	// multiple levels.
 	if !w.Config.AllowWholeBlock && w.Config.AllowFirstInBlock {
-		for i := 0; i < w.Config.FirstInBlockMaxDepth; i++ {
+		for i := range w.Config.FirstInBlockMaxDepth {
 			if i < len(blockCursor.firstIdents) {
 				firstIntersect := identIntersection(
 					previousIdents,
@@ -682,9 +682,9 @@ func (w *WSL) CheckBlockLeadingNewline(body *ast.BlockStmt) {
 	w.CheckLeadingNewline(body.Lbrace, body.List, comments)
 }
 
-func (w *WSL) CheckCaseLeadingNewline(case_ *ast.CaseClause) {
-	comments := ast.NewCommentMap(w.Fset, case_, w.File.Comments)
-	w.CheckLeadingNewline(case_.Colon, case_.Body, comments)
+func (w *WSL) CheckCaseLeadingNewline(caseClause *ast.CaseClause) {
+	comments := ast.NewCommentMap(w.Fset, caseClause, w.File.Comments)
+	w.CheckLeadingNewline(caseClause.Colon, caseClause.Body, comments)
 }
 
 func (w *WSL) CheckLeadingNewline(startPos token.Pos, body []ast.Stmt, comments ast.CommentMap) {
