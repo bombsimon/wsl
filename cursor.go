@@ -154,6 +154,7 @@ func (c *Cursor) Stmt() ast.Stmt {
 
 func (c *Cursor) Save() func() {
 	idx := c.currentIdx
+
 	return func() {
 		c.currentIdx = idx
 	}

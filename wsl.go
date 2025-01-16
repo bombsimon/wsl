@@ -466,6 +466,10 @@ func (w *WSL) checkCaseTrailingNewline(stmt *ast.CaseClause, cursor *Cursor) {
 }
 
 func (w *WSL) CheckReturn(stmt *ast.ReturnStmt, cursor *Cursor) {
+	for _, expr := range stmt.Results {
+		w.CheckExpr(expr, cursor)
+	}
+
 	if _, ok := w.Config.Checks[CheckReturn]; !ok {
 		return
 	}
@@ -476,10 +480,14 @@ func (w *WSL) CheckReturn(stmt *ast.ReturnStmt, cursor *Cursor) {
 		return
 	}
 
+	if w.numberOfStatementsAbove(cursor) == 0 {
+		return
+	}
+
 	// If the distance between the first statement and the return statement is
 	// less than 3 LOC we're allowed to cuddle.
 	firstStmts := cursor.Nth(0)
-	if w.lineFor(stmt.End())-w.lineFor(firstStmts.Pos()) < 2 {
+	if w.lineFor(stmt.End())-w.lineFor(firstStmts.Pos()) < w.Config.ReturnMaxLines {
 		return
 	}
 
@@ -509,6 +517,10 @@ func (w *WSL) CheckIncDec(stmt *ast.IncDecStmt, cursor *Cursor) {
 
 func (w *WSL) strictAppendCheck(stmt *ast.AssignStmt, cursor *Cursor) {
 	if _, ok := w.Config.Checks[CheckAppend]; !ok {
+		return
+	}
+
+	if w.numberOfStatementsAbove(cursor) == 0 {
 		return
 	}
 

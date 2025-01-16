@@ -57,15 +57,17 @@ type Configuration struct {
 	AllowWholeBlock      bool
 	FirstInBlockMaxDepth int
 	CaseMaxLines         int
+	ReturnMaxLines       int
 	Checks               CheckSet
 }
 
 func NewConfig() *Configuration {
 	return &Configuration{
-		AllowFirstInBlock:    false,
+		AllowFirstInBlock:    true,
 		AllowWholeBlock:      false,
 		FirstInBlockMaxDepth: 1,
 		CaseMaxLines:         0,
+		ReturnMaxLines:       2,
 		Checks:               DefaultChecks(),
 	}
 }
