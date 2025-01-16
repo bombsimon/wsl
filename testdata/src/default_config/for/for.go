@@ -4,16 +4,22 @@ func fn1() {
 	a := 1
 	b := 2 // want "missing whitespace decreases readability"
 	for i := 0; i < b; i++ {
-		panic(a)
+		panic(1)
 	}
+
+	_ = a
+	_ = b
 }
 
 func fn2() {
 	b := 2
 	a := 1
 	for i := 0; i < b; i++ { // want "missing whitespace decreases readability"
-		panic(a)
+		panic(1)
 	}
+
+	_ = a
+	_ = b
 }
 
 func fn3() {

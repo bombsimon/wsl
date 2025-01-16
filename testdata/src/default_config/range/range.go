@@ -4,16 +4,22 @@ func fn1() {
 	a := []int{}
 	b := []int{} // want "missing whitespace decreases readability"
 	for range b {
-		panic(a)
+		panic(1)
 	}
+
+	_ = a
+	_ = b
 }
 
 func fn2() {
 	b := []int{}
 	a := []int{}
 	for range b { // want "missing whitespace decreases readability"
-		panic(a)
+		panic(1)
 	}
+
+	_ = a
+	_ = b
 }
 
 func fn3() {
