@@ -438,14 +438,24 @@ func (w *WSL) CheckCase(stmt *ast.CaseClause, cursor *Cursor) {
 	w.CheckCaseLeadingNewline(stmt)
 
 	if w.Config.CaseMaxLines != 0 {
-		w.checkCaseTrailingNewline(stmt, cursor)
+		w.checkCaseTrailingNewline(stmt.Body, cursor)
 	}
 
 	cursor.Extend(w.checkBody(stmt.Body))
 }
 
-func (w *WSL) checkCaseTrailingNewline(stmt *ast.CaseClause, cursor *Cursor) {
-	if len(stmt.Body) == 0 {
+func (w *WSL) CheckComm(stmt *ast.CommClause, cursor *Cursor) {
+	w.CheckCommLeadingNewline(stmt)
+
+	if w.Config.CaseMaxLines != 0 {
+		w.checkCaseTrailingNewline(stmt.Body, cursor)
+	}
+
+	cursor.Extend(w.checkBody(stmt.Body))
+}
+
+func (w *WSL) checkCaseTrailingNewline(body []ast.Stmt, cursor *Cursor) {
+	if len(body) == 0 {
 		return
 	}
 
@@ -455,13 +465,18 @@ func (w *WSL) checkCaseTrailingNewline(stmt *ast.CaseClause, cursor *Cursor) {
 		return
 	}
 
-	nextCase, ok := cursor.Stmt().(*ast.CaseClause)
-	if !ok {
+	var nextCase ast.Node
+	switch n := cursor.Stmt().(type) {
+	case *ast.CaseClause:
+		nextCase = n
+	case *ast.CommClause:
+		nextCase = n
+	default:
 		return
 	}
 
-	firstStmt := stmt.Body[0]
-	lastStmt := stmt.Body[len(stmt.Body)-1]
+	firstStmt := body[0]
+	lastStmt := body[len(body)-1]
 	totalLines := w.lineFor(lastStmt.End()) - w.lineFor(firstStmt.Pos()) + 1
 
 	// Not exceeding max lines to require newline.
@@ -625,9 +640,19 @@ func (w *WSL) CheckStmt(stmt ast.Stmt, cursor *Cursor) {
 	// case:
 	case *ast.CaseClause:
 		w.CheckCase(s, cursor)
+	// case:
+	case *ast.CommClause:
+		w.CheckComm(s, cursor)
 	// { }
 	case *ast.BlockStmt:
 		w.CheckBlock(s)
+	// select { }
+	case *ast.SelectStmt:
+		w.CheckBlock(s.Body)
+	// ch <- ...
+	case *ast.SendStmt:
+		// TODO: Check cuddling?
+		w.CheckExpr(s.Value, cursor)
 	default:
 		fmt.Printf("Not implemented stmt: %T\n", s)
 	}
@@ -646,8 +671,22 @@ func (w *WSL) CheckExpr(expr ast.Expr, cursor *Cursor) *Cursor {
 		}
 
 		return c
-	case *ast.BasicLit, *ast.CompositeLit, *ast.Ident,
-		*ast.UnaryExpr, *ast.SelectorExpr:
+	case *ast.IndexExpr:
+		return w.CheckExpr(s.X, cursor)
+	case *ast.StarExpr:
+		return w.CheckExpr(s.X, cursor)
+	case *ast.ArrayType,
+		*ast.BasicLit,
+		*ast.BinaryExpr,
+		*ast.ChanType,
+		*ast.CompositeLit,
+		*ast.Ident,
+		*ast.MapType,
+		*ast.ParenExpr,
+		*ast.SelectorExpr,
+		*ast.SliceExpr,
+		*ast.TypeAssertExpr,
+		*ast.UnaryExpr:
 		cursor.AddIdents(allIdents(s), false)
 	default:
 		fmt.Printf("Not implemented expr: %T\n", s)
@@ -685,6 +724,11 @@ func (w *WSL) CheckBlockLeadingNewline(body *ast.BlockStmt) {
 func (w *WSL) CheckCaseLeadingNewline(caseClause *ast.CaseClause) {
 	comments := ast.NewCommentMap(w.Fset, caseClause, w.File.Comments)
 	w.CheckLeadingNewline(caseClause.Colon, caseClause.Body, comments)
+}
+
+func (w *WSL) CheckCommLeadingNewline(commClause *ast.CommClause) {
+	comments := ast.NewCommentMap(w.Fset, commClause, w.File.Comments)
+	w.CheckLeadingNewline(commClause.Colon, commClause.Body, comments)
 }
 
 func (w *WSL) CheckLeadingNewline(startPos token.Pos, body []ast.Stmt, comments ast.CommentMap) {
@@ -930,8 +974,24 @@ func allIdents(node ast.Node) []*ast.Ident {
 		}
 	case *ast.StructType:
 		idents = append(idents, allIdents(n.Fields)...)
-	case *ast.BasicLit, *ast.FuncLit, *ast.BranchStmt,
-		*ast.ArrayType:
+	case *ast.ParenExpr:
+		idents = append(idents, allIdents(n.X)...)
+	case *ast.SendStmt:
+		idents = append(idents, allIdents(n.Chan)...)
+		idents = append(idents, allIdents(n.Value)...)
+	case *ast.ChanType:
+		idents = append(idents, allIdents(n.Value)...)
+	case *ast.CommClause:
+		for _, s := range n.Body {
+			idents = append(idents, allIdents(s)...)
+		}
+	case *ast.ArrayType,
+		*ast.BasicLit,
+		*ast.BlockStmt,
+		*ast.BranchStmt,
+		*ast.FuncLit,
+		*ast.SelectStmt,
+		*ast.TypeSpec:
 	default:
 		spew.Dump(node)
 		fmt.Printf("missing ident detection for %T\n", node)
