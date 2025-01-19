@@ -40,3 +40,12 @@ func fn4() {
 		panic(a)
 	}
 }
+
+func fn5(m any, k string) string {
+	v := m.(map[string]string)
+	if r, ok := m[k]; ok {
+		return r
+	}
+
+	return k
+}

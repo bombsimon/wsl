@@ -910,8 +910,10 @@ func allIdents(node ast.Node) []*ast.Ident {
 			idents = append(idents, allIdents(rhs)...)
 		}
 	case *ast.IfStmt:
+		idents = append(idents, allIdents(n.Init)...)
 		idents = append(idents, allIdents(n.Cond)...)
-		// TODO: idents = append(idents, allIdents(n.Else)...)
+		// TODO
+		// idents = append(idents, allIdents(n.Else)...)
 	case *ast.BinaryExpr:
 		idents = append(idents, allIdents(n.X)...)
 		idents = append(idents, allIdents(n.Y)...)
