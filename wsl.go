@@ -543,6 +543,18 @@ func (w *WSL) CheckIncDec(stmt *ast.IncDecStmt, cursor *Cursor) {
 	w.CheckCuddlingWithoutIntersection(stmt, cursor)
 }
 
+func (w *WSL) CheckLabel(stmt *ast.LabeledStmt, cursor *Cursor) {
+	if _, ok := w.Config.Checks[CheckLabel]; !ok {
+		return
+	}
+
+	if w.numberOfStatementsAbove(cursor) == 0 {
+		return
+	}
+
+	w.addError(stmt.Pos(), stmt.Pos(), stmt.Pos(), MessageAddWhitespace)
+}
+
 func (w *WSL) strictAppendCheck(stmt *ast.AssignStmt, cursor *Cursor) {
 	if _, ok := w.Config.Checks[CheckAppend]; !ok {
 		return
@@ -653,6 +665,9 @@ func (w *WSL) CheckStmt(stmt ast.Stmt, cursor *Cursor) {
 	case *ast.SendStmt:
 		// TODO: Check cuddling?
 		w.CheckExpr(s.Value, cursor)
+	// LABEL:
+	case *ast.LabeledStmt:
+		w.CheckLabel(s, cursor)
 	default:
 		fmt.Printf("Not implemented stmt: %T\n", s)
 	}
@@ -808,6 +823,13 @@ func (w *WSL) CheckTrailingNewline(body *ast.BlockStmt) {
 
 	closingPos := body.Rbrace
 	lastStmtOrComment := lastStmt.End()
+
+	// Empty label statements needs positional adjustment. #92
+	if l, ok := lastStmt.(*ast.LabeledStmt); ok {
+		if _, ok := l.Stmt.(*ast.EmptyStmt); ok {
+			lastStmtOrComment = lastStmt.Pos()
+		}
+	}
 
 	comments := ast.NewCommentMap(w.Fset, body, w.File.Comments)
 	for _, commentGroup := range comments {
@@ -992,6 +1014,7 @@ func allIdents(node ast.Node) []*ast.Ident {
 		*ast.BlockStmt,
 		*ast.BranchStmt,
 		*ast.FuncLit,
+		*ast.LabeledStmt,
 		*ast.SelectStmt,
 		*ast.TypeSpec:
 	default:

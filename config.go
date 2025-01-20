@@ -28,6 +28,7 @@ const (
 	CheckFor
 	CheckGo
 	CheckIf
+	CheckLabel
 	CheckLeadingWhitespace
 	CheckTrailingWhitespace
 	CheckRange
@@ -125,6 +126,7 @@ func DefaultChecks() CheckSet {
 		CheckFor:                {},
 		CheckGo:                 {},
 		CheckIf:                 {},
+		CheckLabel:              {},
 		CheckLeadingWhitespace:  {},
 		CheckTrailingWhitespace: {},
 		CheckRange:              {},
