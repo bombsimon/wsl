@@ -1,5 +1,7 @@
 package testpkg
 
+import "context"
+
 func fn1(n int) {
 	switch n {
 	case 1:
@@ -22,5 +24,19 @@ func fn1(n int) {
 		n++
 		n++
 		n++
+	}
+}
+
+func fn2(ctx context.Context, ch1 chan struct{}) {
+	select {
+	case ctx.Done():
+		_ = 1
+		_ = 1
+		_ = 1
+		_ = 1 // want "missing whitespace decreases readability"
+	case <-ch1:
+		_ = 1
+	default:
+		_ = 1
 	}
 }

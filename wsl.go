@@ -354,6 +354,10 @@ func (w *WSL) CheckTypeSwitch(stmt *ast.TypeSwitchStmt, cursor *Cursor) {
 	w.CheckBlockAndExtend(stmt, stmt.Body, cursor, CheckTypeSwitch)
 }
 
+func (w *WSL) CheckSelect(stmt *ast.SelectStmt, cursor *Cursor) {
+	w.CheckBlockAndExtend(stmt, stmt.Body, cursor, CheckSelect)
+}
+
 func (w *WSL) CheckExprStmt(stmt *ast.ExprStmt, cursor *Cursor) {
 	w.CheckExprAndExtend(
 		stmt,
@@ -660,7 +664,7 @@ func (w *WSL) CheckStmt(stmt ast.Stmt, cursor *Cursor) {
 		w.CheckBlock(s)
 	// select { }
 	case *ast.SelectStmt:
-		w.CheckBlock(s.Body)
+		w.CheckSelect(s, cursor)
 	// ch <- ...
 	case *ast.SendStmt:
 		// TODO: Check cuddling?

@@ -33,6 +33,7 @@ const (
 	CheckTrailingWhitespace
 	CheckRange
 	CheckReturn
+	CheckSelect
 	CheckSwitch
 	CheckTypeSwitch
 )
@@ -131,6 +132,7 @@ func DefaultChecks() CheckSet {
 		CheckTrailingWhitespace: {},
 		CheckRange:              {},
 		CheckReturn:             {},
+		CheckSelect:             {},
 		CheckSwitch:             {},
 		CheckTypeSwitch:         {},
 	}
