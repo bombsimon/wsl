@@ -1,5 +1,10 @@
 package testpkg
 
+import (
+	"bytes"
+	"encoding/json"
+)
+
 type T struct {
 	I int
 }
@@ -10,6 +15,11 @@ func NewT() *T {
 
 func (*T) Fn() int {
 	return 1
+}
+
+func FnC(_ string, fn func() error) error {
+	fn()
+	return nil
 }
 
 func strictAppend() {
@@ -39,4 +49,11 @@ func assignAndCall() {
 
 	t1.Fn()
 	t2.I = t1.Fn()
+}
+
+func closureInCall() {
+	buf := &bytes.Buffer{}
+	err := Fnc("buf", func() error {
+		return json.NewEncoder(buf).Encode("x")
+	})
 }
