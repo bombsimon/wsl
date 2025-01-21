@@ -205,11 +205,7 @@ func (w *WSL) CheckCuddlingWithoutIntersection(stmt ast.Node, cursor *Cursor) {
 	// 3. With the new check config, one could just disable checks for assign
 	// and it would allow cuddling with anything.
 	if !prevIsValidType && currIsAssign {
-		currentIdents := allIdents(stmt)
-		previousIdents := allIdents(previousNode)
-		intersects := identIntersection(currentIdents, previousIdents)
-
-		if len(intersects) > 0 {
+		if hasIntersection(stmt, previousNode) {
 			return
 		}
 	}
@@ -390,8 +386,27 @@ func (w *WSL) CheckDefer(stmt *ast.DeferStmt, cursor *Cursor) {
 		stmt.Call,
 		cursor,
 		func(n ast.Node) (int, bool) {
-			_, ok := n.(*ast.DeferStmt)
-			return 1, !ok
+			_, previousIsDefer := n.(*ast.DeferStmt)
+			_, previousIsIf := n.(*ast.IfStmt)
+
+			// We allow defer as a third node only if we if check between. E.g.
+			// 	f, err := os.Open(file)
+			// 	if err != nil {
+			// 	    return err
+			// 	}
+			// defer f.Close()
+			if previousIsIf && w.numberOfStatementsAbove(cursor) >= 2 {
+				defer cursor.Save()()
+
+				cursor.Previous()
+				cursor.Previous()
+
+				if hasIntersection(cursor.Stmt(), stmt) {
+					return 1, false
+				}
+			}
+
+			return 1, !previousIsDefer
 		},
 		CheckDefer,
 	)
@@ -588,11 +603,7 @@ func (w *WSL) strictAppendCheck(stmt *ast.AssignStmt, cursor *Cursor) {
 		return
 	}
 
-	appendIdents := allIdents(appendNode)
-	previousIdents := allIdents(previousNode)
-	intersects := identIntersection(appendIdents, previousIdents)
-
-	if len(intersects) == 0 {
+	if !hasIntersection(appendNode, previousNode) {
 		w.addError(stmt.Pos(), stmt.Pos(), stmt.Pos(), MessageAddWhitespace)
 	}
 }
@@ -1027,6 +1038,17 @@ func allIdents(node ast.Node) []*ast.Ident {
 	}
 
 	return idents
+}
+
+func hasIntersection(a, b ast.Node) bool {
+	return len(nodeIdentIntersection(a, b)) > 0
+}
+
+func nodeIdentIntersection(a, b ast.Node) []*ast.Ident {
+	aI := allIdents(a)
+	bI := allIdents(b)
+
+	return identIntersection(aI, bI)
 }
 
 func identIntersection(a, b []*ast.Ident) []*ast.Ident {

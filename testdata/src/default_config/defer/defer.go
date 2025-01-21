@@ -2,6 +2,7 @@ package testpkg
 
 import (
 	"fmt"
+	"os"
 	"sync"
 )
 
@@ -57,4 +58,12 @@ func fn2() {
 	defer b.Close()
 
 	_ = a
+}
+
+func fn3() {
+	f, err := os.Open("x")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
 }

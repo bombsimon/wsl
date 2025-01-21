@@ -133,16 +133,12 @@ func (c *Cursor) PreviousNode() ast.Node {
 }
 
 func (c *Cursor) PeekNext() bool {
-	reset := c.Save()
-	defer reset()
-
+	defer c.Save()()
 	return c.Next()
 }
 
 func (c *Cursor) PeekPrevious() bool {
-	reset := c.Save()
-	defer reset()
-
+	defer c.Save()()
 	return c.Previous()
 }
 
