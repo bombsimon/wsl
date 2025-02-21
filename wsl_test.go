@@ -25,6 +25,7 @@ func TestDefaultConfig(t *testing.T) {
 		{dir: "else_if"},
 		{dir: "fix_advanced"},
 		{dir: "fix_cuddle_blocks"},
+		{dir: "fix_cuddle_whole_blocks"},
 		{dir: "generated"},
 		{dir: "generated_file"},
 		{dir: "generic_handling"},

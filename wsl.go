@@ -304,12 +304,14 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 		}
 
-		// We could potentially have a block which require us to check the first
-		// argument before ruling out an allowed cuddle.
-		var calledOrAssignedFirstInBlock []string
+		// Contains the union of all variable names used anywhere
+		// within the block body (if applicable) and is used to check
+		// if a preceding statement's variables are actually used within
+		// the block. This helps enforce rules about allowed cuddling.
+		var blockUsedVars []string
 
 		if firstBodyStatement != nil {
-			calledOrAssignedFirstInBlock = append(p.findLHS(firstBodyStatement), p.findRHS(firstBodyStatement)...)
+			blockUsedVars = p.findUsedVariablesInStatement(stmt)
 		}
 
 		var (
@@ -426,7 +428,7 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 
 		reportNewlineTwoLinesAbove := func(n1, n2 ast.Node, reason string) {
 			if atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) ||
-				atLeastOneInListsMatch(assignedOnLineAbove, calledOrAssignedFirstInBlock) {
+				atLeastOneInListsMatch(assignedOnLineAbove, blockUsedVars) {
 				// If both the assignment on the line above _and_ the assignment
 				// two lines above is part of line or first in block, add the
 				// newline as if non were.
@@ -435,7 +437,7 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 
 				if isAssignmentTwoLinesAbove &&
 					(atLeastOneInListsMatch(rightAndLeftHandSide, assignedTwoLinesAbove) ||
-						atLeastOneInListsMatch(assignedTwoLinesAbove, calledOrAssignedFirstInBlock)) {
+						atLeastOneInListsMatch(assignedTwoLinesAbove, blockUsedVars)) {
 					p.addWhitespaceBeforeError(n1, reason)
 				} else {
 					// If the variable on the line above is allowed to be
@@ -507,7 +509,7 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 				continue
 			}
 
-			if atLeastOneInListsMatch(assignedOnLineAbove, calledOrAssignedFirstInBlock) {
+			if atLeastOneInListsMatch(assignedOnLineAbove, blockUsedVars) {
 				continue
 			}
 
@@ -611,7 +613,7 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 
 			if !atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) {
-				if !atLeastOneInListsMatch(assignedOnLineAbove, calledOrAssignedFirstInBlock) {
+				if !atLeastOneInListsMatch(assignedOnLineAbove, blockUsedVars) {
 					p.addWhitespaceBeforeError(t, reasonRangeCuddledWithoutUse)
 				}
 			}
@@ -679,7 +681,7 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 				}
 			}
 
-			if atLeastOneInListsMatch(assignedOnLineAbove, calledOrAssignedFirstInBlock) {
+			if atLeastOneInListsMatch(assignedOnLineAbove, blockUsedVars) {
 				continue
 			}
 
@@ -701,7 +703,7 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 			// comments regarding variable usages on the line before or as the
 			// first line in the block for details.
 			if !atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) {
-				if !atLeastOneInListsMatch(assignedOnLineAbove, calledOrAssignedFirstInBlock) {
+				if !atLeastOneInListsMatch(assignedOnLineAbove, blockUsedVars) {
 					p.addWhitespaceBeforeError(t, reasonForCuddledAssignWithoutUse)
 				}
 			}
@@ -757,7 +759,7 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 			if !atLeastOneInListsMatch(rightHandSide, assignedOnLineAbove) {
 				// Allow type assertion on variables used in the first case
 				// immediately.
-				if !atLeastOneInListsMatch(assignedOnLineAbove, calledOrAssignedFirstInBlock) {
+				if !atLeastOneInListsMatch(assignedOnLineAbove, blockUsedVars) {
 					p.addWhitespaceBeforeError(t, reasonTypeSwitchCuddledWithoutUse)
 				}
 			}
@@ -837,6 +839,32 @@ func (p *processor) firstBodyStatement(i int, allStmt []ast.Stmt) ast.Node {
 	}
 
 	return firstBodyStatement
+}
+
+// findUsedVariablesInStatement processes a statement,
+// returning a union of all variables used within it.
+func (p *processor) findUsedVariablesInStatement(stmt ast.Stmt) []string {
+	var (
+		used []string
+		seen = map[string]struct{}{}
+	)
+
+	// ast.Inspect walks the AST of the statement.
+	ast.Inspect(stmt, func(n ast.Node) bool {
+		// We're only interested in identifiers.
+		if ident, ok := n.(*ast.Ident); ok {
+			if _, exists := seen[ident.Name]; !exists {
+				seen[ident.Name] = struct{}{}
+
+				used = append(used, ident.Name)
+			}
+		}
+
+		// Continue walking the AST.
+		return true
+	})
+
+	return used
 }
 
 func (p *processor) findLHS(node ast.Node) []string {
