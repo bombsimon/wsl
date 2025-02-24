@@ -2,6 +2,8 @@
 name: CI
 on:
   push:
+    branches:
+      - master
   pull_request:
 
 jobs:
@@ -15,7 +17,7 @@ jobs:
           go-version: stable
       - uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.62.2
+          version: v1.63.4
 
   tests:
     # run after golangci-lint action to not produce duplicated errors
