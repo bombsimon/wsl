@@ -235,7 +235,7 @@ var (
 
 ### allow-cuddle-used-in-block
 
-Controls if you may cuddle variables used in block statements. This is false by default as to not change existing behavior.
+Controls if you may cuddle variables used anywhere in the following block.
 
 > Default value: false
 
