@@ -31,7 +31,7 @@ func TestDefaultConfig(t *testing.T) {
 		{dir: "multiline_case"},
 		{dir: "remove_whitespace"},
 		{dir: "line_directive"},
-		{dir: "cuddle_used_in_first_line_block"},
+		{dir: "cuddle_used_in_first_line"},
 	}
 
 	for _, test := range testCases {
