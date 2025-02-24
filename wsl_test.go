@@ -31,6 +31,7 @@ func TestDefaultConfig(t *testing.T) {
 		{dir: "multiline_case"},
 		{dir: "remove_whitespace"},
 		{dir: "line_directive"},
+		{dir: "cuddle_used_in_first_line_block"},
 	}
 
 	for _, test := range testCases {
@@ -121,6 +122,12 @@ func TestWithConfig(t *testing.T) {
 			subdir: "include_generated",
 			configFn: func(config *Configuration) {
 				config.IncludeGenerated = true
+			},
+		},
+		{
+			subdir: "cuddle_used_in_block",
+			configFn: func(config *Configuration) {
+				config.AllowCuddleUsedInBlock = true
 			},
 		},
 	} {

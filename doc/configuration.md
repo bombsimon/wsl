@@ -233,6 +233,109 @@ var (
 )
 ```
 
+### allow-cuddle-used-in-block
+
+Controls if you may cuddle variables used anywhere in the following block.
+
+> Default value: false
+
+Supported when true:
+
+```go
+counter := 0
+if somethingTrue {
+    checker := getAChecker()
+    if !checker {
+        return
+    }
+
+    counter++
+}
+
+var numbers []int
+for i := 0; i < 10; i++ {
+    if 1 == 1 {
+        numbers = append(numbers, i)
+    }
+}
+
+var numbers2 []int
+for {
+    if 1 == 1 {
+        numbers2 = append(numbers2, 1)
+    }
+}
+
+var id string
+switch {
+case int:
+    if true {
+        id = strconv.Itoa(i)
+    }
+case uint32:
+    if true {
+        id = strconv.Itoa(int(i))
+    }
+case string:
+    if true {
+        id = i
+    }
+}
+```
+
+Required when false:
+
+```go
+counter := 0
+
+if somethingTrue {
+    checker := getAChecker()
+    if !checker {
+        return
+    }
+
+    counter++
+}
+
+var numbers []int
+
+for i := 0; i < 10; i++ {
+    if 1 == 1 {
+        numbers = append(numbers, i)
+    }
+}
+
+var numbers2 []int
+
+for {
+    if 1 == 1 {
+        numbers2 = append(numbers2, 1)
+    }
+}
+
+var id string
+
+switch {
+case int:
+    if true {
+        id = strconv.Itoa(i)
+    }
+case uint32:
+    if true {
+        id = strconv.Itoa(int(i))
+    }
+case string:
+    if true {
+        id = i
+    }
+}
+```
+
+**Note**: this means the option _overrides_ the following rules:
+- [Anonymous switch statements should never be cuddled](rules.md#anonymous-switch-statements-should-never-be-cuddled)
+- [For statement without condition should never be cuddled](rules.md#for-statement-without-condition-should-never-be-cuddled)
+
+
 ### [allow-trailing-comment](rules.md#block-should-not-end-with-a-whitespace-or-comment)
 
 Controls if blocks can end with comments. This is not encouraged sine it's
