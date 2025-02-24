@@ -6,6 +6,8 @@ linter and how they should be resolved or configured to handle.
 ## Checklist
 
 ### Anonymous switch statements should never be cuddled
+> Can be configured, see [configuration
+documentation](configuration.md#allow-cuddle-used-in-block)
 
 Anonymous `switch` statements (mindless `switch`) should deserve its needed
 attention that it does not need any assigned variables. Hence, it should not
@@ -398,6 +400,8 @@ run()
 ---
 
 ### For statement without condition should never be cuddled
+> Can be configured, see [configuration
+documentation](configuration.md#allow-cuddle-used-in-block)
 
 `for` loop without conditions (infinity loop) should deserves its own
 attention. Hence, it should not be cuddled with anyone.

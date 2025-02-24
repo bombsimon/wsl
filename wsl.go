@@ -179,6 +179,18 @@ type Configuration struct {
 	// errors even for generated files. Can be useful when developing
 	// generators.
 	IncludeGenerated bool
+
+	// AllowCuddleUsedInBlock will allowing cuddling of variables with block statements
+	// if they are used anywhere in the block. This defaults to false but setting
+	// it to true will allow the following example:
+	//
+	// var numbers []int
+	// for i := 0; i < 10; i++ {
+	// 	if 1 == 1 {
+	// 		numbers = append(numbers, i)
+	// 	}
+	// }
+	AllowCuddleUsedInBlock bool
 }
 
 // fix is a range to fixup.
@@ -308,10 +320,14 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 		// within the block body (if applicable) and is used to check
 		// if a preceding statement's variables are actually used within
 		// the block. This helps enforce rules about allowed cuddling.
-		var blockUsedVars []string
+		var identifiersUsedInBlock []string
 
 		if firstBodyStatement != nil {
-			blockUsedVars = p.findUsedVariablesInStatement(stmt)
+			if p.config.AllowCuddleUsedInBlock {
+				identifiersUsedInBlock = p.findUsedVariablesInStatement(stmt)
+			} else {
+				identifiersUsedInBlock = append(p.findLHS(firstBodyStatement), p.findRHS(firstBodyStatement)...)
+			}
 		}
 
 		var (
@@ -428,7 +444,7 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 
 		reportNewlineTwoLinesAbove := func(n1, n2 ast.Node, reason string) {
 			if atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) ||
-				atLeastOneInListsMatch(assignedOnLineAbove, blockUsedVars) {
+				atLeastOneInListsMatch(assignedOnLineAbove, identifiersUsedInBlock) {
 				// If both the assignment on the line above _and_ the assignment
 				// two lines above is part of line or first in block, add the
 				// newline as if non were.
@@ -437,7 +453,7 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 
 				if isAssignmentTwoLinesAbove &&
 					(atLeastOneInListsMatch(rightAndLeftHandSide, assignedTwoLinesAbove) ||
-						atLeastOneInListsMatch(assignedTwoLinesAbove, blockUsedVars)) {
+						atLeastOneInListsMatch(assignedTwoLinesAbove, identifiersUsedInBlock)) {
 					p.addWhitespaceBeforeError(n1, reason)
 				} else {
 					// If the variable on the line above is allowed to be
@@ -509,7 +525,7 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 				continue
 			}
 
-			if atLeastOneInListsMatch(assignedOnLineAbove, blockUsedVars) {
+			if atLeastOneInListsMatch(assignedOnLineAbove, identifiersUsedInBlock) {
 				continue
 			}
 
@@ -613,7 +629,7 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 			}
 
 			if !atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) {
-				if !atLeastOneInListsMatch(assignedOnLineAbove, blockUsedVars) {
+				if !atLeastOneInListsMatch(assignedOnLineAbove, identifiersUsedInBlock) {
 					p.addWhitespaceBeforeError(t, reasonRangeCuddledWithoutUse)
 				}
 			}
@@ -681,7 +697,7 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 				}
 			}
 
-			if atLeastOneInListsMatch(assignedOnLineAbove, blockUsedVars) {
+			if atLeastOneInListsMatch(assignedOnLineAbove, identifiersUsedInBlock) {
 				continue
 			}
 
@@ -689,7 +705,7 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 				p.addWhitespaceBeforeError(t, reasonDeferCuddledWithOtherVar)
 			}
 		case *ast.ForStmt:
-			if len(rightAndLeftHandSide) == 0 {
+			if len(rightAndLeftHandSide) == 0 && !p.config.AllowCuddleUsedInBlock {
 				p.addWhitespaceBeforeError(t, reasonForWithoutCondition)
 				continue
 			}
@@ -703,7 +719,7 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 			// comments regarding variable usages on the line before or as the
 			// first line in the block for details.
 			if !atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) {
-				if !atLeastOneInListsMatch(assignedOnLineAbove, blockUsedVars) {
+				if !atLeastOneInListsMatch(assignedOnLineAbove, identifiersUsedInBlock) {
 					p.addWhitespaceBeforeError(t, reasonForCuddledAssignWithoutUse)
 				}
 			}
@@ -744,6 +760,10 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 
 			if !atLeastOneInListsMatch(rightAndLeftHandSide, assignedOnLineAbove) {
 				if len(rightAndLeftHandSide) == 0 {
+					if p.config.AllowCuddleUsedInBlock {
+						continue
+					}
+
 					p.addWhitespaceBeforeError(t, reasonAnonSwitchCuddled)
 				} else {
 					p.addWhitespaceBeforeError(t, reasonSwitchCuddledWithoutUse)
@@ -759,7 +779,7 @@ func (p *processor) parseBlockStatements(statements []ast.Stmt) {
 			if !atLeastOneInListsMatch(rightHandSide, assignedOnLineAbove) {
 				// Allow type assertion on variables used in the first case
 				// immediately.
-				if !atLeastOneInListsMatch(assignedOnLineAbove, blockUsedVars) {
+				if !atLeastOneInListsMatch(assignedOnLineAbove, identifiersUsedInBlock) {
 					p.addWhitespaceBeforeError(t, reasonTypeSwitchCuddledWithoutUse)
 				}
 			}

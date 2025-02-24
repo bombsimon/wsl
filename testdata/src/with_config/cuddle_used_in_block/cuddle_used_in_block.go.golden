@@ -24,11 +24,15 @@ func ForCuddleAssignmentWholeBlock() {
 	}
 
 	var numbers3 []int
-
-	for { // want "for statement without condition should never be cuddled"
+	for {
 		if x == y {
-			numbers3 = append(numbers3, i)
+			numbers3 = append(numbers3, 1)
 		}
+	}
+
+	var numbers4 []int
+	for {
+		numbers4 = append(numbers4, 1)
 	}
 
 	environment = make(map[string]string)
@@ -101,6 +105,16 @@ func SwitchCuddleAssignmentWholeBlock() {
 		id = "b"
 	}
 
+	var b bool
+
+	var id string // want "declarations should never be cuddled"
+	switch b {    // want "only one cuddle assignment allowed before switch statement"
+	case true:
+		id = "a"
+	case false:
+		id = "b"
+	}
+
 	var id2 string
 	switch i := objectID.(type) {
 	case int:
@@ -118,8 +132,7 @@ func SwitchCuddleAssignmentWholeBlock() {
 	}
 
 	var id3 string
-
-	switch { // want "anonymous switch statements should never be cuddled"
+	switch {
 	case int:
 		if true {
 			id3 = strconv.Itoa(i)

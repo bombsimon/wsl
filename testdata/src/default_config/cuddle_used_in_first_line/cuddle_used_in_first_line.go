@@ -10,14 +10,14 @@ func ForCuddleAssignmentWholeBlock() {
 	y := 2
 
 	var numbers []int
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 10; i++ { // want "for statements should only be cuddled with assignments used in the iteration"
 		if x == y {
 			numbers = append(numbers, i)
 		}
 	}
 
 	var numbers2 []int
-	for i := range 10 {
+	for i := range 10 { // want "ranges should only be cuddled with assignments used in the iteration"
 		if x == y {
 			numbers2 = append(numbers2, i)
 		}
@@ -31,7 +31,7 @@ func ForCuddleAssignmentWholeBlock() {
 	}
 
 	environment = make(map[string]string)
-	for _, env := range req.GetConfig().GetEnvs() {
+	for _, env := range req.GetConfig().GetEnvs() { // want "ranges should only be cuddled with assignments used in the iteration"
 		switch env.GetKey() {
 		case "user-data":
 			cloudInitUserData = env.GetValue()
@@ -46,7 +46,7 @@ func IfCuddleAssignmentWholeBlock() {
 	y := 2
 
 	counter := 0
-	if somethingTrue {
+	if somethingTrue { // want "if statements should only be cuddled with assignments used in the if statement itself"
 		checker := getAChecker()
 		if !checker {
 			return
@@ -56,7 +56,7 @@ func IfCuddleAssignmentWholeBlock() {
 	}
 
 	var number2 []int
-	if x == y {
+	if x == y { // want "if statements should only be cuddled with assignments used in the if statement itself"
 		fmt.Println("a")
 	} else {
 		if x > y {
@@ -65,7 +65,7 @@ func IfCuddleAssignmentWholeBlock() {
 	}
 
 	var number3 []int
-	if x == y {
+	if x == y { // want "if statements should only be cuddled with assignments used in the if statement itself"
 		fmt.Println("a")
 	} else if x > y {
 		if x == y {
@@ -74,7 +74,7 @@ func IfCuddleAssignmentWholeBlock() {
 	}
 
 	var number4 []int
-	if x == y {
+	if x == y { // want "if statements should only be cuddled with assignments used in the if statement itself"
 		if x == y {
 			number4 = append(number4, i)
 		}
@@ -99,8 +99,17 @@ func SwitchCuddleAssignmentWholeBlock() {
 		id = "b"
 	}
 
+	var b bool
+	var id string // want "declarations should never be cuddled"
+	switch b {    // want "only one cuddle assignment allowed before switch statement"
+	case true:
+		id = "a"
+	case false:
+		id = "b"
+	}
+
 	var id2 string
-	switch i := objectID.(type) {
+	switch i := objectID.(type) { // want "type switch statements should only be cuddled with variables switched"
 	case int:
 		if true {
 			id2 = strconv.Itoa(i)
