@@ -79,7 +79,7 @@ func (wa *wslAnalyzer) flags() flag.FlagSet {
 	return *flags
 }
 
-func (wa *wslAnalyzer) run(pass *analysis.Pass) (interface{}, error) {
+func (wa *wslAnalyzer) run(pass *analysis.Pass) (any, error) {
 	for _, file := range pass.Files {
 		filename := getFilename(pass.Fset, file)
 		if !strings.HasSuffix(filename, ".go") {

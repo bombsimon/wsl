@@ -60,7 +60,6 @@ linters:
     presets:
       - comments
       - common-false-positives
-      - legacy
       - std-error-handling
 
 issues:
@@ -71,5 +70,10 @@ formatters:
     - gofmt
     - gofumpt
     - goimports
+  settings:
+    gofmt:
+      rewrite-rules:
+        - pattern: 'interface{}'
+          replacement: 'any'
 
 # vim: set sw=2 ts=2 et:
