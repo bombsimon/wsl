@@ -56,3 +56,11 @@ func closureInCall() {
 		return json.NewEncoder(buf).Encode("x")
 	})
 }
+
+func assignAfterBlock() {
+	x := 1
+	if x > 0 {
+		return
+	}
+	x = 2 // want "missing whitespace decreases readability"
+}

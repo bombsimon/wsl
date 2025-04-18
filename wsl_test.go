@@ -53,14 +53,6 @@ func TestWithConfig(t *testing.T) {
 			subdir: "first_in_block_n1",
 			configFn: func(config *Configuration) {
 				config.AllowFirstInBlock = true
-				config.FirstInBlockMaxDepth = 1
-			},
-		},
-		{
-			subdir: "first_in_block_n5",
-			configFn: func(config *Configuration) {
-				config.AllowFirstInBlock = true
-				config.FirstInBlockMaxDepth = 5
 			},
 		},
 		{

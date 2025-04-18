@@ -10,25 +10,6 @@ var ErrCursourOutObFounds = errors.New("out of bounds")
 // Cursor holds a list of statements and a pointer to where in the list we are.
 // Each block gets a new cursor and can be used to check previous or coming
 // statements.
-//
-// A cursor also keeps a set of all identifiers seen in the block and child
-// blocks and a separate list of string slices of first identifier in blocks.
-// Each element represents the depth of where the identifiers was found.
-//
-// In this example:
-//
-//	    func Fn() {
-//		       if true {
-//		           a, b := 1, 2
-//		           if false {
-//		               c := 3
-//		               d := 4
-//		           }
-//		       }
-//		   }
-//
-// idents will be a map containing [a, b, c, d] and first identifiers will be
-// [[a, b], [c]].
 type Cursor struct {
 	currentIdx  int
 	statements  []ast.Stmt

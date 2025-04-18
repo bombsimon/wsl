@@ -53,16 +53,26 @@ func (w *WSL) Run() {
 	}
 }
 
+func (w *WSL) CheckCuddlingBlock(stmt ast.Node, blockList []ast.Stmt, cursor *Cursor, maxAllowedStatements int) {
+	var firstBlockStmt ast.Node
+	if len(blockList) > 0 {
+		firstBlockStmt = blockList[0]
+	}
+
+	w.checkCuddlingWithDecl(stmt, firstBlockStmt, cursor, maxAllowedStatements, true)
+}
+
 func (w *WSL) CheckCuddling(stmt ast.Node, cursor *Cursor, maxAllowedStatements int) {
-	w.checkCuddlingWithDecl(stmt, cursor, maxAllowedStatements, true)
+	w.checkCuddlingWithDecl(stmt, nil, cursor, maxAllowedStatements, true)
 }
 
 func (w *WSL) CheckCuddlingNoDecl(stmt ast.Node, cursor *Cursor, maxAllowedStatements int) {
-	w.checkCuddlingWithDecl(stmt, cursor, maxAllowedStatements, false)
+	w.checkCuddlingWithDecl(stmt, nil, cursor, maxAllowedStatements, false)
 }
 
 func (w *WSL) checkCuddlingWithDecl(
 	stmt ast.Node,
+	firstBlockStmt ast.Node,
 	cursor *Cursor,
 	maxAllowedStatements int,
 	declIsValid bool,
@@ -112,50 +122,33 @@ func (w *WSL) checkCuddlingWithDecl(
 	// FEATURE: Allow identifier used anywhere in block (including recursive
 	// blocks).
 	if w.Config.AllowWholeBlock {
-		// anyIntersects := identsInMap(previousIdents, blockCursor.idents)
-		// if len(anyIntersects) > 0 {
-		// 	// We have matches, but too many statements above.
-		// 	if numStmtsAbove > maxAllowedStatements {
-		// 		w.addError(previousNode.Pos(), previousNode.Pos(), previousNode.Pos(), MessageAddWhitespace)
-		// 	}
-
-		// 	return
-		// }
-	}
-
-	// FEATURE: Allow identifiers used first in block. Configurable to allow
-	// multiple levels.
-	if !w.Config.AllowWholeBlock && w.Config.AllowFirstInBlock {
 		allIdentsInBlock := identsFromNode(stmt)
-		spew.Dump(allIdentsInBlock)
 
 		anyIntersects := identIntersection(previousIdents, allIdentsInBlock)
 		if len(anyIntersects) > 0 {
 			// We have matches, but too many statements above.
-			if numStmtsAbove > maxAllowedStatements {
+			if maxAllowedStatements != -1 && numStmtsAbove > maxAllowedStatements {
 				w.addError(previousNode.Pos(), previousNode.Pos(), previousNode.Pos(), MessageAddWhitespace)
 			}
 
 			return
 		}
+	}
 
-		// for i := range w.Config.FirstInBlockMaxDepth {
-		// 	if i < len(blockCursor.firstIdents) {
-		// 		firstIntersect := identIntersection(
-		// 			previousIdents,
-		// 			blockCursor.firstIdents[i],
-		// 		)
+	// FEATURE: Allow identifiers used first in block. Configurable to allow
+	// multiple levels.
+	if !w.Config.AllowWholeBlock && w.Config.AllowFirstInBlock {
+		firstStmtIdents := identsFromNode(firstBlockStmt)
 
-		// 		if len(firstIntersect) > 0 {
-		// 			// We have matches, but too many statements above.
-		// 			if numStmtsAbove > maxAllowedStatements {
-		// 				w.addError(previousNode.Pos(), previousNode.Pos(), previousNode.Pos(), MessageAddWhitespace)
-		// 			}
+		anyIntersects := identIntersection(previousIdents, firstStmtIdents)
+		if len(anyIntersects) > 0 {
+			// We have matches, but too many statements above.
+			if maxAllowedStatements != -1 && numStmtsAbove > maxAllowedStatements {
+				w.addError(previousNode.Pos(), previousNode.Pos(), previousNode.Pos(), MessageAddWhitespace)
+			}
 
-		// 			return
-		// 		}
-		// 	}
-		// }
+			return
+		}
 	}
 
 	// We're cuddled but the line immediately above doesn't contain any
@@ -216,8 +209,12 @@ func (w *WSL) CheckCuddlingWithoutIntersection(stmt ast.Node, cursor *Cursor) {
 	// whatever) or we don't.
 	// 3. With the new check config, one could just disable checks for assign
 	// and it would allow cuddling with anything.
+	//
+	// This is also a bit odd because the reason it works in the current impl.
+	// is because we only allow this if the line above is a single line
+	// statement which it never is for e.g. if.
 	if !prevIsValidType && currIsAssign {
-		if hasIntersection(stmt, previousNode) {
+		if _, ok := previousNode.(*ast.ExprStmt); ok && hasIntersection(stmt, previousNode) {
 			return
 		}
 	}
@@ -284,7 +281,7 @@ func (w *WSL) MaybeCheckBlock(
 	w.CheckBlock(blockStmt)
 
 	if _, ok := w.Config.Checks[check]; ok {
-		w.CheckCuddling(node, cursor, 1)
+		w.CheckCuddlingBlock(node, blockStmt.List, cursor, 1)
 	}
 }
 
@@ -318,24 +315,22 @@ func (w *WSL) CheckFunc(funcDecl *ast.FuncDecl) {
 	w.CheckBlock(funcDecl.Body)
 }
 
-func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor) {
+func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor, isElse bool) {
 	// if
 	w.CheckBlock(stmt.Body)
 
 	switch v := stmt.Else.(type) {
 	// else-if
 	case *ast.IfStmt:
-		// We use our new cursor created for this if-block to check nested if.
-		w.CheckIf(v, cursor)
+		w.CheckIf(v, cursor, true)
 
 	// else
 	case *ast.BlockStmt:
-		// Merge the idents from the else branch.
 		w.CheckBlock(v)
 	}
 
-	if _, ok := w.Config.Checks[CheckIf]; ok {
-		w.CheckCuddling(stmt, cursor, 1)
+	if _, ok := w.Config.Checks[CheckIf]; !isElse && ok {
+		w.CheckCuddlingBlock(stmt, stmt.Body.List, cursor, 1)
 	}
 }
 
@@ -628,7 +623,7 @@ func (w *WSL) CheckStmt(stmt ast.Stmt, cursor *Cursor) {
 	switch s := stmt.(type) {
 	// if a {} else if b {} else {}
 	case *ast.IfStmt:
-		w.CheckIf(s, cursor)
+		w.CheckIf(s, cursor, false)
 	// for {} / for a; b; c {}
 	case *ast.ForStmt:
 		w.CheckFor(s, cursor)
@@ -1070,6 +1065,10 @@ func identsFromNode(node ast.Node) []*ast.Ident {
 		idents []*ast.Ident
 		seen   = map[string]struct{}{}
 	)
+
+	if node == nil {
+		return idents
+	}
 
 	ast.Inspect(node, func(n ast.Node) bool {
 		if ident, ok := n.(*ast.Ident); ok {

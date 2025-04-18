@@ -15,8 +15,7 @@ func fn1() {
 }
 
 func fn2() {
-	var a any
-	a = 1
+	var a any = 1
 
 	b := 1
 

@@ -67,12 +67,11 @@ type Configuration struct {
 
 func NewConfig() *Configuration {
 	return &Configuration{
-		AllowFirstInBlock:    true,
-		AllowWholeBlock:      false,
-		FirstInBlockMaxDepth: 1,
-		CaseMaxLines:         0,
-		ReturnMaxLines:       2,
-		Checks:               DefaultChecks(),
+		AllowFirstInBlock: true,
+		AllowWholeBlock:   false,
+		CaseMaxLines:      0,
+		ReturnMaxLines:    2,
+		Checks:            DefaultChecks(),
 	}
 }
 
