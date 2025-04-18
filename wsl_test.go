@@ -67,6 +67,12 @@ func TestWithConfig(t *testing.T) {
 				config.Checks.Add(CheckAssignExclusive)
 			},
 		},
+		{
+			subdir: "disable_all",
+			configFn: func(config *Configuration) {
+				config.Checks = NoChecks()
+			},
+		},
 	} {
 		t.Run(tc.subdir, func(t *testing.T) {
 			config := NewConfig()
