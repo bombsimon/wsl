@@ -28,6 +28,7 @@ const (
 	CheckFor
 	CheckGo
 	CheckIf
+	CheckIncDec
 	CheckLabel
 	CheckLeadingWhitespace
 	CheckTrailingWhitespace
@@ -57,12 +58,11 @@ Configuration migration
 - IncludeGenerated                 | Done.
 */
 type Configuration struct {
-	AllowFirstInBlock    bool
-	AllowWholeBlock      bool
-	FirstInBlockMaxDepth int
-	CaseMaxLines         int
-	ReturnMaxLines       int
-	Checks               CheckSet
+	AllowFirstInBlock bool
+	AllowWholeBlock   bool
+	CaseMaxLines      int
+	ReturnMaxLines    int
+	Checks            CheckSet
 }
 
 func NewConfig() *Configuration {
@@ -126,6 +126,7 @@ func DefaultChecks() CheckSet {
 		CheckFor:                {},
 		CheckGo:                 {},
 		CheckIf:                 {},
+		CheckIncDec:             {},
 		CheckLabel:              {},
 		CheckLeadingWhitespace:  {},
 		CheckTrailingWhitespace: {},
@@ -181,6 +182,8 @@ func CheckFromString(s string) (CheckType, error) {
 		return CheckGo, nil
 	case "if":
 		return CheckIf, nil
+	case "incdec":
+		return CheckIncDec, nil
 	case "leading-whitespace":
 		return CheckLeadingWhitespace, nil
 	case "trailing-whitespace":

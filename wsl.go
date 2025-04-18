@@ -7,7 +7,6 @@ import (
 	"go/types"
 	"slices"
 
-	"github.com/davecgh/go-spew/spew"
 	"golang.org/x/tools/go/analysis"
 )
 
@@ -79,14 +78,14 @@ func (w *WSL) checkCuddlingWithDecl(
 ) {
 	defer cursor.Save()()
 
-	currentIdents := allIdents(cursor.Stmt())
+	currentIdents := identsFromNode(cursor.Stmt(), true)
 	previousIdents := []*ast.Ident{}
 
 	var previousNode ast.Node
 
 	if cursor.Previous() {
 		previousNode = cursor.Stmt()
-		previousIdents = allIdents(previousNode)
+		previousIdents = identsFromNode(previousNode, true)
 
 		cursor.Next() // Move forward again
 	}
@@ -119,10 +118,9 @@ func (w *WSL) checkCuddlingWithDecl(
 		return
 	}
 
-	// FEATURE: Allow identifier used anywhere in block (including recursive
-	// blocks).
+	// FEATURE(AllowWholeBlock): Allow identifier used anywhere in block (including recursive blocks).
 	if w.Config.AllowWholeBlock {
-		allIdentsInBlock := identsFromNode(stmt)
+		allIdentsInBlock := identsFromNode(stmt, false)
 
 		anyIntersects := identIntersection(previousIdents, allIdentsInBlock)
 		if len(anyIntersects) > 0 {
@@ -135,10 +133,9 @@ func (w *WSL) checkCuddlingWithDecl(
 		}
 	}
 
-	// FEATURE: Allow identifiers used first in block. Configurable to allow
-	// multiple levels.
+	// FEATURE(AllowFirstInBlock): Allow identifiers used first in block.
 	if !w.Config.AllowWholeBlock && w.Config.AllowFirstInBlock {
-		firstStmtIdents := identsFromNode(firstBlockStmt)
+		firstStmtIdents := identsFromNode(firstBlockStmt, true)
 
 		anyIntersects := identIntersection(previousIdents, firstStmtIdents)
 		if len(anyIntersects) > 0 {
@@ -159,13 +156,13 @@ func (w *WSL) checkCuddlingWithDecl(
 		return
 	}
 
-	// Check the maximum number of allowed statements above, and if not
-	// disabled (-1) check that the previous one intersects with the
-	// current one.
-	if maxAllowedStatements != -1 && numStmtsAbove > maxAllowedStatements {
-		// Idents on the line above exist in the current condition so that
-		// should remain cuddled.
-		if len(intersects) > 0 {
+	// Idents on the line above exist in the current condition so that should
+	// remain cuddled.
+	if len(intersects) > 0 {
+		// Check the maximum number of allowed statements above, and if not
+		// disabled (-1) check that the previous one intersects with the current
+		// one.
+		if maxAllowedStatements != -1 && numStmtsAbove > maxAllowedStatements {
 			w.addError(previousNode.Pos(), previousNode.Pos(), previousNode.Pos(), MessageAddWhitespace)
 		}
 	}
@@ -297,10 +294,6 @@ func (w *WSL) MaybeCheckExpr(
 	if _, ok := w.Config.Checks[check]; ok {
 		previousNode := cursor.PreviousNode()
 
-		// We can cuddle any amount `go` statements so only check cuddling if the
-		// previous one isn't a `go` call.
-		// We don't even have to check if it's actually cuddled or just the previous
-		// one because even if it's not but is a `go` statement it's valid.
 		if n, ok := predicate(previousNode); ok {
 			w.CheckCuddling(node, cursor, n)
 		}
@@ -372,6 +365,10 @@ func (w *WSL) CheckGo(stmt *ast.GoStmt, cursor *Cursor) {
 		stmt,
 		stmt.Call,
 		cursor,
+		// We can cuddle any amount `go` statements so only check cuddling if the
+		// previous one isn't a `go` call.
+		// We don't even have to check if it's actually cuddled or just the previous
+		// one because even if it's not but is a `go` statement it's valid.
 		func(n ast.Node) (int, bool) {
 			_, ok := n.(*ast.GoStmt)
 			return 1, !ok
@@ -558,6 +555,10 @@ func (w *WSL) CheckAssign(stmt *ast.AssignStmt, cursor *Cursor) {
 
 func (w *WSL) CheckIncDec(stmt *ast.IncDecStmt, cursor *Cursor) {
 	defer w.CheckExpr(stmt.X, cursor)
+
+	if _, ok := w.Config.Checks[CheckIncDec]; !ok {
+		return
+	}
 
 	w.CheckCuddlingWithoutIntersection(stmt, cursor)
 }
@@ -887,157 +888,13 @@ func (w *WSL) addError(report, start, end token.Pos, message string) {
 	w.Issues[report] = issue
 }
 
-func allIdents(node ast.Node) []*ast.Ident {
-	idents := []*ast.Ident{}
-
-	if node == nil {
-		return idents
-	}
-
-	switch n := node.(type) {
-	case *ast.Ident:
-		return []*ast.Ident{n}
-	case *ast.ExprStmt:
-		idents = append(idents, allIdents(n.X)...)
-	case *ast.DeclStmt:
-		idents = append(idents, allIdents(n.Decl)...)
-	case *ast.GenDecl:
-		for _, spec := range n.Specs {
-			idents = append(idents, allIdents(spec)...)
-		}
-	case *ast.GoStmt:
-		idents = append(idents, allIdents(n.Call)...)
-	case *ast.DeferStmt:
-		idents = append(idents, allIdents(n.Call)...)
-	case *ast.ValueSpec:
-		for _, name := range n.Names {
-			idents = append(idents, allIdents(name)...)
-		}
-
-		for _, value := range n.Values {
-			idents = append(idents, allIdents(value)...)
-		}
-	case *ast.AssignStmt:
-		// NOTE: For TypeSwitchStatements, this can be a false positive by
-		// allowing shadowing and "tricking" usage;
-		//
-		// 	   var v any
-		//
-		// 	   notV := 1
-		// 	   switch notV := v.(type) {}
-		//
-		// This would trick wsl to see `notV` used in both type switch and on
-		// line above - faulty(?)
-		for _, lhs := range n.Lhs {
-			idents = append(idents, allIdents(lhs)...)
-		}
-
-		// This must be here to see if a variable is used on the RHS, e.g.
-		// a := 1
-		// b = append(b, fmt.Sprintf("%s", a))
-		for _, rhs := range n.Rhs {
-			idents = append(idents, allIdents(rhs)...)
-		}
-	case *ast.IfStmt:
-		idents = append(idents, allIdents(n.Init)...)
-		idents = append(idents, allIdents(n.Cond)...)
-		idents = append(idents, allIdents(n.Else)...)
-	case *ast.BinaryExpr:
-		idents = append(idents, allIdents(n.X)...)
-		idents = append(idents, allIdents(n.Y)...)
-	case *ast.RangeStmt:
-		idents = append(idents, allIdents(n.X)...)
-	case *ast.SelectorExpr:
-		idents = append(idents, allIdents(n.X)...)
-	case *ast.UnaryExpr:
-		idents = append(idents, allIdents(n.X)...)
-	case *ast.ForStmt:
-		idents = append(idents, allIdents(n.Init)...)
-		idents = append(idents, allIdents(n.Cond)...)
-		idents = append(idents, allIdents(n.Post)...)
-	case *ast.SwitchStmt:
-		idents = append(idents, allIdents(n.Init)...)
-		idents = append(idents, allIdents(n.Tag)...)
-	case *ast.TypeSwitchStmt:
-		idents = append(idents, allIdents(n.Init)...)
-		idents = append(idents, allIdents(n.Assign)...)
-	case *ast.TypeAssertExpr:
-		idents = append(idents, allIdents(n.X)...)
-	case *ast.CallExpr:
-		idents = append(idents, allIdents(n.Fun)...)
-		for _, arg := range n.Args {
-			idents = append(idents, allIdents(arg)...)
-		}
-	case *ast.CompositeLit:
-		for _, elt := range n.Elts {
-			idents = append(idents, allIdents(elt)...)
-		}
-	case *ast.IncDecStmt:
-		idents = allIdents(n.X)
-	case *ast.CaseClause:
-		for _, expr := range n.List {
-			idents = append(idents, allIdents(expr)...)
-		}
-	case *ast.ReturnStmt:
-		for _, r := range n.Results {
-			idents = append(idents, allIdents(r)...)
-		}
-	case *ast.KeyValueExpr:
-		idents = append(idents, allIdents(n.Key)...)
-		idents = append(idents, allIdents(n.Value)...)
-	case *ast.MapType:
-		idents = append(idents, allIdents(n.Key)...)
-		idents = append(idents, allIdents(n.Value)...)
-	case *ast.StarExpr:
-		idents = append(idents, allIdents(n.X)...)
-	case *ast.IndexExpr:
-		idents = append(idents, allIdents(n.X)...)
-		idents = append(idents, allIdents(n.Index)...)
-	case *ast.SliceExpr:
-		idents = append(idents, allIdents(n.X)...)
-		idents = append(idents, allIdents(n.Low)...)
-		idents = append(idents, allIdents(n.High)...)
-		idents = append(idents, allIdents(n.Max)...)
-	case *ast.FieldList:
-		for _, f := range n.List {
-			idents = append(idents, allIdents(f)...)
-		}
-	case *ast.StructType:
-		idents = append(idents, allIdents(n.Fields)...)
-	case *ast.ParenExpr:
-		idents = append(idents, allIdents(n.X)...)
-	case *ast.SendStmt:
-		idents = append(idents, allIdents(n.Chan)...)
-		idents = append(idents, allIdents(n.Value)...)
-	case *ast.ChanType:
-		idents = append(idents, allIdents(n.Value)...)
-	case *ast.CommClause:
-		for _, s := range n.Body {
-			idents = append(idents, allIdents(s)...)
-		}
-	case *ast.ArrayType,
-		*ast.BasicLit,
-		*ast.BlockStmt,
-		*ast.BranchStmt,
-		*ast.FuncLit,
-		*ast.LabeledStmt,
-		*ast.SelectStmt,
-		*ast.TypeSpec:
-	default:
-		spew.Dump(node)
-		fmt.Printf("missing ident detection for %T\n", node)
-	}
-
-	return idents
-}
-
 func hasIntersection(a, b ast.Node) bool {
 	return len(nodeIdentIntersection(a, b)) > 0
 }
 
 func nodeIdentIntersection(a, b ast.Node) []*ast.Ident {
-	aI := allIdents(a)
-	bI := allIdents(b)
+	aI := identsFromNode(a, true)
+	bI := identsFromNode(b, true)
 
 	return identIntersection(aI, bI)
 }
@@ -1056,7 +913,7 @@ func identIntersection(a, b []*ast.Ident) []*ast.Ident {
 	return intersects
 }
 
-func identsFromNode(node ast.Node) []*ast.Ident {
+func identsFromNode(node ast.Node, skipBlock bool) []*ast.Ident {
 	var (
 		idents []*ast.Ident
 		seen   = map[string]struct{}{}
@@ -1067,6 +924,12 @@ func identsFromNode(node ast.Node) []*ast.Ident {
 	}
 
 	ast.Inspect(node, func(n ast.Node) bool {
+		if skipBlock {
+			if _, ok := n.(*ast.BlockStmt); ok {
+				return false
+			}
+		}
+
 		if ident, ok := n.(*ast.Ident); ok {
 			if _, exists := seen[ident.Name]; !exists {
 				idents = append(idents, ident)
