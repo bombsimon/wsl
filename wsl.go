@@ -684,23 +684,22 @@ func (w *WSL) CheckStmt(stmt ast.Stmt, cursor *Cursor) {
 	}
 }
 
-func (w *WSL) CheckExpr(expr ast.Expr, cursor *Cursor) *Cursor {
+func (w *WSL) CheckExpr(expr ast.Expr, cursor *Cursor) {
 	switch s := expr.(type) {
 	// func() {}
 	case *ast.FuncLit:
-		return w.CheckBlock(s.Body)
+		w.CheckBlock(s.Body)
 	// Call(args...)
 	case *ast.CallExpr:
-		c := w.CheckExpr(s.Fun, cursor)
+		w.CheckExpr(s.Fun, cursor)
+
 		for _, e := range s.Args {
 			w.CheckExpr(e, cursor)
 		}
-
-		return c
 	case *ast.IndexExpr:
-		return w.CheckExpr(s.X, cursor)
+		w.CheckExpr(s.X, cursor)
 	case *ast.StarExpr:
-		return w.CheckExpr(s.X, cursor)
+		w.CheckExpr(s.X, cursor)
 	case *ast.ArrayType,
 		*ast.BasicLit,
 		*ast.BinaryExpr,
@@ -716,8 +715,6 @@ func (w *WSL) CheckExpr(expr ast.Expr, cursor *Cursor) *Cursor {
 	default:
 		fmt.Printf("Not implemented expr: %T\n", s)
 	}
-
-	return NewCursor([]ast.Stmt{})
 }
 
 // numberOfStatementsAbove will find out how many lines above the cursor's
@@ -944,8 +941,7 @@ func allIdents(node ast.Node) []*ast.Ident {
 	case *ast.IfStmt:
 		idents = append(idents, allIdents(n.Init)...)
 		idents = append(idents, allIdents(n.Cond)...)
-		// TODO
-		// idents = append(idents, allIdents(n.Else)...)
+		idents = append(idents, allIdents(n.Else)...)
 	case *ast.BinaryExpr:
 		idents = append(idents, allIdents(n.X)...)
 		idents = append(idents, allIdents(n.Y)...)
@@ -1073,8 +1069,8 @@ func identsFromNode(node ast.Node) []*ast.Ident {
 	ast.Inspect(node, func(n ast.Node) bool {
 		if ident, ok := n.(*ast.Ident); ok {
 			if _, exists := seen[ident.Name]; !exists {
-				seen[ident.Name] = struct{}{}
 				idents = append(idents, ident)
+				seen[ident.Name] = struct{}{}
 			}
 		}
 

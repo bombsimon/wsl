@@ -11,10 +11,8 @@ var ErrCursourOutObFounds = errors.New("out of bounds")
 // Each block gets a new cursor and can be used to check previous or coming
 // statements.
 type Cursor struct {
-	currentIdx  int
-	statements  []ast.Stmt
-	idents      map[string]struct{}
-	firstIdents [][]*ast.Ident
+	currentIdx int
+	statements []ast.Stmt
 }
 
 // NewCursor creates a new cursor with a given list of statements.

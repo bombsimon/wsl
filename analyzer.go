@@ -56,7 +56,7 @@ func (wa *wslAnalyzer) flags() flag.FlagSet {
 	return *flags
 }
 
-func (wa *wslAnalyzer) run(pass *analysis.Pass) (interface{}, error) {
+func (wa *wslAnalyzer) run(pass *analysis.Pass) (any, error) {
 	if err := wa.config.Update(wa.enableAll, wa.disableAll, wa.enable, wa.disable); err != nil {
 		return nil, err
 	}

@@ -1,42 +1,14 @@
 ---
-run:
-  timeout: 1m
-  issues-exit-code: 1
-  tests: true
+version: "2"
 
 output:
-  print-issued-lines: false
-  sort-results: true
   formats:
-    - format: colored-line-number
-
-linters-settings:
-  gocognit:
-    min-complexity: 10
-
-  depguard:
-    rules:
-      main:
-        deny:
-          - pkg: "github.com/davecgh/go-spew/spew"
-            desc: not allowed
-
-  misspell:
-    locale: US
-
-  gocritic:
-    # Enable multiple checks by tags, run `GL_DEBUG=gocritic golangci-lint run`
-    # to see all tags and checks. Empty list by default. See
-    # https://github.com/go-critic/go-critic#usage -> section "Tags".
-    enabled-tags:
-      - diagnostic
-      - experimental
-      - opinionated
-      - performance
-      - style
+    text:
+      path: stdout
+      print-issued-lines: false
 
 linters:
-  enable-all: true
+  default: all
   disable:
     - cyclop
     - depguard
@@ -44,16 +16,14 @@ linters:
     - dupword
     - err113
     - exhaustruct
-    - exportloopref
     - forbidigo
     - funlen
-    - gci
     - gocognit
     - gocyclo
     - godox
-    - mnd
     - lll
     - maintidx
+    - mnd
     - nakedret
     - nestif
     - nlreturn
@@ -65,8 +35,45 @@ linters:
     - varnamelen
     - wastedassign
 
+  settings:
+    depguard:
+      rules:
+        main:
+          deny:
+            - pkg: github.com/davecgh/go-spew/spew
+              desc: not allowed
+    gocognit:
+      min-complexity: 10
+    gocritic:
+      # Enable multiple checks by tags, run `GL_DEBUG=gocritic golangci-lint run`
+      # to see all tags and checks. Empty list by default. See
+      # https://github.com/go-critic/go-critic#usage -> section "Tags".
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - opinionated
+        - performance
+        - style
+    misspell:
+      locale: US
+
+  exclusions:
+    presets:
+      - comments
+      - common-false-positives
+      - std-error-handling
+
 issues:
-  exclude-use-default: true
   max-issues-per-linter: 0
   max-same-issues: 0
+formatters:
+  enable:
+    - gofmt
+    - gofumpt
+    - goimports
+  settings:
+    gofmt:
+      rewrite-rules:
+        - pattern: "interface{}"
+          replacement: "any"
 # vim: set sw=2 ts=2 et:
