@@ -53,18 +53,17 @@ func (w *WSL) Run() {
 	}
 }
 
-func (w *WSL) CheckCuddling(stmt ast.Node, cursor, blockCursor *Cursor, maxAllowedStatements int) {
-	w.checkCuddlingWithDecl(stmt, cursor, blockCursor, maxAllowedStatements, true)
+func (w *WSL) CheckCuddling(stmt ast.Node, cursor *Cursor, maxAllowedStatements int) {
+	w.checkCuddlingWithDecl(stmt, cursor, maxAllowedStatements, true)
 }
 
-func (w *WSL) CheckCuddlingNoDecl(stmt ast.Node, cursor, blockCursor *Cursor, maxAllowedStatements int) {
-	w.checkCuddlingWithDecl(stmt, cursor, blockCursor, maxAllowedStatements, false)
+func (w *WSL) CheckCuddlingNoDecl(stmt ast.Node, cursor *Cursor, maxAllowedStatements int) {
+	w.checkCuddlingWithDecl(stmt, cursor, maxAllowedStatements, false)
 }
 
 func (w *WSL) checkCuddlingWithDecl(
 	stmt ast.Node,
 	cursor *Cursor,
-	blockCursor *Cursor,
 	maxAllowedStatements int,
 	declIsValid bool,
 ) {
@@ -113,7 +112,24 @@ func (w *WSL) checkCuddlingWithDecl(
 	// FEATURE: Allow identifier used anywhere in block (including recursive
 	// blocks).
 	if w.Config.AllowWholeBlock {
-		anyIntersects := identsInMap(previousIdents, blockCursor.idents)
+		// anyIntersects := identsInMap(previousIdents, blockCursor.idents)
+		// if len(anyIntersects) > 0 {
+		// 	// We have matches, but too many statements above.
+		// 	if numStmtsAbove > maxAllowedStatements {
+		// 		w.addError(previousNode.Pos(), previousNode.Pos(), previousNode.Pos(), MessageAddWhitespace)
+		// 	}
+
+		// 	return
+		// }
+	}
+
+	// FEATURE: Allow identifiers used first in block. Configurable to allow
+	// multiple levels.
+	if !w.Config.AllowWholeBlock && w.Config.AllowFirstInBlock {
+		allIdentsInBlock := identsFromNode(stmt)
+		spew.Dump(allIdentsInBlock)
+
+		anyIntersects := identIntersection(previousIdents, allIdentsInBlock)
 		if len(anyIntersects) > 0 {
 			// We have matches, but too many statements above.
 			if numStmtsAbove > maxAllowedStatements {
@@ -122,28 +138,24 @@ func (w *WSL) checkCuddlingWithDecl(
 
 			return
 		}
-	}
 
-	// FEATURE: Allow identifiers used first in block. Configurable to allow
-	// multiple levels.
-	if !w.Config.AllowWholeBlock && w.Config.AllowFirstInBlock {
-		for i := range w.Config.FirstInBlockMaxDepth {
-			if i < len(blockCursor.firstIdents) {
-				firstIntersect := identIntersection(
-					previousIdents,
-					blockCursor.firstIdents[i],
-				)
+		// for i := range w.Config.FirstInBlockMaxDepth {
+		// 	if i < len(blockCursor.firstIdents) {
+		// 		firstIntersect := identIntersection(
+		// 			previousIdents,
+		// 			blockCursor.firstIdents[i],
+		// 		)
 
-				if len(firstIntersect) > 0 {
-					// We have matches, but too many statements above.
-					if numStmtsAbove > maxAllowedStatements {
-						w.addError(previousNode.Pos(), previousNode.Pos(), previousNode.Pos(), MessageAddWhitespace)
-					}
+		// 		if len(firstIntersect) > 0 {
+		// 			// We have matches, but too many statements above.
+		// 			if numStmtsAbove > maxAllowedStatements {
+		// 				w.addError(previousNode.Pos(), previousNode.Pos(), previousNode.Pos(), MessageAddWhitespace)
+		// 			}
 
-					return
-				}
-			}
-		}
+		// 			return
+		// 		}
+		// 	}
+		// }
 	}
 
 	// We're cuddled but the line immediately above doesn't contain any
@@ -263,29 +275,27 @@ func (w *WSL) checkError(
 	}
 }
 
-func (w *WSL) CheckBlockAndExtend(
+func (w *WSL) MaybeCheckBlock(
 	node ast.Node,
 	blockStmt *ast.BlockStmt,
 	cursor *Cursor,
 	check CheckType,
 ) {
-	blockCursor := w.CheckBlock(blockStmt)
+	w.CheckBlock(blockStmt)
 
 	if _, ok := w.Config.Checks[check]; ok {
-		w.CheckCuddling(node, cursor, blockCursor, 1)
+		w.CheckCuddling(node, cursor, 1)
 	}
-
-	cursor.Extend(blockCursor)
 }
 
-func (w *WSL) CheckExprAndExtend(
+func (w *WSL) MaybeCheckExpr(
 	node ast.Node,
 	expr ast.Expr,
 	cursor *Cursor,
 	predicate func(ast.Node) (int, bool),
 	check CheckType,
 ) {
-	maybeBlockCursor := w.CheckExpr(expr, cursor)
+	w.CheckExpr(expr, cursor)
 
 	if _, ok := w.Config.Checks[check]; ok {
 		previousNode := cursor.PreviousNode()
@@ -295,11 +305,9 @@ func (w *WSL) CheckExprAndExtend(
 		// We don't even have to check if it's actually cuddled or just the previous
 		// one because even if it's not but is a `go` statement it's valid.
 		if n, ok := predicate(previousNode); ok {
-			w.CheckCuddling(node, cursor, maybeBlockCursor, n)
+			w.CheckCuddling(node, cursor, n)
 		}
 	}
-
-	cursor.Extend(maybeBlockCursor)
 }
 
 func (w *WSL) CheckFunc(funcDecl *ast.FuncDecl) {
@@ -312,50 +320,47 @@ func (w *WSL) CheckFunc(funcDecl *ast.FuncDecl) {
 
 func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor) {
 	// if
-	blockCursor := w.CheckBlock(stmt.Body)
+	w.CheckBlock(stmt.Body)
 
 	switch v := stmt.Else.(type) {
 	// else-if
 	case *ast.IfStmt:
 		// We use our new cursor created for this if-block to check nested if.
-		w.CheckIf(v, blockCursor)
-		blockCursor.Retain()
+		w.CheckIf(v, cursor)
 
 	// else
 	case *ast.BlockStmt:
 		// Merge the idents from the else branch.
-		blockCursor.Merge(w.CheckBlock(v))
+		w.CheckBlock(v)
 	}
 
 	if _, ok := w.Config.Checks[CheckIf]; ok {
-		w.CheckCuddling(stmt, cursor, blockCursor, 1)
+		w.CheckCuddling(stmt, cursor, 1)
 	}
-
-	cursor.Extend(blockCursor)
 }
 
 func (w *WSL) CheckFor(stmt *ast.ForStmt, cursor *Cursor) {
-	w.CheckBlockAndExtend(stmt, stmt.Body, cursor, CheckFor)
+	w.MaybeCheckBlock(stmt, stmt.Body, cursor, CheckFor)
 }
 
 func (w *WSL) CheckRange(stmt *ast.RangeStmt, cursor *Cursor) {
-	w.CheckBlockAndExtend(stmt, stmt.Body, cursor, CheckRange)
+	w.MaybeCheckBlock(stmt, stmt.Body, cursor, CheckRange)
 }
 
 func (w *WSL) CheckSwitch(stmt *ast.SwitchStmt, cursor *Cursor) {
-	w.CheckBlockAndExtend(stmt, stmt.Body, cursor, CheckSwitch)
+	w.MaybeCheckBlock(stmt, stmt.Body, cursor, CheckSwitch)
 }
 
 func (w *WSL) CheckTypeSwitch(stmt *ast.TypeSwitchStmt, cursor *Cursor) {
-	w.CheckBlockAndExtend(stmt, stmt.Body, cursor, CheckTypeSwitch)
+	w.MaybeCheckBlock(stmt, stmt.Body, cursor, CheckTypeSwitch)
 }
 
 func (w *WSL) CheckSelect(stmt *ast.SelectStmt, cursor *Cursor) {
-	w.CheckBlockAndExtend(stmt, stmt.Body, cursor, CheckSelect)
+	w.MaybeCheckBlock(stmt, stmt.Body, cursor, CheckSelect)
 }
 
 func (w *WSL) CheckExprStmt(stmt *ast.ExprStmt, cursor *Cursor) {
-	w.CheckExprAndExtend(
+	w.MaybeCheckExpr(
 		stmt,
 		stmt.X,
 		cursor,
@@ -368,7 +373,7 @@ func (w *WSL) CheckExprStmt(stmt *ast.ExprStmt, cursor *Cursor) {
 }
 
 func (w *WSL) CheckGo(stmt *ast.GoStmt, cursor *Cursor) {
-	w.CheckExprAndExtend(
+	w.MaybeCheckExpr(
 		stmt,
 		stmt.Call,
 		cursor,
@@ -381,7 +386,7 @@ func (w *WSL) CheckGo(stmt *ast.GoStmt, cursor *Cursor) {
 }
 
 func (w *WSL) CheckDefer(stmt *ast.DeferStmt, cursor *Cursor) {
-	w.CheckExprAndExtend(
+	w.MaybeCheckExpr(
 		stmt,
 		stmt.Call,
 		cursor,
@@ -443,7 +448,7 @@ func (w *WSL) CheckDecl(stmt *ast.DeclStmt, cursor *Cursor) {
 		return
 	}
 
-	w.CheckCuddlingNoDecl(stmt, cursor, &Cursor{}, 1)
+	w.CheckCuddlingNoDecl(stmt, cursor, 1)
 }
 
 func (w *WSL) CheckBlock(block *ast.BlockStmt) *Cursor {
@@ -460,7 +465,7 @@ func (w *WSL) CheckCase(stmt *ast.CaseClause, cursor *Cursor) {
 		w.checkCaseTrailingNewline(stmt.Body, cursor)
 	}
 
-	cursor.Extend(w.checkBody(stmt.Body))
+	w.checkBody(stmt.Body)
 }
 
 func (w *WSL) CheckComm(stmt *ast.CommClause, cursor *Cursor) {
@@ -470,7 +475,7 @@ func (w *WSL) CheckComm(stmt *ast.CommClause, cursor *Cursor) {
 		w.checkCaseTrailingNewline(stmt.Body, cursor)
 	}
 
-	cursor.Extend(w.checkBody(stmt.Body))
+	w.checkBody(stmt.Body)
 }
 
 func (w *WSL) checkCaseTrailingNewline(body []ast.Stmt, cursor *Cursor) {
@@ -610,13 +615,9 @@ func (w *WSL) strictAppendCheck(stmt *ast.AssignStmt, cursor *Cursor) {
 
 func (w *WSL) checkBody(body []ast.Stmt) *Cursor {
 	cursor := NewCursor(body)
-	isFirst := true
 
 	for cursor.Next() {
 		w.CheckStmt(cursor.Stmt(), cursor)
-
-		cursor.AddIdents(allIdents(cursor.Stmt()), isFirst)
-		isFirst = false
 	}
 
 	return cursor
@@ -697,7 +698,7 @@ func (w *WSL) CheckExpr(expr ast.Expr, cursor *Cursor) *Cursor {
 	case *ast.CallExpr:
 		c := w.CheckExpr(s.Fun, cursor)
 		for _, e := range s.Args {
-			c.Extend(w.CheckExpr(e, cursor))
+			w.CheckExpr(e, cursor)
 		}
 
 		return c
@@ -717,7 +718,6 @@ func (w *WSL) CheckExpr(expr ast.Expr, cursor *Cursor) *Cursor {
 		*ast.SliceExpr,
 		*ast.TypeAssertExpr,
 		*ast.UnaryExpr:
-		cursor.AddIdents(allIdents(s), false)
 	default:
 		fmt.Printf("Not implemented expr: %T\n", s)
 	}
@@ -1065,14 +1065,22 @@ func identIntersection(a, b []*ast.Ident) []*ast.Ident {
 	return intersects
 }
 
-func identsInMap(a []*ast.Ident, m map[string]struct{}) []*ast.Ident {
-	intersects := []*ast.Ident{}
+func identsFromNode(node ast.Node) []*ast.Ident {
+	var (
+		idents []*ast.Ident
+		seen   = map[string]struct{}{}
+	)
 
-	for _, as := range a {
-		if _, ok := m[as.Name]; ok {
-			intersects = append(intersects, as)
+	ast.Inspect(node, func(n ast.Node) bool {
+		if ident, ok := n.(*ast.Ident); ok {
+			if _, exists := seen[ident.Name]; !exists {
+				seen[ident.Name] = struct{}{}
+				idents = append(idents, ident)
+			}
 		}
-	}
 
-	return intersects
+		return true
+	})
+
+	return idents
 }

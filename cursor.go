@@ -39,65 +39,8 @@ type Cursor struct {
 // NewCursor creates a new cursor with a given list of statements.
 func NewCursor(statements []ast.Stmt) *Cursor {
 	return &Cursor{
-		currentIdx:  -1,
-		statements:  statements,
-		idents:      make(map[string]struct{}),
-		firstIdents: [][]*ast.Ident{},
-	}
-}
-
-// Extend will extend a cursor with another. This is used when returning from a
-// check of a nested block to include all scopes recursively.
-func (c *Cursor) Extend(otherCursor *Cursor) {
-	for i := range otherCursor.idents {
-		c.idents[i] = struct{}{}
-	}
-
-	c.firstIdents = append(c.firstIdents, otherCursor.firstIdents...)
-}
-
-// Merge a cursor with another. This is used when checking chained blocks such
-// as if-else-chains.
-func (c *Cursor) Merge(otherCursor *Cursor) {
-	if len(otherCursor.firstIdents) > 0 {
-		otherFirstIdents := otherCursor.firstIdents[len(otherCursor.firstIdents)-1]
-
-		if len(c.firstIdents) == 0 {
-			c.firstIdents = append(c.firstIdents, otherFirstIdents)
-		} else {
-			c.firstIdents[0] = append(c.firstIdents[0], otherFirstIdents...)
-		}
-	}
-
-	for v := range otherCursor.idents {
-		c.idents[v] = struct{}{}
-	}
-}
-
-// Retain will retain the first idents from a Cursor putting them all at the
-// first index. This is used when there are multiple blocks at the same level
-// with different first identifiers such as if-else.
-func (c *Cursor) Retain() {
-	if len(c.firstIdents) == 0 {
-		return
-	}
-
-	for _, firsts := range c.firstIdents[1:] {
-		c.firstIdents[0] = append(c.firstIdents[0], firsts...)
-	}
-
-	c.firstIdents = c.firstIdents[:1]
-}
-
-// AddIdents adds all idents in the list to the set of identifiers. If it's the
-// first statement for the cursor first identifiers will be extended.
-func (c *Cursor) AddIdents(idents []*ast.Ident, addFirst bool) {
-	for _, i := range idents {
-		c.idents[i.Name] = struct{}{}
-	}
-
-	if addFirst {
-		c.firstIdents = append(c.firstIdents, idents)
+		currentIdx: -1,
+		statements: statements,
 	}
 }
 
