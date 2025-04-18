@@ -24,8 +24,9 @@ func NewAnalyzer(config *Configuration) *analysis.Analyzer {
 // wslAnalyzer is a wrapper around the configuration which is used to be able to
 // set the configuration when creating the analyzer and later be able to update
 // flags and running method.
+//
 // TODO: This should be a public configuration you can pass to `NewAnalyzer` to
-// enable `goalngci-lint` to pass `includeGenerated` but also pass a simpler
+// enable `golang-lint` to pass `includeGenerated` but also pass a simpler
 // enable/disable list of strings.
 type wslAnalyzer struct {
 	config           *Configuration
@@ -71,10 +72,16 @@ func (wa *wslAnalyzer) run(pass *analysis.Pass) (any, error) {
 		// is a not a '.go' file.
 		unadjustedFilename := pass.Fset.PositionFor(file.Pos(), false).Filename
 
+		// if the file is related to cgo the filename of the unadjusted position
+		// is a not a '.go' file.
+		if !strings.HasSuffix(unadjustedFilename, ".go") {
+			continue
+		}
+
 		// The file is skipped if the "unadjusted" file is a Go file, and it's a
 		// generated file (ex: "_test.go" file). The other non-Go files are
 		// skipped by the first 'if' with the adjusted position.
-		if !wa.includeGenerated && ast.IsGenerated(file) && strings.HasSuffix(unadjustedFilename, ".go") {
+		if !wa.includeGenerated && ast.IsGenerated(file) {
 			continue
 		}
 
@@ -122,7 +129,7 @@ type multiStringValue struct {
 func (m *multiStringValue) Set(value string) error {
 	var s []string
 
-	for _, v := range strings.Split(value, ",") {
+	for v := range strings.SplitSeq(value, ",") {
 		s = append(s, strings.TrimSpace(v))
 	}
 
