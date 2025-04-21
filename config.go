@@ -202,7 +202,7 @@ func CheckFromString(s string) (CheckType, error) {
 		return CheckGo, nil
 	case "if":
 		return CheckIf, nil
-	case "incdec":
+	case "inc-dec":
 		return CheckIncDec, nil
 	case "label":
 		return CheckLabel, nil
