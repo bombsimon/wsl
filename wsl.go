@@ -21,8 +21,11 @@ type FixRange struct {
 }
 
 type Issue struct {
-	Message   string
-	FixRanges []FixRange // TODO: Do we need multiple?
+	Message string
+	// We can report multiple fixes at the same position. This happens e.g. when
+	// we force error cuddling but the error assignment is already cuddled.
+	// See `checkError` for examples.
+	FixRanges []FixRange
 }
 
 type WSL struct {
@@ -30,7 +33,7 @@ type WSL struct {
 	Fset     *token.FileSet
 	TypeInfo *types.Info
 	Comments ast.CommentMap
-	Issues   map[token.Pos]Issue // TODO: When do we have multiple reports?
+	Issues   map[token.Pos]Issue
 	Config   *Configuration
 }
 
@@ -365,10 +368,8 @@ func (w *WSL) CheckGo(stmt *ast.GoStmt, cursor *Cursor) {
 		stmt,
 		stmt.Call,
 		cursor,
-		// We can cuddle any amount `go` statements so only check cuddling if the
-		// previous one isn't a `go` call.
-		// We don't even have to check if it's actually cuddled or just the previous
-		// one because even if it's not but is a `go` statement it's valid.
+		// We can cuddle any amount `go` statements so only check cuddling if
+		// the previous one isn't a `go` call.
 		func(n ast.Node) (int, bool) {
 			_, ok := n.(*ast.GoStmt)
 			return 1, !ok
@@ -386,7 +387,9 @@ func (w *WSL) CheckDefer(stmt *ast.DeferStmt, cursor *Cursor) {
 			_, previousIsDefer := n.(*ast.DeferStmt)
 			_, previousIsIf := n.(*ast.IfStmt)
 
-			// We allow defer as a third node only if we if check between. E.g.
+			// We allow defer as a third node only if we have an if statement
+			// between, e.g.
+			//
 			// 	f, err := os.Open(file)
 			// 	if err != nil {
 			// 	    return err
@@ -403,6 +406,7 @@ func (w *WSL) CheckDefer(stmt *ast.DeferStmt, cursor *Cursor) {
 				}
 			}
 
+			// Only check cuddling if previous statement isn't also a defer.
 			return 1, !previousIsDefer
 		},
 		CheckDefer,
@@ -519,8 +523,7 @@ func (w *WSL) CheckReturn(stmt *ast.ReturnStmt, cursor *Cursor) {
 	}
 
 	// There's only a return statement.
-	noStmts := cursor.Len()
-	if noStmts <= 1 {
+	if cursor.Len() <= 1 {
 		return
 	}
 

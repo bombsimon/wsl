@@ -138,7 +138,7 @@ func (m *multiStringValue) Set(value string) error {
 	return nil
 }
 
-// Set implements the flag.Value interface.
+// String implements the flag.Value interface.
 func (m *multiStringValue) String() string {
 	if m.slicePtr == nil {
 		return ""

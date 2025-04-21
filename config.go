@@ -14,29 +14,51 @@ type CheckType int
 
 // Each checker is represented by a CheckType that is used to enable or disable
 // the check.
+// A check can either be of a specific built-in keyword or custom checks.
 const (
 	CheckInvalid CheckType = iota
 	CheckAssign
-	CheckAssignExclusive
-	CheckAppend
 	CheckBreak
 	CheckContinue
 	CheckDecl
 	CheckDefer
 	CheckExpr
-	CheckErr
 	CheckFor
 	CheckGo
 	CheckIf
 	CheckIncDec
 	CheckLabel
-	CheckLeadingWhitespace
-	CheckTrailingWhitespace
 	CheckRange
 	CheckReturn
 	CheckSelect
 	CheckSwitch
 	CheckTypeSwitch
+
+	// Assign exclusive only allows assignments of either new variables or
+	// re-assignment of existing ones, e.g.
+	//
+	// a := 1
+	// b := 2
+	//
+	// a = 1
+	// b = 2
+	CheckAssignExclusive
+	// Check append only allows assignments of `append` to be cuddled with other
+	// assignments if it's a variable used in the append statement, e.g.
+	//
+	// a := 1
+	// x = append(x, a)
+	CheckAppend
+	// Force error checking to follow immediately after an error variable is
+	// assigned, e.g.
+	//
+	// _, err := someFn()
+	// if err != nil {
+	//     panic(err)
+	// }
+	CheckErr
+	CheckLeadingWhitespace
+	CheckTrailingWhitespace
 )
 
 /*

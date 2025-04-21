@@ -1,11 +1,8 @@
 package wsl
 
 import (
-	"errors"
 	"go/ast"
 )
-
-var ErrCursourOutObFounds = errors.New("out of bounds")
 
 // Cursor holds a list of statements and a pointer to where in the list we are.
 // Each block gets a new cursor and can be used to check previous or coming
@@ -52,16 +49,6 @@ func (c *Cursor) PreviousNode() ast.Node {
 	}
 
 	return previousNode
-}
-
-func (c *Cursor) PeekNext() bool {
-	defer c.Save()()
-	return c.Next()
-}
-
-func (c *Cursor) PeekPrevious() bool {
-	defer c.Save()()
-	return c.Previous()
 }
 
 func (c *Cursor) Stmt() ast.Stmt {
