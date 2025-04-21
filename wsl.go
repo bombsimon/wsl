@@ -350,6 +350,18 @@ func (w *WSL) CheckSelect(stmt *ast.SelectStmt, cursor *Cursor) {
 	w.MaybeCheckBlock(stmt, stmt.Body, cursor, CheckSelect)
 }
 
+func (w *WSL) CheckSend(stmt *ast.SendStmt, cursor *Cursor) {
+	defer func() {
+		w.CheckExpr(stmt.Value, cursor)
+	}()
+
+	if _, ok := w.Config.Checks[CheckSend]; !ok {
+		return
+	}
+
+	w.CheckCuddling(stmt, cursor, 1)
+}
+
 func (w *WSL) CheckExprStmt(stmt *ast.ExprStmt, cursor *Cursor) {
 	w.MaybeCheckExpr(
 		stmt,
@@ -678,8 +690,7 @@ func (w *WSL) CheckStmt(stmt ast.Stmt, cursor *Cursor) {
 		w.CheckSelect(s, cursor)
 	// ch <- ...
 	case *ast.SendStmt:
-		// TODO: Check cuddling?
-		w.CheckExpr(s.Value, cursor)
+		w.CheckSend(s, cursor)
 	// LABEL:
 	case *ast.LabeledStmt:
 		w.CheckLabel(s, cursor)

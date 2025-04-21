@@ -133,6 +133,14 @@ func select(ctx context.Context, ch1 chan struct{}) {
 	_ = x
 }
 
+func send(ch chan int) {
+	a := 1
+	ch <- 1
+
+	b := 2
+	<-ch
+}
+
 func switch() {
 	a := 1
 	b := 2

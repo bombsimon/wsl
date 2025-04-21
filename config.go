@@ -31,6 +31,7 @@ const (
 	CheckRange
 	CheckReturn
 	CheckSelect
+	CheckSend
 	CheckSwitch
 	CheckTypeSwitch
 
@@ -164,6 +165,7 @@ func AllChecks() CheckSet {
 	c := DefaultChecks()
 	c.Add(CheckAssignExclusive)
 	c.Add(CheckErr)
+	c.Add(CheckSend)
 
 	return c
 }
@@ -184,10 +186,6 @@ func CheckFromString(s string) (CheckType, error) {
 	switch strings.ToLower(s) {
 	case "assign":
 		return CheckAssign, nil
-	case "assign-exclusive":
-		return CheckAssignExclusive, nil
-	case "append":
-		return CheckAppend, nil
 	case "break":
 		return CheckBreak, nil
 	case "continue":
@@ -206,18 +204,31 @@ func CheckFromString(s string) (CheckType, error) {
 		return CheckIf, nil
 	case "incdec":
 		return CheckIncDec, nil
-	case "leading-whitespace":
-		return CheckLeadingWhitespace, nil
-	case "trailing-whitespace":
-		return CheckTrailingWhitespace, nil
+	case "label":
+		return CheckLabel, nil
 	case "range":
 		return CheckRange, nil
 	case "return":
 		return CheckReturn, nil
+	case "select":
+		return CheckSelect, nil
+	case "send":
+		return CheckSend, nil
 	case "switch":
 		return CheckSwitch, nil
 	case "type-switch":
 		return CheckTypeSwitch, nil
+
+	case "append":
+		return CheckAppend, nil
+	case "assign-exclusive":
+		return CheckAssignExclusive, nil
+	case "err":
+		return CheckErr, nil
+	case "leading-whitespace":
+		return CheckLeadingWhitespace, nil
+	case "trailing-whitespace":
+		return CheckTrailingWhitespace, nil
 	default:
 		return CheckInvalid, fmt.Errorf("invalid check '%s'", s)
 	}
