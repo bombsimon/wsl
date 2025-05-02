@@ -39,6 +39,8 @@ can be run. The idea with this is to attract more users.
 This is an exhaustive list of all the checks that can be enabled or disabled.
 The names are the same as the Go AST type name.
 
+For more details and examples, see [RULES](RULES.md).
+
 ✅ = enabled by default, ❌ = disabled by default
 
 #### Built-ins and keywords
