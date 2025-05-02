@@ -81,60 +81,81 @@ Configuration migration
 - IncludeGenerated                 | Done.
 */
 type Configuration struct {
+	IncludeGenerated  bool
 	AllowFirstInBlock bool
 	AllowWholeBlock   bool
 	CaseMaxLines      int
-	ReturnMaxLines    int
+	BranchMaxLines    int
 	Checks            CheckSet
 }
 
 func NewConfig() *Configuration {
 	return &Configuration{
+		IncludeGenerated:  false,
 		AllowFirstInBlock: true,
 		AllowWholeBlock:   false,
 		CaseMaxLines:      0,
-		ReturnMaxLines:    2,
+		BranchMaxLines:    2,
 		Checks:            DefaultChecks(),
 	}
 }
 
-func (c *Configuration) Update(
+func NewWithChecks(
 	enableAll bool,
 	disableAll bool,
 	enable []string,
 	disable []string,
-) error {
+) (*Configuration, error) {
+	checks, err := NewCheckSet(enableAll, disableAll, enable, disable)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create config: %w", err)
+	}
+
+	cfg := NewConfig()
+	cfg.Checks = checks
+
+	return cfg, nil
+}
+
+func NewCheckSet(
+	enableAll bool,
+	disableAll bool,
+	enable []string,
+	disable []string,
+) (CheckSet, error) {
+	cs := DefaultChecks()
+
 	if enableAll && disableAll {
-		return errors.New("can't use both `enable-all` and `disable-all`")
+		return nil, errors.New("can't use both `enable-all` and `disable-all`")
 	}
 
 	if enableAll {
-		c.Checks = AllChecks()
+		cs = AllChecks()
 	}
 
 	if disableAll {
-		c.Checks = NoChecks()
+		cs = NoChecks()
 	}
 
 	for _, s := range enable {
 		check, err := CheckFromString(s)
 		if err != nil {
-			return fmt.Errorf("invalid check '%s'", s)
+			return nil, fmt.Errorf("invalid check '%s'", s)
 		}
 
-		c.Checks.Add(check)
+		cs.Add(check)
 	}
 
 	for _, s := range disable {
 		check, err := CheckFromString(s)
 		if err != nil {
-			return fmt.Errorf("invalid check '%s'", s)
+			return nil, fmt.Errorf("invalid check '%s'", s)
 		}
 
-		c.Checks.Remove(check)
+		cs.Remove(check)
 	}
 
-	return nil
+	return cs, nil
 }
 
 func DefaultChecks() CheckSet {

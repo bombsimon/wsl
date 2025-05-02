@@ -5,6 +5,7 @@ import (
 	"go/ast"
 	"go/token"
 	"strings"
+	"sync"
 
 	"golang.org/x/tools/go/analysis"
 )
@@ -24,31 +25,44 @@ func NewAnalyzer(config *Configuration) *analysis.Analyzer {
 // wslAnalyzer is a wrapper around the configuration which is used to be able to
 // set the configuration when creating the analyzer and later be able to update
 // flags and running method.
-//
-// TODO: This should be a public configuration you can pass to `NewAnalyzer` to
-// enable `golang-lint` to pass `includeGenerated` but also pass a simpler
-// enable/disable list of strings.
 type wslAnalyzer struct {
-	config           *Configuration
-	includeGenerated bool
-	enableAll        bool
-	disableAll       bool
-	enable           []string
-	disable          []string
+	config *Configuration
+
+	// When we use flags, we need to parse the ones used for checks into
+	// temporary variables so we can create the check set once the flag is being
+	// parsed by the analyzer and we run our analyzer.
+	enableAll  bool
+	disableAll bool
+	enable     []string
+	disable    []string
+
+	// To only validate and convert the parsed flags once we use a `sync.Once`
+	// to only create a check set once and store the set and potential error. We
+	// also store if we actually had a configuration to ensure we don't
+	// overwrite the checks if the analyzer was created with a proper wsl
+	// config.
+	cfgOnce       sync.Once
+	didHaveConfig bool
+	checkSet      CheckSet
+	checkSetErr   error
 }
 
 func (wa *wslAnalyzer) flags() flag.FlagSet {
-	flags := flag.NewFlagSet("", flag.ExitOnError)
+	flags := flag.NewFlagSet("wsl", flag.ExitOnError)
 
-	// If we have a configuration set we're not running from the command line so
-	// we don't use any flags.
 	if wa.config != nil {
+		wa.didHaveConfig = true
 		return *flags
 	}
 
 	wa.config = NewConfig()
 
-	flags.BoolVar(&wa.includeGenerated, "include-generated", false, "Include generated files")
+	flags.BoolVar(&wa.config.IncludeGenerated, "include-generated", false, "Include generated files")
+	flags.BoolVar(&wa.config.AllowFirstInBlock, "allow-first-in-block", true, "Allow cuddling if variable is used in the first statement in the block")
+	flags.BoolVar(&wa.config.AllowWholeBlock, "allow-whole-block", false, "Allow cuddling if variable is used anywhere in the block")
+	flags.IntVar(&wa.config.CaseMaxLines, "case-max-lines", 0, "Max lines before requiring a newline at the end of case (0 = never)")
+	flags.IntVar(&wa.config.BranchMaxLines, "branch-max-lines", 2, "Max lines before requiring newline before branching, e.g. `return`, `break`, `continue` (0 = never)")
+
 	flags.BoolVar(&wa.enableAll, "enable-all", false, "Enable all checks")
 	flags.BoolVar(&wa.disableAll, "disable-all", false, "Disable all checks")
 	flags.Var(&multiStringValue{slicePtr: &wa.enable}, "enable", "Comma separated list of checks to enable")
@@ -58,8 +72,19 @@ func (wa *wslAnalyzer) flags() flag.FlagSet {
 }
 
 func (wa *wslAnalyzer) run(pass *analysis.Pass) (any, error) {
-	if err := wa.config.Update(wa.enableAll, wa.disableAll, wa.enable, wa.disable); err != nil {
-		return nil, err
+	wa.cfgOnce.Do(func() {
+		// No need to update checks if config was passed when creating the
+		// analyzer.
+		if wa.didHaveConfig {
+			return
+		}
+
+		// Parse the check params once if we set our config from flags.
+		wa.config.Checks, wa.checkSetErr = NewCheckSet(wa.enableAll, wa.disableAll, wa.enable, wa.disable)
+	})
+
+	if wa.checkSetErr != nil {
+		return nil, wa.checkSetErr
 	}
 
 	for _, file := range pass.Files {
@@ -81,7 +106,7 @@ func (wa *wslAnalyzer) run(pass *analysis.Pass) (any, error) {
 		// The file is skipped if the "unadjusted" file is a Go file, and it's a
 		// generated file (ex: "_test.go" file). The other non-Go files are
 		// skipped by the first 'if' with the adjusted position.
-		if !wa.includeGenerated && ast.IsGenerated(file) {
+		if !wa.config.IncludeGenerated && ast.IsGenerated(file) {
 			continue
 		}
 

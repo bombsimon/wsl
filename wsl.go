@@ -438,9 +438,10 @@ func (w *WSL) CheckBranch(stmt *ast.BranchStmt, cursor *Cursor) {
 		return
 	}
 
-	// TODO: Should this be lines or statements?
 	lastStmtInBlock := cursor.statements[len(cursor.statements)-1]
-	if stmt == lastStmtInBlock && len(cursor.statements) <= 2 {
+	firstStmts := cursor.Nth(0)
+
+	if w.lineFor(lastStmtInBlock.End())-w.lineFor(firstStmts.Pos()) < w.Config.BranchMaxLines {
 		return
 	}
 
@@ -511,7 +512,6 @@ func (w *WSL) checkCaseTrailingNewline(body []ast.Stmt, cursor *Cursor) {
 	lastStmt := body[len(body)-1]
 	totalLines := w.lineFor(lastStmt.End()) - w.lineFor(firstStmt.Pos()) + 1
 
-	// Not exceeding max lines to require newline.
 	if totalLines <= w.Config.CaseMaxLines {
 		return
 	}
@@ -546,7 +546,7 @@ func (w *WSL) CheckReturn(stmt *ast.ReturnStmt, cursor *Cursor) {
 	// If the distance between the first statement and the return statement is
 	// less than 3 LOC we're allowed to cuddle.
 	firstStmts := cursor.Nth(0)
-	if w.lineFor(stmt.End())-w.lineFor(firstStmts.Pos()) < w.Config.ReturnMaxLines {
+	if w.lineFor(stmt.End())-w.lineFor(firstStmts.Pos()) < w.Config.BranchMaxLines {
 		return
 	}
 
@@ -876,6 +876,9 @@ func (w *WSL) lineFor(pos token.Pos) int {
 
 func (w *WSL) implementsErr(node *ast.Ident) bool {
 	typeInfo := w.TypeInfo.TypeOf(node)
+	if typeInfo == nil {
+		return false
+	}
 
 	errorType, ok := types.Universe.Lookup("error").Type().Underlying().(*types.Interface)
 	if !ok {
