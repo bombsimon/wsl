@@ -1,7 +1,6 @@
 package wsl
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 )
@@ -133,12 +132,11 @@ func NewConfig() *Configuration {
 }
 
 func NewWithChecks(
-	enableAll bool,
-	disableAll bool,
+	preset string,
 	enable []string,
 	disable []string,
 ) (*Configuration, error) {
-	checks, err := NewCheckSet(enableAll, disableAll, enable, disable)
+	checks, err := NewCheckSet(preset, enable, disable)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create config: %w", err)
 	}
@@ -150,23 +148,21 @@ func NewWithChecks(
 }
 
 func NewCheckSet(
-	enableAll bool,
-	disableAll bool,
+	preset string,
 	enable []string,
 	disable []string,
 ) (CheckSet, error) {
-	cs := DefaultChecks()
+	var cs CheckSet
 
-	if enableAll && disableAll {
-		return nil, errors.New("can't use both `enable-all` and `disable-all`")
-	}
-
-	if enableAll {
+	switch strings.ToLower(preset) {
+	case "":
+		cs = DefaultChecks()
+	case "all":
 		cs = AllChecks()
-	}
-
-	if disableAll {
+	case "none":
 		cs = NoChecks()
+	default:
+		return nil, fmt.Errorf("invalid preset '%s', must be `all`, `none` or `` (empty)", preset)
 	}
 
 	for _, s := range enable {
