@@ -84,8 +84,8 @@ type Configuration struct {
 	IncludeGenerated  bool
 	AllowFirstInBlock bool
 	AllowWholeBlock   bool
-	CaseMaxLines      int
 	BranchMaxLines    int
+	CaseMaxLines      int
 	Checks            CheckSet
 }
 

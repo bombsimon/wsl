@@ -61,15 +61,11 @@ func (w *WSL) CheckCuddlingBlock(stmt ast.Node, blockList []ast.Stmt, cursor *Cu
 		firstBlockStmt = blockList[0]
 	}
 
-	w.checkCuddlingWithDecl(stmt, firstBlockStmt, cursor, maxAllowedStatements, true)
+	w.checkCuddlingWithDecl(stmt, firstBlockStmt, cursor, maxAllowedStatements)
 }
 
 func (w *WSL) CheckCuddling(stmt ast.Node, cursor *Cursor, maxAllowedStatements int) {
-	w.checkCuddlingWithDecl(stmt, nil, cursor, maxAllowedStatements, true)
-}
-
-func (w *WSL) CheckCuddlingNoDecl(stmt ast.Node, cursor *Cursor, maxAllowedStatements int) {
-	w.checkCuddlingWithDecl(stmt, nil, cursor, maxAllowedStatements, false)
+	w.checkCuddlingWithDecl(stmt, nil, cursor, maxAllowedStatements)
 }
 
 func (w *WSL) checkCuddlingWithDecl(
@@ -77,7 +73,6 @@ func (w *WSL) checkCuddlingWithDecl(
 	firstBlockStmt ast.Node,
 	cursor *Cursor,
 	maxAllowedStatements int,
-	declIsValid bool,
 ) {
 	defer cursor.Save()()
 
@@ -106,13 +101,6 @@ func (w *WSL) checkCuddlingWithDecl(
 	_, prevIsDecl := previousNode.(*ast.DeclStmt)
 	_, prevIsIncDec := previousNode.(*ast.IncDecStmt)
 	_, currIsDefer := stmt.(*ast.DeferStmt)
-
-	// Most of the time we allow cuddling with declarations (var) if it's just
-	// one statement but not always so this can be disabled, e.g. for
-	// delclarations themselves.
-	if !declIsValid {
-		prevIsDecl = false
-	}
 
 	// We're cuddled but not with an assign, declare or defer statement which is
 	// never allowed.
@@ -453,11 +441,14 @@ func (w *WSL) CheckDecl(stmt *ast.DeclStmt, cursor *Cursor) {
 		return
 	}
 
+	// TODO: Decl might be a block that needs analyzing, e.g.
+	// var x = func() {}
+
 	if w.numberOfStatementsAbove(cursor) == 0 {
 		return
 	}
 
-	w.CheckCuddlingNoDecl(stmt, cursor, 1)
+	w.addError(stmt.End(), stmt.Pos(), stmt.Pos(), MessageAddWhitespace)
 }
 
 func (w *WSL) CheckBlock(block *ast.BlockStmt) *Cursor {

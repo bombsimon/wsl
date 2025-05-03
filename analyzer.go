@@ -43,7 +43,6 @@ type wslAnalyzer struct {
 	// config.
 	cfgOnce       sync.Once
 	didHaveConfig bool
-	checkSet      CheckSet
 	checkSetErr   error
 }
 
@@ -60,8 +59,8 @@ func (wa *wslAnalyzer) flags() flag.FlagSet {
 	flags.BoolVar(&wa.config.IncludeGenerated, "include-generated", false, "Include generated files")
 	flags.BoolVar(&wa.config.AllowFirstInBlock, "allow-first-in-block", true, "Allow cuddling if variable is used in the first statement in the block")
 	flags.BoolVar(&wa.config.AllowWholeBlock, "allow-whole-block", false, "Allow cuddling if variable is used anywhere in the block")
-	flags.IntVar(&wa.config.CaseMaxLines, "case-max-lines", 0, "Max lines before requiring a newline at the end of case (0 = never)")
 	flags.IntVar(&wa.config.BranchMaxLines, "branch-max-lines", 2, "Max lines before requiring newline before branching, e.g. `return`, `break`, `continue` (0 = never)")
+	flags.IntVar(&wa.config.CaseMaxLines, "case-max-lines", 0, "Max lines before requiring a newline at the end of case (0 = never)")
 
 	flags.BoolVar(&wa.enableAll, "enable-all", false, "Enable all checks")
 	flags.BoolVar(&wa.disableAll, "disable-all", false, "Disable all checks")

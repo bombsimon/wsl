@@ -10,17 +10,14 @@ func fn1() {
 	e := 5
 	var f = 6 // want "missing whitespace decreases readability"
 	g := 7 // want "missing whitespace decreases readability"
-
-	_ = a
-	_ = b
-	_ = c
-	_ = d
-	_ = e
-	_ = f
-	_ = g
 }
 
 func fn2() {
 	var a = 1
+	var b = a // want "missing whitespace decreases readability"
+}
+
+func fn3() {
+	a := 1
 	var b = a // want "missing whitespace decreases readability"
 }

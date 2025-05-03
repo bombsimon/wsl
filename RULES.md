@@ -5,9 +5,8 @@ allowed and what's allowed.
 
 ## `assign`
 
-Assign is for assignments such as `foo := bar` or re-assignments such as `foo =
-bar`. Assignments should only be cuddled with other assigments, declarations or
-increment/decrement.
+Assign (`foo := bar`) or re-assignments (`foo = bar`) should only be cuddled
+with other assignments, declarations or increment/decrement.
 
 <table>
 <thead><tr><th>Bad</th><th>Good</th></tr></thead>
@@ -19,6 +18,11 @@ if true {
     fmt.Println("hello")
 }
 a := 1
+
+defer func() {
+    fmt.Println("hello")
+}()
+a := 1
 ```
 
 </td><td valign="top">
@@ -30,20 +34,28 @@ if true {
 
 a := 1
 
+defer func() {
+    fmt.Println("hello")
+}()
+
+a := 1
+
+a := 1
 b := 2
 c := 3
-d := 4
 ```
 
 </td></tr>
 
 <tr><td valign="top">
 
-The assignment is cuddled directly with an `if` statement.
+Assignments cuddled with statements that are not assignments, e.g. `if` or
+`defer`.
 
 </td><td valign="top">
 
-The assignment is separated from the `if` statement with an empty line.
+The assignment is separated from non-assignment statement with an empty line.
+This also shows multiple assignments cuddled together which is allowed.
 
 </td></tr>
 </tbody></table>
@@ -112,9 +124,10 @@ See [`break`](#break), same rules apply but for the keyword `continue`.
 
 ## `decl`
 
-Declarations can serve the purpose of pre-declaring variables or even assign
-them for later use, e.g. when passing a reference. It can also be used to group
-and align multiple values for readability.
+Declarations should never be cuddled. When grouping multiple declarations
+together they should be declared in the same group with parenthesis into a
+single statement. The benefit of this is that it also aligns the declaration or
+assignment increasing readability.
 
 > **NOTE** The fixer can't do smart adjustments and currently only add
 > whitespaces.
@@ -125,25 +138,39 @@ and align multiple values for readability.
 <tr><td valign="top">
 
 ```go
-var x string
-fmt.Println("hello")
+var a string
+var b int
+
+const a = 1
+const b = 2
+
 a := 1
-var y int
-var z int
+var b string
+
+fmt.Println("hello")
+var a string
 ```
 
 </td><td valign="top">
 
 ```go
 var (
-    x string
-    y int
-    z int
+    a string
+    b int
 )
+
+const (
+    a = 1
+    b = 2
+)
+
+a := 1
+
+var b string
 
 fmt.Println("hello")
 
-a := 1
+var a string
 ```
 
 </td></tr>
@@ -156,7 +183,7 @@ declarations are not grouped together.
 </td><td valign="top">
 
 All declarations are grouped in a single declaration, aligning them for
-increased readability.
+increased readability. Declarations are separated from other statements.
 
 </td></tr>
 </tbody></table>
@@ -164,7 +191,7 @@ increased readability.
 ## `defer`
 
 Deferring execution should only be used directly in the context of what's being
-deferred.
+deferred and there should only be one statement above.
 
 <table>
 <thead><tr><th>Bad</th><th>Good</th></tr></thead>
@@ -173,6 +200,7 @@ deferred.
 
 ```go
 val, closeFn := SomeFn()
+val2 := fmt.Sprintf("v-%s", val)
 fmt.Println(val)
 defer closeFn()
 
@@ -314,6 +342,16 @@ for {
     x++
     break
 }
+
+// Allowed with `allow-whole-block`
+x := 1
+for {
+    fmt.Println("hello")
+
+    if shouldIncrement() {
+        x++
+    }
+}
 ```
 
 </td></tr>
@@ -324,7 +362,8 @@ Variables above the `for` loop is not used in the `for` statement.
 
 </td><td valign="top">
 
-The variable on the line above is used in the loop condition.
+The variable on the line above is used in the loop condition. Additionally there
+are examples for `allow-first-in-block` and `allow-whole-block`.
 
 </td></tr>
 </tbody></table>
@@ -341,7 +380,7 @@ See [`defer`](#defer), same rules apply but for the keyword `go`.
 > Configurable via `allow-whole-block` to allow cuddling if the variable is used
 > _anywhere_ in the following block (disabled by default).
 
-`if` statements is one of several block statements (a statement with a block)
+`if` statements are one of several block statements (a statement with a block)
 that can have some form of expression or condition. To make block context more
 readable, only one variable is allowed immediately above the `if` statement and
 the variable must be used in the condition (unless configured otherwise).
@@ -429,8 +468,6 @@ if xUsedFirstInBlock() {
 x := 1
 if xUsedFirstInBlock() {
     fmt.Println("will use x later")
-
-    x = 2
 
     if orEvenNestedWouldWork() {
         x = 3
@@ -528,9 +565,15 @@ for _, i := range anotherRange {
 }
 
 x := 1
-for {
+for i := range make([]int, 3) {
     fmt.Println("hello")
     break
+}
+
+s1 := []int{1, 2, 3}
+s2 := []int{3, 2, 1}
+for _, v := range s2 {
+    fmt.Println(v)
 }
 ```
 
@@ -552,17 +595,26 @@ notARange := 1
 for i := range returnsRange(notARange) {
     fmt.Println(i)
 }
+
+s1 := []int{1, 2, 3}
+
+s2 := []int{3, 2, 1}
+for _, v := range s2 {
+    fmt.Println(v)
+}
 ```
 
 </td></tr>
 
 <tr><td valign="top">
 
-Slices that is not related to the `range` is cuddled with the `range` statement.
+Slices that are not related to the `range` is cuddled with the `range`
+statement. Multiple statements are cuddled above the range statement.
 
 </td><td valign="top">
 
-Only variables used in the range are cuddled.
+Only variables used in the `range` are cuddled and at most one statement above the
+`range` statement.
 
 </td></tr>
 </tbody></table>
@@ -571,17 +623,127 @@ Only variables used in the range are cuddled.
 
 See [`break`](#break), same rules apply but for the keyword `return`.
 
+> Configurable via `branch-max-lines`
+
 ## `select`
+
+See [`for`](#for), same rules apply but for the keyword `range`.
+
+> Configurable via `allow-first-in-block` to allow cuddling if the variable is
+> used _first_ in the block (enabled by default).
+>
+> Configurable via `allow-whole-block` to allow cuddling if the variable is used
+> _anywhere_ in the following block (disabled by default).
 
 ## `send`
 
+Send statements should only be cuddled with a single variable that is used on
+the line above.
+
+<table>
+<thead><tr><th>Bad</th><th>Good</th></tr></thead>
+<tbody>
+<tr><td valign="top">
+
+```go
+a := 1
+ch <- 1
+
+b := 2
+<-ch
+```
+
+</td><td valign="top">
+
+```go
+a := 1
+ch <- a
+
+b := 1
+
+<-ch
+```
+
+</td></tr>
+
+<tr><td valign="top">
+
+Send statement cuddled with assignments that doesn't exist on the line above or
+with multiple assignments.
+
+</td><td valign="top">
+
+Send statements are only cuddled with single variables on the line above.
+
+</td></tr>
+</tbody></table>
+
 ## `switch`
+
+See [`for`](#for), same rules apply but for the keyword `range`.
+
+> Configurable via `allow-first-in-block` to allow cuddling if the variable is
+> used _first_ in the block (enabled by default).
+>
+> Configurable via `allow-whole-block` to allow cuddling if the variable is used
+> _anywhere_ in the following block (disabled by default).
 
 ## `type-switch`
 
+See [`for`](#for), same rules apply but for the keyword `range`.
+
+> Configurable via `allow-first-in-block` to allow cuddling if the variable is
+> used _first_ in the block (enabled by default).
+>
+> Configurable via `allow-whole-block` to allow cuddling if the variable is used
+> _anywhere_ in the following block (disabled by default).
+
 ## `assign-exclusive`
 
+Assign exclusive does not allow mixing new assignments (`:=`) with
+re-assignments (`=`).
+
+<table>
+<thead><tr><th>Bad</th><th>Good</th></tr></thead>
+<tbody>
+<tr><td valign="top">
+
+```go
+a := 1
+b = 2
+c := 3
+d = 4
+```
+
+</td><td valign="top">
+
+```go
+a := 1
+c := 3
+
+b = 2
+d = 4
+```
+
+</td></tr>
+
+<tr><td valign="top">
+
+Alternating new assignments and re-assignments.
+
+</td><td valign="top">
+
+Separating assignments and re-assignments.
+
+</td></tr>
+</tbody></table>
+
 ## `append`
+
+Append enables strict `append` checking where assignments that are
+re-assignments with `append` (e.g. `x = append(x, y)`) is only allowed to be
+cuddled with other assignments if the `append` uses the variable on the line
+above.
 
 <table>
 <thead><tr><th>Bad</th><th>Good</th></tr></thead>
