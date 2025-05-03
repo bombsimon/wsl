@@ -132,11 +132,11 @@ func NewConfig() *Configuration {
 }
 
 func NewWithChecks(
-	preset string,
+	defaultChecks string,
 	enable []string,
 	disable []string,
 ) (*Configuration, error) {
-	checks, err := NewCheckSet(preset, enable, disable)
+	checks, err := NewCheckSet(defaultChecks, enable, disable)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create config: %w", err)
 	}
@@ -148,13 +148,13 @@ func NewWithChecks(
 }
 
 func NewCheckSet(
-	preset string,
+	defaultChecks string,
 	enable []string,
 	disable []string,
 ) (CheckSet, error) {
 	var cs CheckSet
 
-	switch strings.ToLower(preset) {
+	switch strings.ToLower(defaultChecks) {
 	case "":
 		cs = DefaultChecks()
 	case "all":
@@ -162,7 +162,7 @@ func NewCheckSet(
 	case "none":
 		cs = NoChecks()
 	default:
-		return nil, fmt.Errorf("invalid preset '%s', must be `all`, `none` or `` (empty)", preset)
+		return nil, fmt.Errorf("invalid preset '%s', must be `all`, `none` or `` (empty)", defaultChecks)
 	}
 
 	for _, s := range enable {

@@ -31,9 +31,9 @@ type wslAnalyzer struct {
 	// When we use flags, we need to parse the ones used for checks into
 	// temporary variables so we can create the check set once the flag is being
 	// parsed by the analyzer and we run our analyzer.
-	preset  string
-	enable  []string
-	disable []string
+	defaultChecks string
+	enable        []string
+	disable       []string
 
 	// To only validate and convert the parsed flags once we use a `sync.Once`
 	// to only create a check set once and store the set and potential error. We
@@ -61,7 +61,7 @@ func (wa *wslAnalyzer) flags() flag.FlagSet {
 	flags.IntVar(&wa.config.BranchMaxLines, "branch-max-lines", 2, "Max lines before requiring newline before branching, e.g. `return`, `break`, `continue` (0 = never)")
 	flags.IntVar(&wa.config.CaseMaxLines, "case-max-lines", 0, "Max lines before requiring a newline at the end of case (0 = never)")
 
-	flags.StringVar(&wa.preset, "preset", "", "Can be 'all' for all checks or 'none' for no checks")
+	flags.StringVar(&wa.defaultChecks, "default", "", "Can be 'all' for all checks or 'none' for no checks or empty for default checks")
 	flags.Var(&multiStringValue{slicePtr: &wa.enable}, "enable", "Comma separated list of checks to enable")
 	flags.Var(&multiStringValue{slicePtr: &wa.disable}, "disable", "Comma separated list of checks to disable")
 
@@ -77,7 +77,7 @@ func (wa *wslAnalyzer) run(pass *analysis.Pass) (any, error) {
 		}
 
 		// Parse the check params once if we set our config from flags.
-		wa.config.Checks, wa.checkSetErr = NewCheckSet(wa.preset, wa.enable, wa.disable)
+		wa.config.Checks, wa.checkSetErr = NewCheckSet(wa.defaultChecks, wa.enable, wa.disable)
 	})
 
 	if wa.checkSetErr != nil {

@@ -129,8 +129,7 @@ linters:
       allow-whole-block: false
       branch-max-lines: 2
       case-max-lines: 0
-      enable-all: false
-      disable-all: false
+      default: none
       enable:
         - assign
         - branch
