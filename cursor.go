@@ -10,6 +10,7 @@ import (
 type Cursor struct {
 	currentIdx int
 	statements []ast.Stmt
+	checkType  CheckType
 }
 
 // NewCursor creates a new cursor with a given list of statements.
@@ -18,6 +19,10 @@ func NewCursor(statements []ast.Stmt) *Cursor {
 		currentIdx: -1,
 		statements: statements,
 	}
+}
+
+func (c *Cursor) SetChecker(ct CheckType) {
+	c.checkType = ct
 }
 
 func (c *Cursor) Next() bool {

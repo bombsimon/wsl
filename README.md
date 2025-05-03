@@ -27,10 +27,9 @@ For more details and examples, see [RULES](RULES.md).
 
 - ✅ **assign** - Assignments should only be cuddled with other assignments,
   declarations or increment/decrement
-- ✅ **break** - Break should only be cuddled if the block is less than `n`
-  lines where `n` is the value of [`branch-max-statements`](#configuration)
-- ✅ **continue** - Continue should only be cuddled if the block is less than
-  `n` lines where `n` is the value of [`branch-max-statements`](#configuration)
+- ✅ **branch** - Branch statement (`break`, `continue`, `fallthrough`, `goto`)
+  should only be cuddled if the block is less than `n` lines where `n` is the
+  value of [`branch-max-statements`](#configuration)
 - ✅ **decl** - Declarations should never be cuddled
 - ✅ **defer** - Defer should only be cuddled with other `defer`, after error
   checking or with variable used on the line above
@@ -134,8 +133,7 @@ linters:
       disable-all: false
       enable:
         - assign
-        - break
-        - continue
+        - branch
         - decl
         - defer
         - expr
@@ -152,10 +150,10 @@ linters:
         - append
         - leading-whitespace
         - trailing-whitespace
-    disable:
-      - assign-exclusive
-      - err
-      - send
+      disable:
+        - assign-exclusive
+        - err
+        - send
 ```
 
 ## See also

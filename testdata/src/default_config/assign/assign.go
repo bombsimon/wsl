@@ -29,7 +29,7 @@ func strictAppend() {
 	x := "c"
 	s = append(s, x)
 	y := "e"
-	s = append(s, "d") // want "missing whitespace decreases readability"
+	s = append(s, "d") // want `missing whitespace decreases readability \(assign\)`
 	s = append(s, y)
 }
 
@@ -62,5 +62,5 @@ func assignAfterBlock() {
 	if x > 0 {
 		return
 	}
-	x = 2 // want "missing whitespace decreases readability"
+	x = 2 // want `missing whitespace decreases readability \(assign\)`
 }

@@ -12,11 +12,29 @@ func fn1() {
 
 		if true {
 			fmt.Println("")
+			break
+		}
+
+		if true {
+			fmt.Println("")
 			continue
 		}
 
 		if true {
 			fmt.Println("")
+			fallthrough
+		}
+
+		if true {
+			fmt.Println("")
+			goto START
+		}
+
+		if false {
+			fmt.Println("")
+			fmt.Println("")
+			fmt.Println("")
+
 			break
 		}
 
@@ -33,13 +51,28 @@ func fn1() {
 			fmt.Println("")
 			fmt.Println("")
 
-			break
+			fallthrough
+		}
+
+		if false {
+			fmt.Println("")
+			fmt.Println("")
+			fmt.Println("")
+
+			goto START
 		}
 	}
 }
 
 func fn2() {
 	for range []int{} {
+		if true {
+			fmt.Println("")
+			fmt.Println("")
+			fmt.Println("")
+			break // want "missing whitespace decreases readability"
+		}
+
 		if true {
 			fmt.Println("")
 			fmt.Println("")
@@ -51,9 +84,14 @@ func fn2() {
 			fmt.Println("")
 			fmt.Println("")
 			fmt.Println("")
+			fallthrough // want "missing whitespace decreases readability"
+		}
+
+		if true {
 			fmt.Println("")
 			fmt.Println("")
-			break // want "missing whitespace decreases readability"
+			fmt.Println("")
+			goto START // want "missing whitespace decreases readability"
 		}
 	}
 }

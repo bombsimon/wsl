@@ -60,9 +60,13 @@ This also shows multiple assignments cuddled together which is allowed.
 </td></tr>
 </tbody></table>
 
-## `break`
+## `branch`
 
 > Configurable via `branch-max-lines`
+
+Branch statement (`break`, `continue`, `fallthrough`, `goto`) should only be
+cuddled if the block is less than `n` lines where `n` is the value of
+`branch-max-statements`.
 
 <table>
 <thead><tr><th>Bad</th><th>Good</th></tr></thead>
@@ -115,12 +119,6 @@ smaller blocks with only 2 lines it's ok to cuddled the `break`.
 
 </td></tr>
 </tbody></table>
-
-## `continue`
-
-> Configurable via `branch-max-lines`
-
-See [`break`](#break), same rules apply but for the keyword `continue`.
 
 ## `decl`
 

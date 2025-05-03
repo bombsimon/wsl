@@ -18,8 +18,7 @@ type CheckType int
 const (
 	CheckInvalid CheckType = iota
 	CheckAssign
-	CheckBreak
-	CheckContinue
+	CheckBranch
 	CheckDecl
 	CheckDefer
 	CheckExpr
@@ -60,7 +59,40 @@ const (
 	CheckErr
 	CheckLeadingWhitespace
 	CheckTrailingWhitespace
+
+	// CheckTypes only used for reporting
+	CheckCaseTrailingNewline
 )
+
+func (c CheckType) String() string {
+	return [...]string{
+		"invalid",
+		"assign",
+		"branch",
+		"decl",
+		"defer",
+		"expr",
+		"for",
+		"go",
+		"if",
+		"inc-dec",
+		"label",
+		"range",
+		"return",
+		"select",
+		"send",
+		"switch",
+		"type-switch",
+		//
+		"assign-exclusive",
+		"append",
+		"err",
+		"leading-whitespace",
+		"trailing-whitespace",
+		//
+		"case-trailing-newline",
+	}[c]
+}
 
 /*
 Configuration migration
@@ -162,8 +194,7 @@ func DefaultChecks() CheckSet {
 	return CheckSet{
 		CheckAssign:             {},
 		CheckAppend:             {},
-		CheckBreak:              {},
-		CheckContinue:           {},
+		CheckBranch:             {},
 		CheckDecl:               {},
 		CheckDefer:              {},
 		CheckExpr:               {},
@@ -207,10 +238,8 @@ func CheckFromString(s string) (CheckType, error) {
 	switch strings.ToLower(s) {
 	case "assign":
 		return CheckAssign, nil
-	case "break":
-		return CheckBreak, nil
-	case "continue":
-		return CheckContinue, nil
+	case "branch":
+		return CheckBranch, nil
 	case "decl":
 		return CheckDecl, nil
 	case "defer":

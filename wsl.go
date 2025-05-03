@@ -105,7 +105,7 @@ func (w *WSL) checkCuddlingWithDecl(
 	// We're cuddled but not with an assign, declare or defer statement which is
 	// never allowed.
 	if !prevIsAssign && !prevIsDecl && !currIsDefer && !prevIsIncDec {
-		w.addError(cursor.Stmt().Pos(), cursor.Stmt().Pos(), cursor.Stmt().Pos(), MessageAddWhitespace)
+		w.addError(cursor.Stmt().Pos(), cursor.Stmt().Pos(), cursor.Stmt().Pos(), MessageAddWhitespace, cursor.checkType)
 		return
 	}
 
@@ -117,7 +117,7 @@ func (w *WSL) checkCuddlingWithDecl(
 		if len(anyIntersects) > 0 {
 			// We have matches, but too many statements above.
 			if maxAllowedStatements != -1 && numStmtsAbove > maxAllowedStatements {
-				w.addError(previousNode.Pos(), previousNode.Pos(), previousNode.Pos(), MessageAddWhitespace)
+				w.addError(previousNode.Pos(), previousNode.Pos(), previousNode.Pos(), MessageAddWhitespace, cursor.checkType)
 			}
 
 			return
@@ -132,7 +132,7 @@ func (w *WSL) checkCuddlingWithDecl(
 		if len(anyIntersects) > 0 {
 			// We have matches, but too many statements above.
 			if maxAllowedStatements != -1 && numStmtsAbove > maxAllowedStatements {
-				w.addError(previousNode.Pos(), previousNode.Pos(), previousNode.Pos(), MessageAddWhitespace)
+				w.addError(previousNode.Pos(), previousNode.Pos(), previousNode.Pos(), MessageAddWhitespace, cursor.checkType)
 			}
 
 			return
@@ -143,7 +143,7 @@ func (w *WSL) checkCuddlingWithDecl(
 	// variables used in this statement.
 	intersects := identIntersection(currentIdents, previousIdents)
 	if len(intersects) == 0 {
-		w.addError(stmt.Pos(), stmt.Pos(), stmt.Pos(), MessageAddWhitespace)
+		w.addError(stmt.Pos(), stmt.Pos(), stmt.Pos(), MessageAddWhitespace, cursor.checkType)
 		return
 	}
 
@@ -154,7 +154,7 @@ func (w *WSL) checkCuddlingWithDecl(
 		// disabled (-1) check that the previous one intersects with the current
 		// one.
 		if maxAllowedStatements != -1 && numStmtsAbove > maxAllowedStatements {
-			w.addError(previousNode.Pos(), previousNode.Pos(), previousNode.Pos(), MessageAddWhitespace)
+			w.addError(previousNode.Pos(), previousNode.Pos(), previousNode.Pos(), MessageAddWhitespace, cursor.checkType)
 		}
 	}
 }
@@ -208,7 +208,7 @@ func (w *WSL) CheckCuddlingWithoutIntersection(stmt ast.Node, cursor *Cursor) {
 	}
 
 	if w.numberOfStatementsAbove(cursor) > 0 && !prevIsValidType {
-		w.addError(stmt.Pos(), stmt.Pos(), stmt.Pos(), MessageAddWhitespace)
+		w.addError(stmt.Pos(), stmt.Pos(), stmt.Pos(), MessageAddWhitespace, cursor.checkType)
 	}
 }
 
@@ -227,6 +227,8 @@ func (w *WSL) checkError(
 		return
 	}
 
+	cursor.SetChecker(CheckErr)
+
 	if stmtsAbove > 0 || len(previousIdents) == 0 {
 		return
 	}
@@ -237,7 +239,7 @@ func (w *WSL) checkError(
 		return
 	}
 
-	w.addError(ifStmt.Pos(), previousNode.End(), ifStmt.Pos(), MessageRemoveWhitespace)
+	w.addError(ifStmt.Pos(), previousNode.End(), ifStmt.Pos(), MessageRemoveWhitespace, cursor.checkType)
 
 	// If we add the error at the same position but with a different fix
 	// range, only the fix range will be updated.
@@ -256,7 +258,7 @@ func (w *WSL) checkError(
 	cursor.Previous()
 
 	if w.numberOfStatementsAbove(cursor) > 0 {
-		w.addError(ifStmt.Pos(), previousNode.Pos(), previousNode.Pos(), MessageAddWhitespace)
+		w.addError(ifStmt.Pos(), previousNode.Pos(), previousNode.Pos(), MessageAddWhitespace, cursor.checkType)
 	}
 }
 
@@ -269,6 +271,7 @@ func (w *WSL) MaybeCheckBlock(
 	w.CheckBlock(blockStmt)
 
 	if _, ok := w.Config.Checks[check]; ok {
+		cursor.SetChecker(check)
 		w.CheckCuddlingBlock(node, blockStmt.List, cursor, 1)
 	}
 }
@@ -283,6 +286,7 @@ func (w *WSL) MaybeCheckExpr(
 	w.CheckExpr(expr, cursor)
 
 	if _, ok := w.Config.Checks[check]; ok {
+		cursor.SetChecker(check)
 		previousNode := cursor.PreviousNode()
 
 		if n, ok := predicate(previousNode); ok {
@@ -314,6 +318,7 @@ func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor, isElse bool) {
 	}
 
 	if _, ok := w.Config.Checks[CheckIf]; !isElse && ok {
+		cursor.SetChecker(CheckIf)
 		w.CheckCuddlingBlock(stmt, stmt.Body.List, cursor, 1)
 	}
 }
@@ -346,6 +351,8 @@ func (w *WSL) CheckSend(stmt *ast.SendStmt, cursor *Cursor) {
 	if _, ok := w.Config.Checks[CheckSend]; !ok {
 		return
 	}
+
+	cursor.SetChecker(CheckSend)
 
 	w.CheckCuddling(stmt, cursor, 1)
 }
@@ -414,13 +421,11 @@ func (w *WSL) CheckDefer(stmt *ast.DeferStmt, cursor *Cursor) {
 }
 
 func (w *WSL) CheckBranch(stmt *ast.BranchStmt, cursor *Cursor) {
-	if _, ok := w.Config.Checks[CheckBreak]; !ok && stmt.Tok == token.BREAK {
+	if _, ok := w.Config.Checks[CheckBranch]; !ok {
 		return
 	}
 
-	if _, ok := w.Config.Checks[CheckContinue]; !ok && stmt.Tok == token.CONTINUE {
-		return
-	}
+	cursor.SetChecker(CheckBranch)
 
 	if w.numberOfStatementsAbove(cursor) == 0 {
 		return
@@ -433,13 +438,15 @@ func (w *WSL) CheckBranch(stmt *ast.BranchStmt, cursor *Cursor) {
 		return
 	}
 
-	w.addError(stmt.Pos(), stmt.Pos(), stmt.Pos(), MessageAddWhitespace)
+	w.addError(stmt.Pos(), stmt.Pos(), stmt.Pos(), MessageAddWhitespace, cursor.checkType)
 }
 
 func (w *WSL) CheckDecl(stmt *ast.DeclStmt, cursor *Cursor) {
 	if _, ok := w.Config.Checks[CheckDecl]; !ok {
 		return
 	}
+
+	cursor.SetChecker(CheckDecl)
 
 	// TODO: Decl might be a block that needs analyzing, e.g.
 	// var x = func() {}
@@ -448,7 +455,7 @@ func (w *WSL) CheckDecl(stmt *ast.DeclStmt, cursor *Cursor) {
 		return
 	}
 
-	w.addError(stmt.End(), stmt.Pos(), stmt.Pos(), MessageAddWhitespace)
+	w.addError(stmt.End(), stmt.Pos(), stmt.Pos(), MessageAddWhitespace, cursor.checkType)
 }
 
 func (w *WSL) CheckBlock(block *ast.BlockStmt) *Cursor {
@@ -513,7 +520,7 @@ func (w *WSL) checkCaseTrailingNewline(body []ast.Stmt, cursor *Cursor) {
 		return
 	}
 
-	w.addError(lastStmt.End(), nextCase.Pos(), nextCase.Pos(), MessageAddWhitespace)
+	w.addError(lastStmt.End(), nextCase.Pos(), nextCase.Pos(), MessageAddWhitespace, CheckCaseTrailingNewline)
 }
 
 func (w *WSL) CheckReturn(stmt *ast.ReturnStmt, cursor *Cursor) {
@@ -524,6 +531,8 @@ func (w *WSL) CheckReturn(stmt *ast.ReturnStmt, cursor *Cursor) {
 	if _, ok := w.Config.Checks[CheckReturn]; !ok {
 		return
 	}
+
+	cursor.SetChecker(CheckReturn)
 
 	// There's only a return statement.
 	if cursor.Len() <= 1 {
@@ -541,7 +550,7 @@ func (w *WSL) CheckReturn(stmt *ast.ReturnStmt, cursor *Cursor) {
 		return
 	}
 
-	w.addError(stmt.Pos(), stmt.Pos(), stmt.Pos(), MessageAddWhitespace)
+	w.addError(stmt.Pos(), stmt.Pos(), stmt.Pos(), MessageAddWhitespace, cursor.checkType)
 }
 
 func (w *WSL) CheckAssign(stmt *ast.AssignStmt, cursor *Cursor) {
@@ -555,6 +564,8 @@ func (w *WSL) CheckAssign(stmt *ast.AssignStmt, cursor *Cursor) {
 		return
 	}
 
+	cursor.SetChecker(CheckAssign)
+
 	w.CheckCuddlingWithoutIntersection(stmt, cursor)
 	w.strictAppendCheck(stmt, cursor)
 }
@@ -566,6 +577,8 @@ func (w *WSL) CheckIncDec(stmt *ast.IncDecStmt, cursor *Cursor) {
 		return
 	}
 
+	cursor.SetChecker(CheckIncDec)
+
 	w.CheckCuddlingWithoutIntersection(stmt, cursor)
 }
 
@@ -574,11 +587,13 @@ func (w *WSL) CheckLabel(stmt *ast.LabeledStmt, cursor *Cursor) {
 		return
 	}
 
+	cursor.SetChecker(CheckLabel)
+
 	if w.numberOfStatementsAbove(cursor) == 0 {
 		return
 	}
 
-	w.addError(stmt.Pos(), stmt.Pos(), stmt.Pos(), MessageAddWhitespace)
+	w.addError(stmt.Pos(), stmt.Pos(), stmt.Pos(), MessageAddWhitespace, cursor.checkType)
 }
 
 func (w *WSL) strictAppendCheck(stmt *ast.AssignStmt, cursor *Cursor) {
@@ -611,7 +626,7 @@ func (w *WSL) strictAppendCheck(stmt *ast.AssignStmt, cursor *Cursor) {
 	}
 
 	if !hasIntersection(appendNode, previousNode) {
-		w.addError(stmt.Pos(), stmt.Pos(), stmt.Pos(), MessageAddWhitespace)
+		w.addError(stmt.Pos(), stmt.Pos(), stmt.Pos(), MessageAddWhitespace, cursor.checkType)
 	}
 }
 
@@ -812,7 +827,7 @@ func (w *WSL) CheckLeadingNewline(startPos token.Pos, body []ast.Stmt, comments 
 	firstStmtLine := w.Fset.PositionFor(firstStmt, false).Line
 
 	if openingPosLine != firstStmtLine-1 {
-		w.addError(openingPos, openingPos, firstStmt, MessageRemoveWhitespace)
+		w.addError(openingPos, openingPos, firstStmt, MessageRemoveWhitespace, CheckLeadingWhitespace)
 	}
 }
 
@@ -857,7 +872,7 @@ func (w *WSL) CheckTrailingNewline(body *ast.BlockStmt) {
 	lastStmtLine := w.Fset.PositionFor(lastStmtOrComment, false).Line
 
 	if closingPosLine != lastStmtLine+1 {
-		w.addError(closingPos, lastStmtOrComment, closingPos, MessageRemoveWhitespace)
+		w.addError(closingPos, lastStmtOrComment, closingPos, MessageRemoveWhitespace, CheckTrailingWhitespace)
 	}
 }
 
@@ -879,11 +894,11 @@ func (w *WSL) implementsErr(node *ast.Ident) bool {
 	return types.Implements(typeInfo, errorType)
 }
 
-func (w *WSL) addError(report, start, end token.Pos, message string) {
+func (w *WSL) addError(report, start, end token.Pos, message string, ct CheckType) {
 	issue, ok := w.Issues[report]
 	if !ok {
 		issue = Issue{
-			Message:   message,
+			Message:   fmt.Sprintf("%s (%s)", message, ct),
 			FixRanges: []FixRange{},
 		}
 	}
