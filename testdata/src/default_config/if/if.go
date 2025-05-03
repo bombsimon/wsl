@@ -4,7 +4,7 @@ import "errors"
 
 func fn1() {
 	a := 1
-	b := 2 // want "missing whitespace decreases readability"
+	b := 2 // want `missing whitespace decreases readability \(if\)`
 	if b == 2 {
 		panic(1)
 	}
@@ -16,7 +16,7 @@ func fn1() {
 func fn2() {
 	b := 2
 	a := 1
-	if b == 2 { // want "missing whitespace decreases readability"
+	if b == 2 { // want `missing whitespace decreases readability \(if\)`
 		panic(1)
 	}
 
@@ -36,7 +36,7 @@ func fn4() {
 	if a := 1; a != 2 {
 		panic(a)
 	}
-	if a := 2; a != 2 { // want "missing whitespace decreases readability"
+	if a := 2; a != 2 { // want `missing whitespace decreases readability \(if\)`
 		panic(a)
 	}
 }

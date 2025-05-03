@@ -13,7 +13,7 @@ func fn1() {
 	}
 
 	b := 1
-	if true { // want "missing whitespace decreases readability"
+	if true { // want `missing whitespace decreases readability \(if\)`
 		Fn(one)
 
 		if false {

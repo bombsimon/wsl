@@ -15,7 +15,7 @@ func Go() {
 
 	barFunc := func() {}
 
-	go fooFunc() // want "missing whitespace decreases readability"
+	go fooFunc() // want `missing whitespace decreases readability \(go\)`
 
 	_ = barFunc
 
@@ -25,7 +25,7 @@ func Go() {
 
 	cuddled := true
 
-	go func() { // want "missing whitespace decreases readability"
+	go func() { // want `missing whitespace decreases readability \(go\)`
 		fmt.Println("hey")
 	}()
 
@@ -36,7 +36,7 @@ func Go() {
 
 	notArgToGo := 1
 
-	go Fn(argToGo) // want "missing whitespace decreases readability"
+	go Fn(argToGo) // want `missing whitespace decreases readability \(go\)`
 
 	_ = notArgToGo
 
@@ -50,14 +50,14 @@ func Go() {
 
 	multiCuddle1 := NewT()
 
-	multiCuddle2 := NewT() // want "missing whitespace decreases readability"
+	multiCuddle2 := NewT() // want `missing whitespace decreases readability \(go\)`
 	go multiCuddle2()
 
 	// TODO: Breaking change, this used to be on the first `go` stmt - now it's
 	// on the line that should have a blank line above.
 	t4 := NewT()
 
-	t5 := NewT() // want "missing whitespace decreases readability"
+	t5 := NewT() // want `missing whitespace decreases readability \(go\)`
 	go t5()
 	go t4()
 

@@ -2,7 +2,7 @@ package testpkg
 
 func fn1() {
 	a := 1
-	b := 2 // want "missing whitespace decreases readability"
+	b := 2 // want `missing whitespace decreases readability \(switch\)`
 	switch b {
 	case 1:
 	case 2:
@@ -14,7 +14,7 @@ func fn1() {
 func fn2() {
 	b := 2
 	a := 1
-	switch b { // want "missing whitespace decreases readability"
+	switch b { // want `missing whitespace decreases readability \(switch\)`
 	case 1:
 	case 2:
 	case 3:
@@ -27,7 +27,7 @@ func fn3() {
 	case true:
 	case false:
 	}
-	switch true { // want "missing whitespace decreases readability"
+	switch true { // want `missing whitespace decreases readability \(switch\)`
 	case true:
 	case false:
 		panic("")

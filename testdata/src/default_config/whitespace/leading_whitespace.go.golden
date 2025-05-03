@@ -6,17 +6,17 @@ func Call(fn func()) func() {
 	return fn
 }
 
-func fn1() { // want "unnecessary whitespace decreases readability"
+func fn1() { // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
 	fmt.Println("Hello, World")
 }
 
-func fn2() { // want "unnecessary whitespace decreases readability"
+func fn2() { // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
 	// Space before comment.
 	fmt.Println("Hello, World")
 }
 
 func fn3() {
-	// Space after comment // want "unnecessary whitespace decreases readability"
+	// Space after comment // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
 	fmt.Println("Hello, World")
 }
 
@@ -37,7 +37,7 @@ func fn51() {
 }
 
 func fn6() {
-	if true { // want "unnecessary whitespace decreases readability"
+	if true { // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
 		_ = 1
 	}
 }
@@ -45,45 +45,45 @@ func fn6() {
 func fn7() {
 	if true {
 		_ = 1
-	} else if true { // want "unnecessary whitespace decreases readability"
+	} else if true { // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
 		_ = 1
-	} else { // want "unnecessary whitespace decreases readability"
+	} else { // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
 		_ = 1
 	}
 }
 
-func fn8(a string, b any, s []string) { // want "unnecessary whitespace decreases readability"
-	if true { // want "unnecessary whitespace decreases readability"
+func fn8(a string, b any, s []string) { // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
+	if true { // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
 		_ = 1
-	} else if true { // want "unnecessary whitespace decreases readability"
-		_ = 1
-	}
-
-	for i := 0; i < 1; i++ { // want "unnecessary whitespace decreases readability"
+	} else if true { // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
 		_ = 1
 	}
 
-	for n := range []int{} { // want "unnecessary whitespace decreases readability"
+	for i := 0; i < 1; i++ { // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
+		_ = 1
+	}
+
+	for n := range []int{} { // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
 		_ = n
 	}
 
-	for range s { // want "unnecessary whitespace decreases readability"
+	for range s { // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
 		_ = 1
 	}
 
-	switch a { // want "unnecessary whitespace decreases readability"
+	switch a { // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
 	case "a":
 	}
 
-	switch b.(type) { // want "unnecessary whitespace decreases readability"
+	switch b.(type) { // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
 	case int:
 	}
 
-	f := func() { // want "unnecessary whitespace decreases readability"
+	f := func() { // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
 		_ = 1
 	}
 
-	f2 := Call(func() { // want "unnecessary whitespace decreases readability"
+	f2 := Call(func() { // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
 		_ = 1
 	})
 
@@ -93,14 +93,14 @@ func fn8(a string, b any, s []string) { // want "unnecessary whitespace decrease
 
 func fn9() {
 	switch {
-	case 1: // want "unnecessary whitespace decreases readability"
+	case 1: // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
 		_ = 1
 
 	case 2:
-		// This is a comment // want "unnecessary whitespace decreases readability"
+		// This is a comment // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
 		_ = 2
 
-	default: // want "unnecessary whitespace decreases readability"
+	default: // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
 		_ = 3
 
 	}

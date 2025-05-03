@@ -28,13 +28,13 @@ L1:
 	if true {
 		_ = 1
 	}
-L2: // want "missing whitespace decreases readability"
+L2: // want `missing whitespace decreases readability \(if\)`
 	if true {
 		_ = 1
 	}
 
 	_ = 1
-L3: // want "missing whitespace decreases readability"
+L3: // want `missing whitespace decreases readability \(label\)`
 	_ = 1
 }
 
@@ -45,6 +45,6 @@ LABEL:
 		fmt.Println("")
 		fmt.Println("")
 		fmt.Println("")
-		break // want "missing whitespace decreases readability"
+		break // want `missing whitespace decreases readability \(branch\)`
 	}
 }

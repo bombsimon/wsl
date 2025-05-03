@@ -2,22 +2,22 @@ package testpkg
 
 func fn1() {
 	var a = 1
-	var b = 2 // want "missing whitespace decreases readability"
+	var b = 2 // want `missing whitespace decreases readability \(decl\)`
 
 	const c = 3
-	const d = 4 // want "missing whitespace decreases readability"
+	const d = 4 // want `missing whitespace decreases readability \(decl\)`
 
 	e := 5
-	var f = 6 // want "missing whitespace decreases readability"
-	g := 7 // want "missing whitespace decreases readability"
+	var f = 6 // want `missing whitespace decreases readability \(decl\)`
+	g := 7 // want `missing whitespace decreases readability \(assign\)`
 }
 
 func fn2() {
 	var a = 1
-	var b = a // want "missing whitespace decreases readability"
+	var b = a // want `missing whitespace decreases readability \(decl\)`
 }
 
 func fn3() {
 	a := 1
-	var b = a // want "missing whitespace decreases readability"
+	var b = a // want `missing whitespace decreases readability \(decl\)`
 }

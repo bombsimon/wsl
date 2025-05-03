@@ -2,7 +2,7 @@ package testpkg
 
 func fn1() {
 	a := []int{}
-	b := []int{} // want "missing whitespace decreases readability"
+	b := []int{} // want `missing whitespace decreases readability \(range\)`
 	for range b {
 		panic(1)
 	}
@@ -14,7 +14,7 @@ func fn1() {
 func fn2() {
 	b := []int{}
 	a := []int{}
-	for range b { // want "missing whitespace decreases readability"
+	for range b { // want `missing whitespace decreases readability \(range\)`
 		panic(1)
 	}
 
@@ -26,7 +26,7 @@ func fn3() {
 	for range make([]int, 0) {
 		panic("")
 	}
-	for range make([]int, 0) { // want "missing whitespace decreases readability"
+	for range make([]int, 0) { // want `missing whitespace decreases readability \(range\)`
 		panic("")
 	}
 }

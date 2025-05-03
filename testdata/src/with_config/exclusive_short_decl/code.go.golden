@@ -11,7 +11,7 @@ func fn() {
 
 	d := 1
 
-	a = 3  // want "missing whitespace decreases readability"
+	a = 3  // want `missing whitespace decreases readability \(assign\)`
 
-	e := 4 // want "missing whitespace decreases readability"
+	e := 4 // want `missing whitespace decreases readability \(assign\)`
 }
