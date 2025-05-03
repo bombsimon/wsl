@@ -1,5 +1,7 @@
 package testpkg
 
+import "fmt"
+
 func fn1() {
 	for i := range make([]int, 2) {
 		if i == 1 {
@@ -34,4 +36,15 @@ L2: // want "missing whitespace decreases readability"
 	_ = 1
 L3: // want "missing whitespace decreases readability"
 	_ = 1
+}
+
+func fn() {
+LABEL:
+	if true {
+		fmt.Println("")
+		fmt.Println("")
+		fmt.Println("")
+		fmt.Println("")
+		break // want "missing whitespace decreases readability"
+	}
 }

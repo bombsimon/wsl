@@ -583,6 +583,8 @@ func (w *WSL) CheckIncDec(stmt *ast.IncDecStmt, cursor *Cursor) {
 }
 
 func (w *WSL) CheckLabel(stmt *ast.LabeledStmt, cursor *Cursor) {
+	w.CheckStmt(stmt.Stmt, cursor)
+
 	if _, ok := w.Config.Checks[CheckLabel]; !ok {
 		return
 	}
@@ -700,6 +702,7 @@ func (w *WSL) CheckStmt(stmt ast.Stmt, cursor *Cursor) {
 	// LABEL:
 	case *ast.LabeledStmt:
 		w.CheckLabel(s, cursor)
+	case *ast.EmptyStmt:
 	default:
 		fmt.Printf("Not implemented stmt: %T\n", s)
 	}
