@@ -129,7 +129,7 @@ linters:
       allow-whole-block: false
       branch-max-lines: 2
       case-max-lines: 0
-      default: none
+      default: ~ # Can be `all`, `none` or empty
       enable:
         - assign
         - branch
