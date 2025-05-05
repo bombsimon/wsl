@@ -239,7 +239,39 @@ func (w *WSL) checkError(
 		return
 	}
 
-	w.addError(ifStmt.Pos(), previousNode.End(), ifStmt.Pos(), MessageRemoveWhitespace, cursor.checkType)
+	previousNodeEnd := previousNode.End()
+
+	comments := ast.NewCommentMap(w.Fset, previousNode, w.File.Comments)
+	for _, cg := range comments {
+		for _, c := range cg {
+			if c.Pos() < previousNodeEnd || c.End() > ifStmt.Pos() {
+				continue
+			}
+
+			if c.End() > previousNodeEnd {
+				// There's a comment between the error variable and the
+				// if-statement, we can't do much about this. Most likely, the
+				// comment has a meaning, but even if not we would end up with
+				// something like
+				//
+				// err := fn()
+				// // Some Comment
+				// if err != nil {}
+				//
+				// Which just feels marginally better than leaving the space
+				// anyway.
+				if w.lineFor(c.End()) != w.lineFor(previousNodeEnd) {
+					return
+				}
+
+				// If they are on the same line though, we can just extend where
+				// the line ends.
+				previousNodeEnd = c.End()
+			}
+		}
+	}
+
+	w.addError(previousNodeEnd+1, previousNodeEnd, ifStmt.Pos(), MessageRemoveWhitespace, cursor.checkType)
 
 	// If we add the error at the same position but with a different fix
 	// range, only the fix range will be updated.
@@ -257,8 +289,11 @@ func (w *WSL) checkError(
 	//   if err != nil {}
 	cursor.Previous()
 
+	// We report this fix on the same pos as the previous diagnostic, but the
+	// fix is different. The reason is to just stack more fixes for the same
+	// diagnostic, the issue isn't present until the first fix.
 	if w.numberOfStatementsAbove(cursor) > 0 {
-		w.addError(ifStmt.Pos(), previousNode.Pos(), previousNode.Pos(), MessageAddWhitespace, cursor.checkType)
+		w.addError(previousNodeEnd+1, previousNode.Pos(), previousNode.Pos(), MessageAddWhitespace, cursor.checkType)
 	}
 }
 

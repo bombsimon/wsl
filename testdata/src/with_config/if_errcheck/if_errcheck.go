@@ -3,18 +3,54 @@ package testpkg
 import "errors"
 
 func fn1() {
+	err := errors.New("x") // want +1 `unnecessary whitespace decreases readability \(err\)`
+
+	if err != nil {
+		panic(err)
+	}
+}
+
+func fn11() { // want +2 `unnecessary whitespace decreases readability \(err\)`
 	err := errors.New("x")
 
-	if err != nil { // want `unnecessary whitespace decreases readability \(err\)`
+	if err != nil {
+		panic(err)
+	}
+}
+
+func fn12() {
+	err := errors.New("x")
+	// Some comment
+	if err != nil {
+		panic(err)
+	}
+}
+
+func fn13() {
+	err := errors.New("x")
+
+	// Some comment
+	if err != nil {
 		panic(err)
 	}
 }
 
 func fn2() {
 	a := 1
+	err := errors.New("x") // want +1 `unnecessary whitespace decreases readability \(err\)`
+
+	if err != nil {
+		panic(err)
+	}
+
+	_ = a
+}
+
+func fn21() {
+	a := 1 // want +2 `unnecessary whitespace decreases readability \(err\)`
 	err := errors.New("x")
 
-	if err != nil { // want `unnecessary whitespace decreases readability \(err\)`
+	if err != nil {
 		panic(err)
 	}
 
