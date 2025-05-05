@@ -15,11 +15,11 @@ type Config struct {
 	Version string `yaml:"version"`
 }
 
-type V1ToV4 struct {
+type V1 struct {
 	Settings Settings `yaml:"linters-settings"`
 }
 
-type V5 struct {
+type V2 struct {
 	Linters Linters `yaml:"linters"`
 }
 
@@ -162,14 +162,14 @@ func getWslConfig(filename string) *WSL {
 
 	switch cfg.Version {
 	case "":
-		var cfg V1ToV4
+		var cfg V1
 		if err := yaml.Unmarshal(yamlFile, &cfg); err != nil {
 			log.Fatalf("%v", err)
 		}
 
 		return cfg.Settings.WSL
 	case "2":
-		var cfg V5
+		var cfg V2
 		if err := yaml.Unmarshal(yamlFile, &cfg); err != nil {
 			log.Fatalf("%v", err)
 		}
