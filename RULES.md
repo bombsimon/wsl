@@ -403,7 +403,7 @@ if b > 1 {
 a := 1
 b := 2
 if a > 1 {
-    fmt.Println("a > b")
+    fmt.Println("a > 1")
 }
 
 a := 1
@@ -558,7 +558,7 @@ See [`for`](#for), same rules apply but for the keyword `range`.
 
 ```go
 someRange := []int{1, 2, 3}
-for _, i := range anotherRange {
+for _, i := range thisIsNotSomeRange {
     fmt.Println(i)
 }
 
@@ -580,7 +580,7 @@ for _, v := range s2 {
 ```go
 someRange := []int{1, 2, 3}
 
-for _, i := range anotherRange {
+for _, i := range thisIsNotSomeRange {
     fmt.Println(i)
 }
 
@@ -619,9 +619,59 @@ Only variables used in the `range` are cuddled and at most one statement above t
 
 ## `return`
 
-See [`break`](#break), same rules apply but for the keyword `return`.
-
 > Configurable via `branch-max-lines`
+
+Return statements is an important statement that is easiy to miss in larger code
+blocks. To better visualize the `return` statement and that the method is
+returning it should always be followed by a blank line unless the scope is as
+small as `branch-max-lines`.
+
+<table>
+<thead><tr><th>Bad</th><th>Good</th></tr></thead>
+<tbody>
+<tr><td valign="top">
+
+```go
+func Fn() int {
+    x, err := someFn()
+    if err != nil {
+        panic(err)
+    }
+
+    fmt.Println(x)
+    return
+}
+```
+
+</td><td valign="top">
+
+```go
+func Fn() int {
+    x, err := someFn()
+    if err != nil {
+        panic(err)
+    }
+
+    fmt.Println(x)
+
+    return
+}
+```
+
+</td></tr>
+
+<tr><td valign="top">
+
+The block is big enough to warrant an explicit return which is otherwise easy to
+miss.
+
+</td><td valign="top">
+
+The return statement is isolated on it's own line, making it stand out a bit
+more.
+
+</td></tr>
+</tbody></table>
 
 ## `select`
 

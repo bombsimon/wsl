@@ -19,6 +19,10 @@ This is an exhaustive list of all the checks that can be enabled or disabled and
 their default value. The names are the same as the Go
 [AST](https://pkg.go.dev/go/ast) type name for built-ins.
 
+The base rule is that statements that has a block (e.g. `for`, `range`,
+`switch`, `if` etc) should always only be directly adjacent with a single
+variable and only if it's used in the expression in the block itself.
+
 For more details and examples, see [RULES](RULES.md).
 
 ✅ = enabled by default, ❌ = disabled by default
