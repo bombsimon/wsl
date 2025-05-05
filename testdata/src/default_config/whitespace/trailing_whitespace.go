@@ -7,15 +7,15 @@ func Call(fn func()) func() {
 }
 
 func fn1() {
-	fmt.Println("Hello, World")
+	fmt.Println("Hello, World") // want +1 `unnecessary whitespace decreases readability \(trailing-whitespace\)`
 
-} // want `unnecessary whitespace decreases readability \(trailing-whitespace\)`
+}
 
 func fn2() {
-	fmt.Println("Hello, World")
+	fmt.Println("Hello, World")  // want +2 `unnecessary whitespace decreases readability \(trailing-whitespace\)`
 	// Comment with wihtespace
 
-} // want `unnecessary whitespace decreases readability \(trailing-whitespace\)`
+}
 
 func fn3() {
 	fmt.Println("Hello, World")
@@ -31,47 +31,47 @@ func fn4() {
 
 func fn5() {
 	if true {
-		_ = 1
+		_ = 1 // want +1 `unnecessary whitespace decreases readability \(trailing-whitespace\)`
 
-	} // want `unnecessary whitespace decreases readability \(trailing-whitespace\)`
+	}
 }
 
 func fn6() {
 	if true {
-		_ = 1
+		_ = 1 // want +1 `unnecessary whitespace decreases readability \(trailing-whitespace\)`
 
-	} else if true { // want `unnecessary whitespace decreases readability \(trailing-whitespace\)`
-		_ = 1
+	} else if true {
+		_ = 1 // want +1 `unnecessary whitespace decreases readability \(trailing-whitespace\)`
 
-	} else { // want `unnecessary whitespace decreases readability \(trailing-whitespace\)`
-		_ = 1
+	} else {
+		_ = 1 // want +1 `unnecessary whitespace decreases readability \(trailing-whitespace\)`
 
-	} // want `unnecessary whitespace decreases readability \(trailing-whitespace\)`
+	}
 }
 
 func fn8(a string, b any, s []string) {
 	if true {
-		_ = 1
+		_ = 1 // want +1 `unnecessary whitespace decreases readability \(trailing-whitespace\)`
 
-	} else if true { // want `unnecessary whitespace decreases readability \(trailing-whitespace\)`
-		_ = 1
+	} else if true {
+		_ = 1 // want +1 `unnecessary whitespace decreases readability \(trailing-whitespace\)`
 
-	} // want `unnecessary whitespace decreases readability \(trailing-whitespace\)`
+	}
 
 	for i := 0; i < 1; i++ {
-		_ = 1
+		_ = 1 // want +1 `unnecessary whitespace decreases readability \(trailing-whitespace\)`
 
-	} // want `unnecessary whitespace decreases readability \(trailing-whitespace\)`
+	}
 
 	for n := range []int{} {
-		_ = n
+		_ = n // want +1 `unnecessary whitespace decreases readability \(trailing-whitespace\)`
 
-	} // want `unnecessary whitespace decreases readability \(trailing-whitespace\)`
+	}
 
 	for range s {
-		_ = 1
+		_ = 1 // want +1 `unnecessary whitespace decreases readability \(trailing-whitespace\)`
 
-	} // want `unnecessary whitespace decreases readability \(trailing-whitespace\)`
+	}
 
 	switch a {
 	case "a":
@@ -84,14 +84,14 @@ func fn8(a string, b any, s []string) {
 	}
 
 	f := func() {
-		_ = 1
+		_ = 1 // want +1 `unnecessary whitespace decreases readability \(trailing-whitespace\)`
 
-	} // want `unnecessary whitespace decreases readability \(trailing-whitespace\)`
+	}
 
 	f2 := Call(func() {
-		_ = 1
+		_ = 1 // want +1 `unnecessary whitespace decreases readability \(trailing-whitespace\)`
 
-	}) // want `unnecessary whitespace decreases readability \(trailing-whitespace\)`
+	})
 
 	_ = f
 	_ = f2

@@ -6,19 +6,19 @@ func Call(fn func()) func() {
 	return fn
 }
 
-func fn1() { // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
+func fn1() { // want +1 `unnecessary whitespace decreases readability \(leading-whitespace\)`
 
 	fmt.Println("Hello, World")
 }
 
-func fn2() { // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
+func fn2() { // want +1 `unnecessary whitespace decreases readability \(leading-whitespace\)`
 
 	// Space before comment.
 	fmt.Println("Hello, World")
 }
 
-func fn3() {
-	// Space after comment // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
+func fn3() { // want +2 `unnecessary whitespace decreases readability \(leading-whitespace\)`
+	// Space after comment
 
 	fmt.Println("Hello, World")
 }
@@ -40,7 +40,7 @@ func fn51() {
 }
 
 func fn6() {
-	if true { // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
+	if true { // want +1 `unnecessary whitespace decreases readability \(leading-whitespace\)`
 
 		_ = 1
 	}
@@ -49,56 +49,56 @@ func fn6() {
 func fn7() {
 	if true {
 		_ = 1
-	} else if true { // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
+	} else if true { // want +1 `unnecessary whitespace decreases readability \(leading-whitespace\)`
 
 		_ = 1
-	} else { // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
+	} else { // want +1 `unnecessary whitespace decreases readability \(leading-whitespace\)`
 
 		_ = 1
 	}
 }
 
-func fn8(a string, b any, s []string) { // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
+func fn8(a string, b any, s []string) { // want +1 `unnecessary whitespace decreases readability \(leading-whitespace\)`
 
-	if true { // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
-
-		_ = 1
-	} else if true { // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
+	if true { // want +1 `unnecessary whitespace decreases readability \(leading-whitespace\)`
 
 		_ = 1
-	}
-
-	for i := 0; i < 1; i++ { // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
+	} else if true { // want +1 `unnecessary whitespace decreases readability \(leading-whitespace\)`
 
 		_ = 1
 	}
 
-	for n := range []int{} { // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
+	for i := 0; i < 1; i++ { // want +1 `unnecessary whitespace decreases readability \(leading-whitespace\)`
+
+		_ = 1
+	}
+
+	for n := range []int{} { // want +1 `unnecessary whitespace decreases readability \(leading-whitespace\)`
 
 		_ = n
 	}
 
-	for range s { // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
+	for range s { // want +1 `unnecessary whitespace decreases readability \(leading-whitespace\)`
 
 		_ = 1
 	}
 
-	switch a { // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
+	switch a { // want +1 `unnecessary whitespace decreases readability \(leading-whitespace\)`
 
 	case "a":
 	}
 
-	switch b.(type) { // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
+	switch b.(type) { // want +1 `unnecessary whitespace decreases readability \(leading-whitespace\)`
 
 	case int:
 	}
 
-	f := func() { // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
+	f := func() { // want +1 `unnecessary whitespace decreases readability \(leading-whitespace\)`
 
 		_ = 1
 	}
 
-	f2 := Call(func() { // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
+	f2 := Call(func() { // want +1 `unnecessary whitespace decreases readability \(leading-whitespace\)`
 
 		_ = 1
 	})
@@ -109,16 +109,16 @@ func fn8(a string, b any, s []string) { // want `unnecessary whitespace decrease
 
 func fn9() {
 	switch {
-	case 1: // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
+	case 1: // want +1 `unnecessary whitespace decreases readability \(leading-whitespace\)`
 
 		_ = 1
 
-	case 2:
-		// This is a comment // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
+	case 2: // want +2 `unnecessary whitespace decreases readability \(leading-whitespace\)`
+		// This is a comment
 
 		_ = 2
 
-	default: // want `unnecessary whitespace decreases readability \(leading-whitespace\)`
+	default: // want +1 `unnecessary whitespace decreases readability \(leading-whitespace\)`
 
 		_ = 3
 
