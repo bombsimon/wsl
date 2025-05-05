@@ -864,7 +864,7 @@ func (w *WSL) CheckLeadingNewline(startPos token.Pos, body []ast.Stmt, comments 
 	openingPosLine := w.Fset.PositionFor(openingPos, false).Line
 	firstStmtLine := w.Fset.PositionFor(firstStmt, false).Line
 
-	if openingPosLine != firstStmtLine-1 {
+	if firstStmtLine > openingPosLine+1 {
 		w.addError(openingPos+1, openingPos, firstStmt, MessageRemoveWhitespace, CheckLeadingWhitespace)
 	}
 }
@@ -909,7 +909,7 @@ func (w *WSL) CheckTrailingNewline(body *ast.BlockStmt) {
 	closingPosLine := w.Fset.PositionFor(closingPos, false).Line
 	lastStmtLine := w.Fset.PositionFor(lastStmtOrComment, false).Line
 
-	if closingPosLine != lastStmtLine+1 {
+	if closingPosLine > lastStmtLine+1 {
 		w.addError(lastStmtOrComment+1, lastStmtOrComment, closingPos, MessageRemoveWhitespace, CheckTrailingWhitespace)
 	}
 }

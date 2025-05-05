@@ -6,6 +6,8 @@ func Call(fn func()) func() {
 	return fn
 }
 
+func fn0() { fmt.Println("Hello, World") }
+
 func fn1() { // want +1 `unnecessary whitespace decreases readability \(leading-whitespace\)`
 
 	fmt.Println("Hello, World")
