@@ -39,3 +39,8 @@ func fn3() {
 	_ = c
 	_ = d
 }
+
+func fn4() {
+	b := 2
+	<-ch // want `missing whitespace decreases readability \(expr\)`
+}
