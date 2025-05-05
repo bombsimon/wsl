@@ -95,7 +95,7 @@ in more details.
 go install github.com/bombsimon/wsl/v5/cmd/wsl@latest
 
 # Main branch
-go install github.com/bombsimon/wsl/v5/cmd/wsl@master
+go install github.com/bombsimon/wsl/v5/cmd/wsl@main
 ```
 
 ## Usage
@@ -110,7 +110,7 @@ the default analysis flags and way of working.
 wsl --help
 wsl [flags] </path/to/package/...>
 
-wsl --disable-all --enable break,continue --fix ./...
+wsl --default none --enable branch,return --fix ./...
 ```
 
 `wsl` is also integrated in [`golangci-lint`][golangci-lint]
@@ -161,7 +161,7 @@ linters:
 
 ## See also
 
-- [`nlterutn`][nlreturn] - Use empty lines before `return`
+- [`nlreturn`][nlreturn] - Use empty lines before `return`
 - [`whitespace`][whitespace] - Don't use a blank newline at the start or end of
   a block.
 - [`gofumpt`][gofumpt] - Stricter formatter than `gofmt`.
