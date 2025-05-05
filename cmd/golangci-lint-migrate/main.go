@@ -7,7 +7,7 @@ import (
 	"os"
 	"slices"
 
-	"github.com/bombsimon/wsl/v4"
+	"github.com/bombsimon/wsl/v5"
 	"gopkg.in/yaml.v3"
 )
 
@@ -52,7 +52,7 @@ type WSL struct {
 	ForceCaseTrailingWhitespace  int  `yaml:"force-case-trailing-whitespace"`
 
 	AllowCuddlingWithCalls []string `yaml:"allow-cuddle-with-calls"`
-	AllowCuddleWithRhs     []string `yaml:"allow-cuddle-with-rhs"`
+	AllowCuddleWithRHS     []string `yaml:"allow-cuddle-with-rhs"`
 	ErrorVariableNames     []string `yaml:"error-variable-names"`
 }
 

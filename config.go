@@ -41,12 +41,14 @@ const (
 	//
 	// a = 1
 	// b = 2
+	// .
 	CheckAssignExclusive
 	// Check append only allows assignments of `append` to be cuddled with other
 	// assignments if it's a variable used in the append statement, e.g.
 	//
 	// a := 1
 	// x = append(x, a)
+	// .
 	CheckAppend
 	// Force error checking to follow immediately after an error variable is
 	// assigned, e.g.
@@ -55,11 +57,12 @@ const (
 	// if err != nil {
 	//     panic(err)
 	// }
+	// .
 	CheckErr
 	CheckLeadingWhitespace
 	CheckTrailingWhitespace
 
-	// CheckTypes only used for reporting
+	// CheckTypes only used for reporting.
 	CheckCaseTrailingNewline
 )
 

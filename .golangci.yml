@@ -17,6 +17,7 @@ linters:
     - err113
     - exhaustruct
     - forbidigo
+    - funcorder
     - funlen
     - gocognit
     - gocyclo
@@ -30,6 +31,7 @@ linters:
     - paralleltest
     - prealloc
     - rowserrcheck
+    - tagliatelle
     - testpackage
     - tparallel
     - varnamelen
