@@ -546,7 +546,7 @@ func (w *WSL) checkCaseTrailingNewline(body []ast.Stmt, cursor *Cursor) {
 	lastStmt := body[len(body)-1]
 	totalLines := w.lineFor(lastStmt.End()) - w.lineFor(firstStmt.Pos()) + 1
 
-	if totalLines <= w.Config.CaseMaxLines {
+	if totalLines < w.Config.CaseMaxLines {
 		return
 	}
 
@@ -580,7 +580,7 @@ func (w *WSL) CheckReturn(stmt *ast.ReturnStmt, cursor *Cursor) {
 	}
 
 	// If the distance between the first statement and the return statement is
-	// less than 3 LOC we're allowed to cuddle.
+	// less than `n` LOC we're allowed to cuddle.
 	firstStmts := cursor.Nth(0)
 	if w.lineFor(stmt.End())-w.lineFor(firstStmts.Pos()) < w.Config.BranchMaxLines {
 		return

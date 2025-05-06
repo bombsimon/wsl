@@ -56,9 +56,15 @@ func TestWithConfig(t *testing.T) {
 			},
 		},
 		{
-			subdir: "case_trailing_whitespace",
+			subdir: "case_max_lines",
 			configFn: func(config *Configuration) {
-				config.CaseMaxLines = 2
+				config.CaseMaxLines = 3
+			},
+		},
+		{
+			subdir: "branch_max_lines",
+			configFn: func(config *Configuration) {
+				config.BranchMaxLines = 5
 			},
 		},
 		{

@@ -33,7 +33,7 @@ For more details and examples, see [RULES](RULES.md).
   declarations or increment/decrement
 - ✅ **branch** - Branch statement (`break`, `continue`, `fallthrough`, `goto`)
   should only be cuddled if the block is less than `n` lines where `n` is the
-  value of [`branch-max-statements`](#configuration)
+  value of [`branch-max-lines`](#configuration)
 - ✅ **decl** - Declarations should never be cuddled
 - ✅ **defer** - Defer should only be cuddled with other `defer`, after error
   checking or with variable used on the line above
@@ -50,7 +50,7 @@ For more details and examples, see [RULES](RULES.md).
 - ✅ **range** - Range should only be cuddled with a single variable used on the
   line above
 - ✅ **return** - Return should only be cuddled if the block is less than `n`
-  lines where `n` is the value of [`branch-max-statements`](#configuration)
+  lines where `n` is the value of [`branch-max-lines`](#configuration)
 - ✅ **select** - Select should only be cuddled with a single variable used on the
   line above
 - ❌ **send** - Send should only be cuddled with a single variable used on the line
@@ -81,11 +81,12 @@ in more details.
   the variable
 - ❌ **allow-whole-block** - Same as above, but allows cuddling if the variable is
   used _anywhere_ in the following (or nested) block
-- **branch-max-lines** - If a block contains less than this number of lines the
-  branch statement (e.g. `return`, `break`, `continue`) does not need to be
-  separated by a whitespace (default 2, 0 = off)
+- **branch-max-lines** - If a block contains more than this number of lines the
+  branch statement (e.g. `return`, `break`, `continue`) need to be separated by
+  a whitespace (default 2)
 - **case-max-lines** - If set to a non negative number, `case` blocks needs to
-  end with a whitespace if exceeding this number (default 0, 0 = off)
+  end with a whitespace if exceeding this number (default 0, 0 = off, 1 =
+  always)
 - ❌ **include-generated** - Include generated files when checking
 
 ## Installation
