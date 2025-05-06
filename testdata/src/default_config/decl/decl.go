@@ -21,3 +21,10 @@ func fn3() {
 	a := 1
 	var b = a // want `missing whitespace decreases readability \(decl\)`
 }
+
+func fn4() {
+	var x = func() { // want +1 `unnecessary whitespace decreases readability \(leading-whitespace\)`
+
+		return 1
+	}()
+}

@@ -478,15 +478,14 @@ func (w *WSL) CheckBranch(stmt *ast.BranchStmt, cursor *Cursor) {
 	w.addError(stmt.Pos(), stmt.Pos(), stmt.Pos(), MessageAddWhitespace, cursor.checkType)
 }
 
-func (w *WSL) CheckDecl(stmt *ast.DeclStmt, cursor *Cursor) {
+func (w *WSL) CheckDeclStmt(stmt *ast.DeclStmt, cursor *Cursor) {
+	w.CheckDecl(stmt.Decl, cursor)
+
 	if _, ok := w.Config.Checks[CheckDecl]; !ok {
 		return
 	}
 
 	cursor.SetChecker(CheckDecl)
-
-	// TODO: Decl might be a block that needs analyzing, e.g.
-	// var x = func() {}
 
 	if w.numberOfStatementsAbove(cursor) == 0 {
 		return
@@ -705,7 +704,7 @@ func (w *WSL) CheckStmt(stmt ast.Stmt, cursor *Cursor) {
 		w.CheckBranch(s, cursor)
 	// var a
 	case *ast.DeclStmt:
-		w.CheckDecl(s, cursor)
+		w.CheckDeclStmt(s, cursor)
 	// a := a
 	case *ast.AssignStmt:
 		w.CheckAssign(s, cursor)
@@ -772,9 +771,36 @@ func (w *WSL) CheckExpr(expr ast.Expr, cursor *Cursor) {
 		*ast.SelectorExpr,
 		*ast.SliceExpr,
 		*ast.TypeAssertExpr,
-		*ast.UnaryExpr:
+		*ast.UnaryExpr,
+		nil:
 	default:
 		fmt.Printf("Not implemented expr: %T\n", s)
+	}
+}
+
+func (w *WSL) CheckDecl(decl ast.Decl, cursor *Cursor) {
+	switch d := decl.(type) {
+	case *ast.GenDecl:
+		for _, spec := range d.Specs {
+			w.CheckSpec(spec, cursor)
+		}
+	case *ast.FuncDecl:
+		w.CheckStmt(d.Body, cursor)
+	case *ast.BadDecl:
+	default:
+		fmt.Printf("Not implemented decl: %T\n", d)
+	}
+}
+
+func (w *WSL) CheckSpec(spec ast.Spec, cursor *Cursor) {
+	switch s := spec.(type) {
+	case *ast.ValueSpec:
+		for _, expr := range s.Values {
+			w.CheckExpr(expr, cursor)
+		}
+	case *ast.ImportSpec, *ast.TypeSpec:
+	default:
+		fmt.Printf("Not implemented spec: %T\n", s)
 	}
 }
 
