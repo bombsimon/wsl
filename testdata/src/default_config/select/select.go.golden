@@ -16,7 +16,7 @@ func fn1(ctx context.Context, ch1 chan struct{}) {
 func fn1(ctx context.Context, ch1 chan struct{}) {
 	x := 1
 
-	select { // want `missing whitespace decreases readability \(select\)`
+	select { // want `missing whitespace above this line \(no shared variables above select\)`
 	case ctx.Done():
 		_ = 1
 	case <-ch1:

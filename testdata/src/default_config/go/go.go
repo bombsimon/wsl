@@ -13,7 +13,7 @@ func Go() {
 	go fooFunc()
 
 	barFunc := func() {}
-	go fooFunc() // want `missing whitespace decreases readability \(go\)`
+	go fooFunc() // want `missing whitespace above this line \(no shared variables above go\)`
 
 	_ = barFunc
 
@@ -22,7 +22,7 @@ func Go() {
 	}()
 
 	cuddled := true
-	go func() { // want `missing whitespace decreases readability \(go\)`
+	go func() { // want `missing whitespace above this line \(no shared variables above go\)`
 		fmt.Println("hey")
 	}()
 
@@ -32,7 +32,7 @@ func Go() {
 	go Fn(argToGo)
 
 	notArgToGo := 1
-	go Fn(argToGo) // want `missing whitespace decreases readability \(go\)`
+	go Fn(argToGo) // want `missing whitespace above this line \(no shared variables above go\)`
 
 	_ = notArgToGo
 
@@ -45,13 +45,13 @@ func Go() {
 	go t3()
 
 	multiCuddle1 := NewT()
-	multiCuddle2 := NewT() // want `missing whitespace decreases readability \(go\)`
+	multiCuddle2 := NewT() // want `missing whitespace above this line \(too many statements above go\)`
 	go multiCuddle2()
 
 	// TODO: Breaking change, this used to be on the first `go` stmt - now it's
 	// on the line that should have a blank line above.
 	t4 := NewT()
-	t5 := NewT() // want `missing whitespace decreases readability \(go\)`
+	t5 := NewT() // want `missing whitespace above this line \(too many statements above go\)`
 	go t5()
 	go t4()
 

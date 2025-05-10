@@ -70,28 +70,28 @@ func fn2() {
 			fmt.Println("")
 			fmt.Println("")
 			fmt.Println("")
-			break // want `missing whitespace decreases readability \(branch\)`
+			break // want `missing whitespace above this line \(too many lines above branch\)`
 		}
 
 		if true {
 			fmt.Println("")
 			fmt.Println("")
 			fmt.Println("")
-			continue // want `missing whitespace decreases readability \(branch\)`
+			continue // want `missing whitespace above this line \(too many lines above branch\)`
 		}
 
 		if true {
 			fmt.Println("")
 			fmt.Println("")
 			fmt.Println("")
-			fallthrough // want `missing whitespace decreases readability \(branch\)`
+			fallthrough // want `missing whitespace above this line \(too many lines above branch\)`
 		}
 
 		if true {
 			fmt.Println("")
 			fmt.Println("")
 			fmt.Println("")
-			goto START // want `missing whitespace decreases readability \(branch\)`
+			goto START // want `missing whitespace above this line \(too many lines above branch\)`
 		}
 	}
 }

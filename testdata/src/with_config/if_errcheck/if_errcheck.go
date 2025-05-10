@@ -3,14 +3,14 @@ package testpkg
 import "errors"
 
 func fn1() {
-	err := errors.New("x") // want +1 `unnecessary whitespace decreases readability \(err\)`
+	err := errors.New("x") // want +1 `unnecessary whitespace \(err\)`
 
 	if err != nil {
 		panic(err)
 	}
 }
 
-func fn11() { // want +2 `unnecessary whitespace decreases readability \(err\)`
+func fn11() { // want +2 `unnecessary whitespace \(err\)`
 	err := errors.New("x")
 
 	if err != nil {
@@ -37,7 +37,7 @@ func fn13() {
 
 func fn2() {
 	a := 1
-	err := errors.New("x") // want +1 `unnecessary whitespace decreases readability \(err\)`
+	err := errors.New("x") // want +1 `unnecessary whitespace \(err\)`
 
 	if err != nil {
 		panic(err)
@@ -47,7 +47,7 @@ func fn2() {
 }
 
 func fn21() {
-	a := 1 // want +2 `unnecessary whitespace decreases readability \(err\)`
+	a := 1 // want +2 `unnecessary whitespace \(err\)`
 	err := errors.New("x")
 
 	if err != nil {
@@ -59,7 +59,7 @@ func fn21() {
 
 func fn3() {
 	a := 1
-	err := errors.New("x") // want `missing whitespace decreases readability \(if\)`
+	err := errors.New("x") // want `missing whitespace above this line \(too many statements above if\)`
 	if err != nil {
 		panic(err)
 	}

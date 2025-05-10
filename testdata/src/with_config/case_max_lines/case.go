@@ -12,7 +12,7 @@ func fn1(n int) {
 	case 3:
 		n++
 		n++
-		n++ // want `missing whitespace decreases readability \(case-trailing-newline\)`
+		n++ // want `missing whitespace below this line \(case-trailing-newline\)`
 	case 4:
 		n++
 		n++
@@ -32,7 +32,7 @@ func fn2(ctx context.Context, ch1 chan struct{}) {
 	case ctx.Done():
 		_ = 1
 		_ = 1
-		_ = 1 // want `missing whitespace decreases readability \(case-trailing-newline\)`
+		_ = 1 // want `missing whitespace below this line \(case-trailing-newline\)`
 	case <-ch1:
 		_ = 1
 	default:

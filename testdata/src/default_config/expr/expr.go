@@ -17,8 +17,8 @@ func fn() {
 func fn2() {
 	a := 1
 	b := 2
-	fmt.Println("") // want `missing whitespace decreases readability \(expr\)`
-	c := 3          // want `missing whitespace decreases readability \(assign\)`
+	fmt.Println("") // want `missing whitespace above this line \(no shared variables above expr\)`
+	c := 3          // want `missing whitespace above this line \(invalid statement above assign\)`
 	d := 4
 
 	_ = a
@@ -31,7 +31,7 @@ func fn3() {
 	a := 1
 	b := 2
 	fmt.Println(b)
-	c := 3 // want `missing whitespace decreases readability \(assign\)`
+	c := 3 // want `missing whitespace above this line \(invalid statement above assign\)`
 	d := 4
 
 	_ = a
@@ -42,5 +42,5 @@ func fn3() {
 
 func fn4() {
 	b := 2
-	<-ch // want `missing whitespace decreases readability \(expr\)`
+	<-ch // want `missing whitespace above this line \(no shared variables above expr\)`
 }

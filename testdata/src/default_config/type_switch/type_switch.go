@@ -18,7 +18,7 @@ func fn2() {
 	var a any = 1
 
 	b := 1
-	switch a.(type) { // want `missing whitespace decreases readability \(type-switch\)`
+	switch a.(type) { // want `missing whitespace above this line \(no shared variables above type-switch\)`
 	case int:
 	case string:
 	}
@@ -41,7 +41,7 @@ func fn3(in any) {
 
 func fn4(in any) {
 	a := Fn()
-	b := Fn() // want `missing whitespace decreases readability \(type-switch\)`
+	b := Fn() // want `missing whitespace above this line \(too many statements above type-switch\)`
 	switch b.(type) {
 	case string:
 		return

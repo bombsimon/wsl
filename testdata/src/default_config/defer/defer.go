@@ -31,12 +31,12 @@ func fn() {
 
 	a = Fn()
 	defer a.Close()
-	b = Fn() // want `missing whitespace decreases readability \(assign\)`
+	b = Fn() // want `missing whitespace above this line \(invalid statement above assign\)`
 	defer b.Close()
 
 	a = Fn()
 	b = Fn()
-	defer a.Close() // want `missing whitespace decreases readability \(defer\)`
+	defer a.Close() // want `missing whitespace above this line \(no shared variables above defer\)`
 	defer b.Close()
 
 	m := sync.Mutex{}
@@ -45,7 +45,7 @@ func fn() {
 	defer m.Unlock()
 
 	c := true
-	defer func(b bool) { // want `missing whitespace decreases readability \(defer\)`
+	defer func(b bool) { // want `missing whitespace above this line \(no shared variables above defer\)`
 		fmt.Printf("%v", b)
 	}()
 
@@ -54,7 +54,7 @@ func fn() {
 
 func fn2() {
 	a := 1
-	b := Fn() // want `missing whitespace decreases readability \(defer\)`
+	b := Fn() // want `missing whitespace above this line \(too many statements above defer\)`
 	defer b.Close()
 
 	_ = a

@@ -8,7 +8,7 @@ func fn1() {
 		y, z := 1, 2
 		if false {
 			z++
-			if true { // want `missing whitespace decreases readability \(if\)`
+			if true { // want `missing whitespace above this line \(no shared variables above if\)`
 				y++
 				x++
 			}
@@ -60,7 +60,7 @@ func fn3(a, b, c itn) {
 	}
 
 	b = 1
-	for range make([]int, 10) { // want `missing whitespace decreases readability \(range\)`
+	for range make([]int, 10) { // want `missing whitespace above this line \(no shared variables above range\)`
 		if true {
 			c++
 
@@ -78,7 +78,7 @@ func fn3(a, b, c itn) {
 	}
 
 	b = 1
-	for i := 0; i < 3; i++ { // want `missing whitespace decreases readability \(for\)`
+	for i := 0; i < 3; i++ { // want `missing whitespace above this line \(no shared variables above for\)`
 		if true {
 			c++
 
@@ -99,7 +99,7 @@ func fn4(a, b, c int) {
 	}
 
 	b = 1
-	switch { // want `missing whitespace decreases readability \(switch\)`
+	switch { // want `missing whitespace above this line \(no shared variables above switch\)`
 	case true:
 		c++
 		a++
@@ -117,7 +117,7 @@ func fn5(a, b, c int) {
 	}()
 
 	b = 1
-	go func() { // want `missing whitespace decreases readability \(go\)`
+	go func() { // want `missing whitespace above this line \(no shared variables above go\)`
 		c++
 		a++
 	}()
@@ -133,7 +133,7 @@ func fn6(a, b, c int) {
 	}()
 
 	b = 1
-	defer func() { // want `missing whitespace decreases readability \(defer\)`
+	defer func() { // want `missing whitespace above this line \(no shared variables above defer\)`
 		c++
 		a++
 	}()

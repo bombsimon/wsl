@@ -11,8 +11,9 @@ import (
 )
 
 const (
-	MessageAddWhitespace    = "missing whitespace decreases readability"
-	MessageRemoveWhitespace = "unnecessary whitespace decreases readability"
+	MessageMissingWhitespaceAbove = "missing whitespace above this line"
+	MessageMissingWhitespaceBelow = "missing whitespace below this line"
+	MessageRemoveWhitespace       = "unnecessary whitespace"
 )
 
 type FixRange struct {
@@ -107,7 +108,7 @@ func (w *WSL) checkCuddlingWithDecl(
 	// We're cuddled but not with an assign, declare or defer statement which is
 	// never allowed.
 	if !nodeIsAssignDeclOrIncDec(previousNode) && !currIsDefer {
-		w.addError(cursor.Stmt().Pos(), cursor.Stmt().Pos(), cursor.Stmt().Pos(), MessageAddWhitespace, cursor.checkType)
+		w.addErrorInvalidTypeCuddle(cursor.Stmt().Pos(), cursor.checkType)
 		return
 	}
 
@@ -116,7 +117,7 @@ func (w *WSL) checkCuddlingWithDecl(
 		if len(anyIntersects) > 0 {
 			// We have matches, but too many statements above.
 			if maxAllowedStatements != -1 && numStmtsAbove > maxAllowedStatements {
-				w.addError(previousNode.Pos(), previousNode.Pos(), previousNode.Pos(), MessageAddWhitespace, cursor.checkType)
+				w.addErrorTooManyStatements(previousNode.Pos(), cursor.checkType)
 			}
 
 			return true
@@ -129,7 +130,6 @@ func (w *WSL) checkCuddlingWithDecl(
 	// (including recursive blocks).
 	if w.Config.AllowWholeBlock {
 		allIdentsInBlock := identsFromNode(stmt, false)
-
 		if checkIntersection(allIdentsInBlock) {
 			return
 		}
@@ -138,13 +138,12 @@ func (w *WSL) checkCuddlingWithDecl(
 	// FEATURE(AllowFirstInBlock): Allow identifiers used first in block.
 	if !w.Config.AllowWholeBlock && w.Config.AllowFirstInBlock {
 		firstStmtIdents := identsFromNode(firstBlockStmt, true)
-
 		if checkIntersection(firstStmtIdents) {
 			return
 		}
 	}
 
-	currentIdents := identsFromNode(cursor.Stmt(), true)
+	currentIdents := identsFromNode(stmt, true)
 	if checkIntersection(currentIdents) {
 		return
 	}
@@ -156,7 +155,7 @@ func (w *WSL) checkCuddlingWithDecl(
 
 	// We're cuddled but the line immediately above doesn't contain any
 	// variables used in this statement.
-	w.addError(stmt.Pos(), stmt.Pos(), stmt.Pos(), MessageAddWhitespace, cursor.checkType)
+	w.addErrorNoIntersection(stmt.Pos(), cursor.checkType)
 }
 
 func (w *WSL) CheckCuddlingWithoutIntersection(stmt ast.Node, cursor *Cursor) {
@@ -208,7 +207,7 @@ func (w *WSL) CheckCuddlingWithoutIntersection(stmt ast.Node, cursor *Cursor) {
 	}
 
 	if w.numberOfStatementsAbove(cursor) > 0 && !prevIsValidType {
-		w.addError(stmt.Pos(), stmt.Pos(), stmt.Pos(), MessageAddWhitespace, cursor.checkType)
+		w.addErrorInvalidTypeCuddle(stmt.Pos(), cursor.checkType)
 	}
 }
 
@@ -293,9 +292,10 @@ func (w *WSL) checkError(
 
 	// We report this fix on the same pos as the previous diagnostic, but the
 	// fix is different. The reason is to just stack more fixes for the same
-	// diagnostic, the issue isn't present until the first fix.
+	// diagnostic, the issue isn't present until the first fix so this message
+	// will never be shown to the user.
 	if w.numberOfStatementsAbove(cursor) > 0 {
-		w.addError(previousNodeEnd+1, previousNode.Pos(), previousNode.Pos(), MessageAddWhitespace, cursor.checkType)
+		w.addError(previousNodeEnd+1, previousNode.Pos(), previousNode.Pos(), MessageMissingWhitespaceAbove, cursor.checkType)
 	}
 }
 
@@ -475,7 +475,7 @@ func (w *WSL) CheckBranch(stmt *ast.BranchStmt, cursor *Cursor) {
 		return
 	}
 
-	w.addError(stmt.Pos(), stmt.Pos(), stmt.Pos(), MessageAddWhitespace, cursor.checkType)
+	w.addErrorTooManyLines(stmt.Pos(), cursor.checkType)
 }
 
 func (w *WSL) CheckDeclStmt(stmt *ast.DeclStmt, cursor *Cursor) {
@@ -491,7 +491,7 @@ func (w *WSL) CheckDeclStmt(stmt *ast.DeclStmt, cursor *Cursor) {
 		return
 	}
 
-	w.addError(stmt.End(), stmt.Pos(), stmt.Pos(), MessageAddWhitespace, cursor.checkType)
+	w.addErrorNeverAllow(stmt.Pos(), cursor.checkType)
 }
 
 func (w *WSL) CheckBlock(block *ast.BlockStmt) *Cursor {
@@ -556,7 +556,7 @@ func (w *WSL) checkCaseTrailingNewline(body []ast.Stmt, cursor *Cursor) {
 		return
 	}
 
-	w.addError(lastStmt.End(), nextCase.Pos(), nextCase.Pos(), MessageAddWhitespace, CheckCaseTrailingNewline)
+	w.addError(lastStmt.End(), nextCase.Pos(), nextCase.Pos(), MessageMissingWhitespaceBelow, CheckCaseTrailingNewline)
 }
 
 func (w *WSL) CheckReturn(stmt *ast.ReturnStmt, cursor *Cursor) {
@@ -586,7 +586,7 @@ func (w *WSL) CheckReturn(stmt *ast.ReturnStmt, cursor *Cursor) {
 		return
 	}
 
-	w.addError(stmt.Pos(), stmt.Pos(), stmt.Pos(), MessageAddWhitespace, cursor.checkType)
+	w.addErrorTooManyLines(stmt.Pos(), cursor.checkType)
 }
 
 func (w *WSL) CheckAssign(stmt *ast.AssignStmt, cursor *Cursor) {
@@ -631,7 +631,7 @@ func (w *WSL) CheckLabel(stmt *ast.LabeledStmt, cursor *Cursor) {
 		return
 	}
 
-	w.addError(stmt.Pos(), stmt.Pos(), stmt.Pos(), MessageAddWhitespace, cursor.checkType)
+	w.addErrorNeverAllow(stmt.Pos(), cursor.checkType)
 }
 
 func (w *WSL) strictAppendCheck(stmt *ast.AssignStmt, cursor *Cursor) {
@@ -664,7 +664,7 @@ func (w *WSL) strictAppendCheck(stmt *ast.AssignStmt, cursor *Cursor) {
 	}
 
 	if !hasIntersection(appendNode, previousNode) {
-		w.addError(stmt.Pos(), stmt.Pos(), stmt.Pos(), MessageAddWhitespace, cursor.checkType)
+		w.addErrorNoIntersection(stmt.Pos(), cursor.checkType)
 	}
 }
 
@@ -960,11 +960,41 @@ func (w *WSL) implementsErr(node *ast.Ident) bool {
 	return types.Implements(typeInfo, errorType)
 }
 
+func (w *WSL) addErrorInvalidTypeCuddle(pos token.Pos, ct CheckType) {
+	reportMessage := fmt.Sprintf("%s (invalid statement above %s)", MessageMissingWhitespaceAbove, ct)
+	w.addErrorWithMessage(pos, pos, pos, reportMessage)
+}
+
+func (w *WSL) addErrorTooManyStatements(pos token.Pos, ct CheckType) {
+	reportMessage := fmt.Sprintf("%s (too many statements above %s)", MessageMissingWhitespaceAbove, ct)
+	w.addErrorWithMessage(pos, pos, pos, reportMessage)
+}
+
+func (w *WSL) addErrorNoIntersection(pos token.Pos, ct CheckType) {
+	reportMessage := fmt.Sprintf("%s (no shared variables above %s)", MessageMissingWhitespaceAbove, ct)
+	w.addErrorWithMessage(pos, pos, pos, reportMessage)
+}
+
+func (w *WSL) addErrorTooManyLines(pos token.Pos, ct CheckType) {
+	reportMessage := fmt.Sprintf("%s (too many lines above %s)", MessageMissingWhitespaceAbove, ct)
+	w.addErrorWithMessage(pos, pos, pos, reportMessage)
+}
+
+func (w *WSL) addErrorNeverAllow(pos token.Pos, ct CheckType) {
+	reportMessage := fmt.Sprintf("%s (never cuddle %s)", MessageMissingWhitespaceAbove, ct)
+	w.addErrorWithMessage(pos, pos, pos, reportMessage)
+}
+
 func (w *WSL) addError(report, start, end token.Pos, message string, ct CheckType) {
+	reportMessage := fmt.Sprintf("%s (%s)", message, ct)
+	w.addErrorWithMessage(report, start, end, reportMessage)
+}
+
+func (w *WSL) addErrorWithMessage(report, start, end token.Pos, message string) {
 	issue, ok := w.Issues[report]
 	if !ok {
 		issue = Issue{
-			Message:   fmt.Sprintf("%s (%s)", message, ct),
+			Message:   message,
 			FixRanges: []FixRange{},
 		}
 	}

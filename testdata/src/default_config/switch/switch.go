@@ -2,7 +2,7 @@ package testpkg
 
 func fn1() {
 	a := 1
-	b := 2 // want `missing whitespace decreases readability \(switch\)`
+	b := 2 // want `missing whitespace above this line \(too many statements above switch\)`
 	switch b {
 	case 1:
 	case 2:
@@ -14,7 +14,7 @@ func fn1() {
 func fn2() {
 	b := 2
 	a := 1
-	switch b { // want `missing whitespace decreases readability \(switch\)`
+	switch b { // want `missing whitespace above this line \(no shared variables above switch\)`
 	case 1:
 	case 2:
 	case 3:
@@ -27,7 +27,7 @@ func fn3() {
 	case true:
 	case false:
 	}
-	switch true { // want `missing whitespace decreases readability \(switch\)`
+	switch true { // want `missing whitespace above this line \(invalid statement above switch\)`
 	case true:
 	case false:
 		panic("")

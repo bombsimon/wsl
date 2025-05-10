@@ -23,20 +23,21 @@ func fn2() {
 	}
 }
 
+// TODO: L2 should be valid?
 func fn3() {
 L1:
 	if true {
 		_ = 1
 	}
 
-L2: // want `missing whitespace decreases readability \(if\)`
+L2: // want `missing whitespace above this line \(invalid statement above if\)`
 	if true {
 		_ = 1
 	}
 
 	_ = 1
 
-L3: // want `missing whitespace decreases readability \(label\)`
+L3: // want `missing whitespace above this line \(never cuddle label\)`
 	_ = 1
 }
 
@@ -48,6 +49,6 @@ LABEL:
 		fmt.Println("")
 		fmt.Println("")
 
-		break // want `missing whitespace decreases readability \(branch\)`
+		break // want `missing whitespace above this line \(too many lines above branch\)`
 	}
 }

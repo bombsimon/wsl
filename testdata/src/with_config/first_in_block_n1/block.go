@@ -13,7 +13,7 @@ func fn1() {
 	}
 
 	b := 1
-	if true { // want `missing whitespace decreases readability \(if\)`
+	if true { // want `missing whitespace above this line \(no shared variables above if\)`
 		Fn(one)
 
 		if false {
