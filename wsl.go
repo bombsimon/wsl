@@ -136,16 +136,18 @@ func (w *WSL) checkExpr(expr ast.Expr, cursor *Cursor) {
 		for _, e := range s.Args {
 			w.checkExpr(e, cursor)
 		}
-	case *ast.IndexExpr:
-		w.checkExpr(s.X, cursor)
 	case *ast.StarExpr:
 		w.checkExpr(s.X, cursor)
+	case *ast.CompositeLit:
+		for _, e := range s.Elts {
+			w.checkExpr(e, cursor)
+		}
 	case *ast.ArrayType,
 		*ast.BasicLit,
 		*ast.BinaryExpr,
 		*ast.ChanType,
-		*ast.CompositeLit,
 		*ast.Ident,
+		*ast.IndexListExpr,
 		*ast.MapType,
 		*ast.ParenExpr,
 		*ast.SelectorExpr,

@@ -44,3 +44,13 @@ func fn4() {
 	b := 2
 	<-ch // want `missing whitespace above this line \(no shared variables above expr\)`
 }
+
+func fn5() {
+	s := []string{
+		func() string { // want +1 `unnecessary whitespace \(leading-whitespace\)`
+
+			"a"
+		},
+		"b",
+	}
+}
