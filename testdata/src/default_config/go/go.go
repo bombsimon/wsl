@@ -48,8 +48,6 @@ func Go() {
 	multiCuddle2 := NewT() // want `missing whitespace above this line \(too many statements above go\)`
 	go multiCuddle2()
 
-	// TODO: Breaking change, this used to be on the first `go` stmt - now it's
-	// on the line that should have a blank line above.
 	t4 := NewT()
 	t5 := NewT() // want `missing whitespace above this line \(too many statements above go\)`
 	go t5()
