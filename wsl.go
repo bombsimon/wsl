@@ -381,9 +381,7 @@ func (w *WSL) CheckSelect(stmt *ast.SelectStmt, cursor *Cursor) {
 }
 
 func (w *WSL) CheckSend(stmt *ast.SendStmt, cursor *Cursor) {
-	defer func() {
-		w.CheckExpr(stmt.Value, cursor)
-	}()
+	defer w.CheckExpr(stmt.Value, cursor)
 
 	if _, ok := w.Config.Checks[CheckSend]; !ok {
 		return
@@ -391,7 +389,17 @@ func (w *WSL) CheckSend(stmt *ast.SendStmt, cursor *Cursor) {
 
 	cursor.SetChecker(CheckSend)
 
-	w.CheckCuddling(stmt, cursor, 1)
+	var stmts []ast.Stmt
+	ast.Inspect(stmt.Value, func(n ast.Node) bool {
+		if b, ok := n.(*ast.BlockStmt); ok {
+			stmts = b.List
+			return false
+		}
+
+		return true
+	})
+
+	w.CheckCuddlingBlock(stmt, stmts, cursor, 1)
 }
 
 func (w *WSL) CheckExprStmt(stmt *ast.ExprStmt, cursor *Cursor) {
