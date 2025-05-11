@@ -161,20 +161,25 @@ func (w *WSL) checkCuddlingWithDecl(
 func (w *WSL) CheckCuddlingWithoutIntersection(stmt ast.Node, cursor *Cursor) {
 	previousNode := cursor.PreviousNode()
 
+	currAssign, currIsAssign := stmt.(*ast.AssignStmt)
 	previousAssign, prevIsAssign := previousNode.(*ast.AssignStmt)
 	_, prevIsDecl := previousNode.(*ast.DeclStmt)
 	_, prevIsIncDec := previousNode.(*ast.IncDecStmt)
-	currAssign, currIsAssign := stmt.(*ast.AssignStmt)
 
-	// Most of the time we allow cuddling with declarations (var) if it's just
-	// one statement but not always so this can be disabled, e.g. for
-	// declarations themselves.
+	// Cuddling without intersection is allowed for assignments and inc/dec
+	// statements. If however the check for declarations is disabled, we also
+	// allow cuddling with them as well.
+	//
+	// var x string
+	// x := ""
+	// y++
 	if _, ok := w.Config.Checks[CheckDecl]; ok {
 		prevIsDecl = false
 	}
 
 	// If we enable exclusive assign checks we only allow new declarations or
 	// new assignments together but not mix and match.
+	//
 	// When this is enabled we also implicitly disable support to cuddle with
 	// anything else.
 	if _, ok := w.Config.Checks[CheckAssignExclusive]; ok {
