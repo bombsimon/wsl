@@ -110,13 +110,13 @@ func (wa *wslAnalyzer) run(pass *analysis.Pass) (any, error) {
 		wsl := New(file, pass, wa.config)
 		wsl.Run()
 
-		for pos, fix := range wsl.Issues {
+		for pos, fix := range wsl.issues {
 			textEdits := []analysis.TextEdit{}
 
-			for _, f := range fix.FixRanges {
+			for _, f := range fix.fixRanges {
 				textEdits = append(textEdits, analysis.TextEdit{
-					Pos:     f.FixRangeStart,
-					End:     f.FixRangeEnd,
+					Pos:     f.fixRangeStart,
+					End:     f.fixRangeEnd,
 					NewText: []byte("\n"),
 				})
 			}
@@ -124,7 +124,7 @@ func (wa *wslAnalyzer) run(pass *analysis.Pass) (any, error) {
 			pass.Report(analysis.Diagnostic{
 				Pos:      pos,
 				Category: "whitespace",
-				Message:  fix.Message,
+				Message:  fix.message,
 				SuggestedFixes: []analysis.SuggestedFix{
 					{
 						TextEdits: textEdits,

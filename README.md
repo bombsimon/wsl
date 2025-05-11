@@ -136,6 +136,7 @@ linters:
       case-max-lines: 0
       default: ~ # Can be `all`, `none`, `default` or empty
       enable:
+        - append
         - assign
         - branch
         - decl
@@ -152,7 +153,6 @@ linters:
         - send
         - switch
         - type-switch
-        - append
         - leading-whitespace
         - trailing-whitespace
       disable:

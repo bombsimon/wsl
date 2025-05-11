@@ -11,52 +11,190 @@ import (
 )
 
 const (
-	MessageMissingWhitespaceAbove = "missing whitespace above this line"
-	MessageMissingWhitespaceBelow = "missing whitespace below this line"
-	MessageRemoveWhitespace       = "unnecessary whitespace"
+	messageMissingWhitespaceAbove = "missing whitespace above this line"
+	messageMissingWhitespaceBelow = "missing whitespace below this line"
+	messageRemoveWhitespace       = "unnecessary whitespace"
 )
 
-type FixRange struct {
-	FixRangeStart token.Pos
-	FixRangeEnd   token.Pos
+type fixRange struct {
+	fixRangeStart token.Pos
+	fixRangeEnd   token.Pos
 }
 
-type Issue struct {
-	Message string
+type issue struct {
+	message string
 	// We can report multiple fixes at the same position. This happens e.g. when
 	// we force error cuddling but the error assignment is already cuddled.
 	// See `checkError` for examples.
-	FixRanges []FixRange
+	fixRanges []fixRange
 }
 
 type WSL struct {
-	File     *ast.File
-	Fset     *token.FileSet
-	TypeInfo *types.Info
-	Comments ast.CommentMap
-	Issues   map[token.Pos]Issue
-	Config   *Configuration
+	file     *ast.File
+	fset     *token.FileSet
+	typeInfo *types.Info
+	comments ast.CommentMap
+	issues   map[token.Pos]issue
+	config   *Configuration
 }
 
 func New(file *ast.File, pass *analysis.Pass, cfg *Configuration) *WSL {
 	return &WSL{
-		Fset:     pass.Fset,
-		File:     file,
-		TypeInfo: pass.TypesInfo,
-		Issues:   make(map[token.Pos]Issue),
-		Config:   cfg,
+		fset:     pass.Fset,
+		file:     file,
+		typeInfo: pass.TypesInfo,
+		issues:   make(map[token.Pos]issue),
+		config:   cfg,
 	}
 }
 
+// Run will run analysis on the file and pass passed to the constructor. It's
+// typically only supposed to be used by [analysis.Analyzer].
 func (w *WSL) Run() {
-	for _, decl := range w.File.Decls {
+	for _, decl := range w.file.Decls {
 		if funcDecl, ok := decl.(*ast.FuncDecl); ok {
-			w.CheckFunc(funcDecl)
+			w.checkFunc(funcDecl)
 		}
 	}
 }
 
-func (w *WSL) CheckCuddlingBlock(stmt ast.Node, blockList []ast.Stmt, cursor *Cursor, maxAllowedStatements int) {
+func (w *WSL) checkStmt(stmt ast.Stmt, cursor *Cursor) {
+	//nolint:gocritic // This is not commented out code, it's examples
+	switch s := stmt.(type) {
+	// if a {} else if b {} else {}
+	case *ast.IfStmt:
+		w.checkIf(s, cursor, false)
+	// for {} / for a; b; c {}
+	case *ast.ForStmt:
+		w.checkFor(s, cursor)
+	// for _, _ = range a {}
+	case *ast.RangeStmt:
+		w.checkRange(s, cursor)
+	// switch {} // switch a {}
+	case *ast.SwitchStmt:
+		w.checkSwitch(s, cursor)
+	// switch a.(type) {}
+	case *ast.TypeSwitchStmt:
+		w.checkTypeSwitch(s, cursor)
+	// return a
+	case *ast.ReturnStmt:
+		w.checkReturn(s, cursor)
+	// continue / break
+	case *ast.BranchStmt:
+		w.checkBranch(s, cursor)
+	// var a
+	case *ast.DeclStmt:
+		w.checkDeclStmt(s, cursor)
+	// a := a
+	case *ast.AssignStmt:
+		w.checkAssign(s, cursor)
+	// a++ / a--
+	case *ast.IncDecStmt:
+		w.checkIncDec(s, cursor)
+	// defer func() {}
+	case *ast.DeferStmt:
+		w.checkDefer(s, cursor)
+	// go func() {}
+	case *ast.GoStmt:
+		w.checkGo(s, cursor)
+	// e.g. someFn()
+	case *ast.ExprStmt:
+		w.checkExprStmt(s, cursor)
+	// case:
+	case *ast.CaseClause:
+		w.checkCaseClause(s, cursor)
+	// case:
+	case *ast.CommClause:
+		w.checkCommClause(s, cursor)
+	// { }
+	case *ast.BlockStmt:
+		w.checkBlock(s)
+	// select { }
+	case *ast.SelectStmt:
+		w.checkSelect(s, cursor)
+	// ch <- ...
+	case *ast.SendStmt:
+		w.checkSend(s, cursor)
+	// LABEL:
+	case *ast.LabeledStmt:
+		w.checkLabel(s, cursor)
+	case *ast.EmptyStmt:
+	default:
+		fmt.Printf("Not implemented stmt: %T\n", s)
+	}
+}
+
+func (w *WSL) checkExpr(expr ast.Expr, cursor *Cursor) {
+	switch s := expr.(type) {
+	// func() {}
+	case *ast.FuncLit:
+		w.checkBlock(s.Body)
+	// Call(args...)
+	case *ast.CallExpr:
+		w.checkExpr(s.Fun, cursor)
+
+		for _, e := range s.Args {
+			w.checkExpr(e, cursor)
+		}
+	case *ast.IndexExpr:
+		w.checkExpr(s.X, cursor)
+	case *ast.StarExpr:
+		w.checkExpr(s.X, cursor)
+	case *ast.ArrayType,
+		*ast.BasicLit,
+		*ast.BinaryExpr,
+		*ast.ChanType,
+		*ast.CompositeLit,
+		*ast.Ident,
+		*ast.MapType,
+		*ast.ParenExpr,
+		*ast.SelectorExpr,
+		*ast.SliceExpr,
+		*ast.TypeAssertExpr,
+		*ast.UnaryExpr,
+		nil:
+	default:
+		fmt.Printf("Not implemented expr: %T\n", s)
+	}
+}
+
+func (w *WSL) checkDecl(decl ast.Decl, cursor *Cursor) {
+	switch d := decl.(type) {
+	case *ast.GenDecl:
+		for _, spec := range d.Specs {
+			w.checkSpec(spec, cursor)
+		}
+	case *ast.FuncDecl:
+		w.checkStmt(d.Body, cursor)
+	case *ast.BadDecl:
+	default:
+		fmt.Printf("Not implemented decl: %T\n", d)
+	}
+}
+
+func (w *WSL) checkSpec(spec ast.Spec, cursor *Cursor) {
+	switch s := spec.(type) {
+	case *ast.ValueSpec:
+		for _, expr := range s.Values {
+			w.checkExpr(expr, cursor)
+		}
+	case *ast.ImportSpec, *ast.TypeSpec:
+	default:
+		fmt.Printf("Not implemented spec: %T\n", s)
+	}
+}
+
+func (w *WSL) checkBody(body []ast.Stmt) *Cursor {
+	cursor := NewCursor(body)
+
+	for cursor.Next() {
+		w.checkStmt(cursor.Stmt(), cursor)
+	}
+
+	return cursor
+}
+
+func (w *WSL) checkCuddlingBlock(stmt ast.Node, blockList []ast.Stmt, cursor *Cursor, maxAllowedStatements int) {
 	var firstBlockStmt ast.Node
 	if len(blockList) > 0 {
 		firstBlockStmt = blockList[0]
@@ -65,7 +203,7 @@ func (w *WSL) CheckCuddlingBlock(stmt ast.Node, blockList []ast.Stmt, cursor *Cu
 	w.checkCuddlingMaxAllowed(stmt, firstBlockStmt, cursor, maxAllowedStatements)
 }
 
-func (w *WSL) CheckCuddling(stmt ast.Node, cursor *Cursor, maxAllowedStatements int) {
+func (w *WSL) checkCuddling(stmt ast.Node, cursor *Cursor, maxAllowedStatements int) {
 	w.checkCuddlingMaxAllowed(stmt, nil, cursor, maxAllowedStatements)
 }
 
@@ -128,7 +266,7 @@ func (w *WSL) checkCuddlingMaxAllowed(
 
 	// FEATURE(AllowWholeBlock): Allow identifier used anywhere in block
 	// (including recursive blocks).
-	if w.Config.AllowWholeBlock {
+	if w.config.AllowWholeBlock {
 		allIdentsInBlock := identsFromNode(stmt, false)
 		if checkIntersection(allIdentsInBlock) {
 			return
@@ -136,7 +274,7 @@ func (w *WSL) checkCuddlingMaxAllowed(
 	}
 
 	// FEATURE(AllowFirstInBlock): Allow identifiers used first in block.
-	if !w.Config.AllowWholeBlock && w.Config.AllowFirstInBlock {
+	if !w.config.AllowWholeBlock && w.config.AllowFirstInBlock {
 		firstStmtIdents := identsFromNode(firstBlockStmt, true)
 		if checkIntersection(firstStmtIdents) {
 			return
@@ -158,7 +296,7 @@ func (w *WSL) checkCuddlingMaxAllowed(
 	w.addErrorNoIntersection(stmt.Pos(), cursor.checkType)
 }
 
-func (w *WSL) CheckCuddlingWithoutIntersection(stmt ast.Node, cursor *Cursor) {
+func (w *WSL) checkCuddlingWithoutIntersection(stmt ast.Node, cursor *Cursor) {
 	previousNode := cursor.PreviousNode()
 
 	currAssign, currIsAssign := stmt.(*ast.AssignStmt)
@@ -173,7 +311,7 @@ func (w *WSL) CheckCuddlingWithoutIntersection(stmt ast.Node, cursor *Cursor) {
 	// var x string
 	// x := ""
 	// y++
-	if _, ok := w.Config.Checks[CheckDecl]; ok {
+	if _, ok := w.config.Checks[CheckDecl]; ok {
 		prevIsDecl = false
 	}
 
@@ -182,7 +320,7 @@ func (w *WSL) CheckCuddlingWithoutIntersection(stmt ast.Node, cursor *Cursor) {
 	//
 	// When this is enabled we also implicitly disable support to cuddle with
 	// anything else.
-	if _, ok := w.Config.Checks[CheckAssignExclusive]; ok {
+	if _, ok := w.config.Checks[CheckAssignExclusive]; ok {
 		prevIsDecl = false
 		prevIsIncDec = false
 
@@ -216,227 +354,131 @@ func (w *WSL) CheckCuddlingWithoutIntersection(stmt ast.Node, cursor *Cursor) {
 	}
 }
 
-func (w *WSL) checkError(
-	stmtsAbove int,
-	ifStmt ast.Node,
-	previousNode ast.Node,
-	previousIdents []*ast.Ident,
-	cursor *Cursor,
-) {
-	defer cursor.Save()()
+func (w *WSL) checkBlock(block *ast.BlockStmt) *Cursor {
+	w.checkBlockLeadingNewline(block)
+	w.checkTrailingNewline(block)
 
-	if _, ok := ifStmt.(*ast.IfStmt); !ok {
-		return
-	}
-
-	if _, ok := w.Config.Checks[CheckErr]; !ok {
-		return
-	}
-
-	cursor.SetChecker(CheckErr)
-
-	if stmtsAbove > 0 || len(previousIdents) == 0 {
-		return
-	}
-
-	if !slices.ContainsFunc(previousIdents, func(ident *ast.Ident) bool {
-		return w.implementsErr(ident)
-	}) {
-		return
-	}
-
-	previousNodeEnd := previousNode.End()
-
-	comments := ast.NewCommentMap(w.Fset, previousNode, w.File.Comments)
-	for _, cg := range comments {
-		for _, c := range cg {
-			if c.Pos() < previousNodeEnd || c.End() > ifStmt.Pos() {
-				continue
-			}
-
-			if c.End() > previousNodeEnd {
-				// There's a comment between the error variable and the
-				// if-statement, we can't do much about this. Most likely, the
-				// comment has a meaning, but even if not we would end up with
-				// something like
-				//
-				// err := fn()
-				// // Some Comment
-				// if err != nil {}
-				//
-				// Which just feels marginally better than leaving the space
-				// anyway.
-				if w.lineFor(c.End()) != w.lineFor(previousNodeEnd) {
-					return
-				}
-
-				// If they are on the same line though, we can just extend where
-				// the line ends.
-				previousNodeEnd = c.End()
-			}
-		}
-	}
-
-	w.addError(previousNodeEnd+1, previousNodeEnd, ifStmt.Pos(), MessageRemoveWhitespace, cursor.checkType)
-
-	// If we add the error at the same position but with a different fix
-	// range, only the fix range will be updated.
-	//
-	//   a := 1
-	//   err := fn()
-	//
-	//   if err != nil {}
-	//
-	// Should become
-	//
-	//   a := 1
-	//
-	//   err := fn()
-	//   if err != nil {}
-	cursor.Previous()
-
-	// We report this fix on the same pos as the previous diagnostic, but the
-	// fix is different. The reason is to just stack more fixes for the same
-	// diagnostic, the issue isn't present until the first fix so this message
-	// will never be shown to the user.
-	if w.numberOfStatementsAbove(cursor) > 0 {
-		w.addError(previousNodeEnd+1, previousNode.Pos(), previousNode.Pos(), MessageMissingWhitespaceAbove, cursor.checkType)
-	}
+	return w.checkBody(block.List)
 }
 
-func (w *WSL) MaybeCheckBlock(
-	node ast.Node,
-	blockStmt *ast.BlockStmt,
-	cursor *Cursor,
-	check CheckType,
-) {
-	w.CheckBlock(blockStmt)
+func (w *WSL) checkCaseClause(stmt *ast.CaseClause, cursor *Cursor) {
+	w.checkCaseLeadingNewline(stmt)
 
-	if _, ok := w.Config.Checks[check]; ok {
-		cursor.SetChecker(check)
-		w.CheckCuddlingBlock(node, blockStmt.List, cursor, 1)
+	if w.config.CaseMaxLines != 0 {
+		w.checkCaseTrailingNewline(stmt.Body, cursor)
 	}
+
+	w.checkBody(stmt.Body)
 }
 
-func (w *WSL) MaybeCheckExpr(
-	node ast.Node,
-	expr ast.Expr,
-	cursor *Cursor,
-	predicate func(ast.Node) (int, bool),
-	check CheckType,
-) {
-	w.CheckExpr(expr, cursor)
+func (w *WSL) checkCommClause(stmt *ast.CommClause, cursor *Cursor) {
+	w.checkCommLeadingNewline(stmt)
 
-	if _, ok := w.Config.Checks[check]; ok {
-		cursor.SetChecker(check)
-		previousNode := cursor.PreviousNode()
-
-		if n, ok := predicate(previousNode); ok {
-			w.CheckCuddling(node, cursor, n)
-		}
+	if w.config.CaseMaxLines != 0 {
+		w.checkCaseTrailingNewline(stmt.Body, cursor)
 	}
+
+	w.checkBody(stmt.Body)
 }
 
-func (w *WSL) CheckFunc(funcDecl *ast.FuncDecl) {
+func (w *WSL) checkFunc(funcDecl *ast.FuncDecl) {
 	if funcDecl.Body == nil {
 		return
 	}
 
-	w.CheckBlock(funcDecl.Body)
+	w.checkBlock(funcDecl.Body)
 }
 
-func (w *WSL) CheckIf(stmt *ast.IfStmt, cursor *Cursor, isElse bool) {
-	// if
-	w.CheckBlock(stmt.Body)
+func (w *WSL) checkAssign(stmt *ast.AssignStmt, cursor *Cursor) {
+	defer func() {
+		for _, expr := range stmt.Rhs {
+			w.checkExpr(expr, cursor)
+		}
+	}()
 
-	switch v := stmt.Else.(type) {
-	// else-if
-	case *ast.IfStmt:
-		w.CheckIf(v, cursor, true)
-
-	// else
-	case *ast.BlockStmt:
-		w.CheckBlock(v)
-	}
-
-	if _, ok := w.Config.Checks[CheckIf]; !isElse && ok {
-		cursor.SetChecker(CheckIf)
-		w.CheckCuddlingBlock(stmt, stmt.Body.List, cursor, 1)
-	}
-}
-
-func (w *WSL) CheckFor(stmt *ast.ForStmt, cursor *Cursor) {
-	w.MaybeCheckBlock(stmt, stmt.Body, cursor, CheckFor)
-}
-
-func (w *WSL) CheckRange(stmt *ast.RangeStmt, cursor *Cursor) {
-	w.MaybeCheckBlock(stmt, stmt.Body, cursor, CheckRange)
-}
-
-func (w *WSL) CheckSwitch(stmt *ast.SwitchStmt, cursor *Cursor) {
-	w.MaybeCheckBlock(stmt, stmt.Body, cursor, CheckSwitch)
-}
-
-func (w *WSL) CheckTypeSwitch(stmt *ast.TypeSwitchStmt, cursor *Cursor) {
-	w.MaybeCheckBlock(stmt, stmt.Body, cursor, CheckTypeSwitch)
-}
-
-func (w *WSL) CheckSelect(stmt *ast.SelectStmt, cursor *Cursor) {
-	w.MaybeCheckBlock(stmt, stmt.Body, cursor, CheckSelect)
-}
-
-func (w *WSL) CheckSend(stmt *ast.SendStmt, cursor *Cursor) {
-	defer w.CheckExpr(stmt.Value, cursor)
-
-	if _, ok := w.Config.Checks[CheckSend]; !ok {
+	if _, ok := w.config.Checks[CheckAssign]; !ok {
 		return
 	}
 
-	cursor.SetChecker(CheckSend)
+	cursor.SetChecker(CheckAssign)
 
-	var stmts []ast.Stmt
-	ast.Inspect(stmt.Value, func(n ast.Node) bool {
-		if b, ok := n.(*ast.BlockStmt); ok {
-			stmts = b.List
-			return false
+	w.checkCuddlingWithoutIntersection(stmt, cursor)
+	w.checkAppend(stmt, cursor)
+}
+
+func (w *WSL) checkAppend(stmt *ast.AssignStmt, cursor *Cursor) {
+	if _, ok := w.config.Checks[CheckAppend]; !ok {
+		return
+	}
+
+	if w.numberOfStatementsAbove(cursor) == 0 {
+		return
+	}
+
+	previousNode := cursor.PreviousNode()
+
+	var appendNode *ast.CallExpr
+
+	for _, expr := range stmt.Rhs {
+		e, ok := expr.(*ast.CallExpr)
+		if !ok {
+			continue
 		}
 
-		return true
-	})
+		if f, ok := e.Fun.(*ast.Ident); ok && f.Name == "append" {
+			appendNode = e
+			break
+		}
+	}
 
-	w.CheckCuddlingBlock(stmt, stmts, cursor, 1)
+	if appendNode == nil {
+		return
+	}
+
+	if !hasIntersection(appendNode, previousNode) {
+		w.addErrorNoIntersection(stmt.Pos(), cursor.checkType)
+	}
 }
 
-func (w *WSL) CheckExprStmt(stmt *ast.ExprStmt, cursor *Cursor) {
-	w.MaybeCheckExpr(
-		stmt,
-		stmt.X,
-		cursor,
-		func(n ast.Node) (int, bool) {
-			_, ok := n.(*ast.ExprStmt)
-			return -1, !ok
-		},
-		CheckExpr,
-	)
+func (w *WSL) checkBranch(stmt *ast.BranchStmt, cursor *Cursor) {
+	if _, ok := w.config.Checks[CheckBranch]; !ok {
+		return
+	}
+
+	cursor.SetChecker(CheckBranch)
+
+	if w.numberOfStatementsAbove(cursor) == 0 {
+		return
+	}
+
+	lastStmtInBlock := cursor.statements[len(cursor.statements)-1]
+	firstStmts := cursor.Nth(0)
+
+	if w.lineFor(lastStmtInBlock.End())-w.lineFor(firstStmts.Pos()) < w.config.BranchMaxLines {
+		return
+	}
+
+	w.addErrorTooManyLines(stmt.Pos(), cursor.checkType)
 }
 
-func (w *WSL) CheckGo(stmt *ast.GoStmt, cursor *Cursor) {
-	w.MaybeCheckExpr(
-		stmt,
-		stmt.Call,
-		cursor,
-		// We can cuddle any amount `go` statements so only check cuddling if
-		// the previous one isn't a `go` call.
-		func(n ast.Node) (int, bool) {
-			_, ok := n.(*ast.GoStmt)
-			return 1, !ok
-		},
-		CheckGo,
-	)
+func (w *WSL) checkDeclStmt(stmt *ast.DeclStmt, cursor *Cursor) {
+	w.checkDecl(stmt.Decl, cursor)
+
+	if _, ok := w.config.Checks[CheckDecl]; !ok {
+		return
+	}
+
+	cursor.SetChecker(CheckDecl)
+
+	if w.numberOfStatementsAbove(cursor) == 0 {
+		return
+	}
+
+	w.addErrorNeverAllow(stmt.Pos(), cursor.checkType)
 }
 
-func (w *WSL) CheckDefer(stmt *ast.DeferStmt, cursor *Cursor) {
-	w.MaybeCheckExpr(
+func (w *WSL) checkDefer(stmt *ast.DeferStmt, cursor *Cursor) {
+	w.maybeCheckExpr(
 		stmt,
 		stmt.Call,
 		cursor,
@@ -470,35 +512,174 @@ func (w *WSL) CheckDefer(stmt *ast.DeferStmt, cursor *Cursor) {
 	)
 }
 
-func (w *WSL) CheckBranch(stmt *ast.BranchStmt, cursor *Cursor) {
-	if _, ok := w.Config.Checks[CheckBranch]; !ok {
+func (w *WSL) checkError(
+	stmtsAbove int,
+	ifStmt ast.Node,
+	previousNode ast.Node,
+	previousIdents []*ast.Ident,
+	cursor *Cursor,
+) {
+	defer cursor.Save()()
+
+	if _, ok := ifStmt.(*ast.IfStmt); !ok {
 		return
 	}
 
-	cursor.SetChecker(CheckBranch)
-
-	if w.numberOfStatementsAbove(cursor) == 0 {
+	if _, ok := w.config.Checks[CheckErr]; !ok {
 		return
 	}
 
-	lastStmtInBlock := cursor.statements[len(cursor.statements)-1]
-	firstStmts := cursor.Nth(0)
+	cursor.SetChecker(CheckErr)
 
-	if w.lineFor(lastStmtInBlock.End())-w.lineFor(firstStmts.Pos()) < w.Config.BranchMaxLines {
+	if stmtsAbove > 0 || len(previousIdents) == 0 {
 		return
 	}
 
-	w.addErrorTooManyLines(stmt.Pos(), cursor.checkType)
+	if !slices.ContainsFunc(previousIdents, func(ident *ast.Ident) bool {
+		return w.implementsErr(ident)
+	}) {
+		return
+	}
+
+	previousNodeEnd := previousNode.End()
+
+	comments := ast.NewCommentMap(w.fset, previousNode, w.file.Comments)
+	for _, cg := range comments {
+		for _, c := range cg {
+			if c.Pos() < previousNodeEnd || c.End() > ifStmt.Pos() {
+				continue
+			}
+
+			if c.End() > previousNodeEnd {
+				// There's a comment between the error variable and the
+				// if-statement, we can't do much about this. Most likely, the
+				// comment has a meaning, but even if not we would end up with
+				// something like
+				//
+				// err := fn()
+				// // Some Comment
+				// if err != nil {}
+				//
+				// Which just feels marginally better than leaving the space
+				// anyway.
+				if w.lineFor(c.End()) != w.lineFor(previousNodeEnd) {
+					return
+				}
+
+				// If they are on the same line though, we can just extend where
+				// the line ends.
+				previousNodeEnd = c.End()
+			}
+		}
+	}
+
+	w.addError(previousNodeEnd+1, previousNodeEnd, ifStmt.Pos(), messageRemoveWhitespace, cursor.checkType)
+
+	// If we add the error at the same position but with a different fix
+	// range, only the fix range will be updated.
+	//
+	//   a := 1
+	//   err := fn()
+	//
+	//   if err != nil {}
+	//
+	// Should become
+	//
+	//   a := 1
+	//
+	//   err := fn()
+	//   if err != nil {}
+	cursor.Previous()
+
+	// We report this fix on the same pos as the previous diagnostic, but the
+	// fix is different. The reason is to just stack more fixes for the same
+	// diagnostic, the issue isn't present until the first fix so this message
+	// will never be shown to the user.
+	if w.numberOfStatementsAbove(cursor) > 0 {
+		w.addError(previousNodeEnd+1, previousNode.Pos(), previousNode.Pos(), messageMissingWhitespaceAbove, cursor.checkType)
+	}
 }
 
-func (w *WSL) CheckDeclStmt(stmt *ast.DeclStmt, cursor *Cursor) {
-	w.CheckDecl(stmt.Decl, cursor)
+func (w *WSL) checkExprStmt(stmt *ast.ExprStmt, cursor *Cursor) {
+	w.maybeCheckExpr(
+		stmt,
+		stmt.X,
+		cursor,
+		func(n ast.Node) (int, bool) {
+			_, ok := n.(*ast.ExprStmt)
+			return -1, !ok
+		},
+		CheckExpr,
+	)
+}
 
-	if _, ok := w.Config.Checks[CheckDecl]; !ok {
+func (w *WSL) checkFor(stmt *ast.ForStmt, cursor *Cursor) {
+	w.maybeCheckBlock(stmt, stmt.Body, cursor, CheckFor)
+}
+
+func (w *WSL) checkGo(stmt *ast.GoStmt, cursor *Cursor) {
+	w.maybeCheckExpr(
+		stmt,
+		stmt.Call,
+		cursor,
+		// We can cuddle any amount `go` statements so only check cuddling if
+		// the previous one isn't a `go` call.
+		func(n ast.Node) (int, bool) {
+			_, ok := n.(*ast.GoStmt)
+			return 1, !ok
+		},
+		CheckGo,
+	)
+}
+
+func (w *WSL) checkIf(stmt *ast.IfStmt, cursor *Cursor, isElse bool) {
+	// if
+	w.checkBlock(stmt.Body)
+
+	switch v := stmt.Else.(type) {
+	// else-if
+	case *ast.IfStmt:
+		w.checkIf(v, cursor, true)
+
+	// else
+	case *ast.BlockStmt:
+		w.checkBlock(v)
+	}
+
+	if _, ok := w.config.Checks[CheckIf]; !isElse && ok {
+		cursor.SetChecker(CheckIf)
+		w.checkCuddlingBlock(stmt, stmt.Body.List, cursor, 1)
+	}
+}
+
+func (w *WSL) checkIncDec(stmt *ast.IncDecStmt, cursor *Cursor) {
+	defer w.checkExpr(stmt.X, cursor)
+
+	if _, ok := w.config.Checks[CheckIncDec]; !ok {
 		return
 	}
 
-	cursor.SetChecker(CheckDecl)
+	cursor.SetChecker(CheckIncDec)
+
+	w.checkCuddlingWithoutIntersection(stmt, cursor)
+}
+
+func (w *WSL) checkLabel(stmt *ast.LabeledStmt, cursor *Cursor) {
+	// We check the statement last because the statement is the same node as the
+	// label (it's a labeled statement). This means that we _first_ want to
+	// check any violations of cuddling the label (never cuddle label) before we
+	// actually check the inner statement.
+	//
+	// It's a subtle difference, but it makes the diagnostic make more sense.
+	// We do this by deferring the statmenet check so it happens last no matter
+	// if we have label checking enabled or not.
+	defer w.checkStmt(stmt.Stmt, cursor)
+
+	if _, ok := w.config.Checks[CheckLabel]; !ok {
+		return
+	}
+
+	cursor.SetChecker(CheckLabel)
 
 	if w.numberOfStatementsAbove(cursor) == 0 {
 		return
@@ -507,31 +688,72 @@ func (w *WSL) CheckDeclStmt(stmt *ast.DeclStmt, cursor *Cursor) {
 	w.addErrorNeverAllow(stmt.Pos(), cursor.checkType)
 }
 
-func (w *WSL) CheckBlock(block *ast.BlockStmt) *Cursor {
-	w.CheckBlockLeadingNewline(block)
-	w.CheckTrailingNewline(block)
-
-	return w.checkBody(block.List)
+func (w *WSL) checkRange(stmt *ast.RangeStmt, cursor *Cursor) {
+	w.maybeCheckBlock(stmt, stmt.Body, cursor, CheckRange)
 }
 
-func (w *WSL) CheckCase(stmt *ast.CaseClause, cursor *Cursor) {
-	w.CheckCaseLeadingNewline(stmt)
-
-	if w.Config.CaseMaxLines != 0 {
-		w.checkCaseTrailingNewline(stmt.Body, cursor)
+func (w *WSL) checkReturn(stmt *ast.ReturnStmt, cursor *Cursor) {
+	for _, expr := range stmt.Results {
+		w.checkExpr(expr, cursor)
 	}
 
-	w.checkBody(stmt.Body)
+	if _, ok := w.config.Checks[CheckReturn]; !ok {
+		return
+	}
+
+	cursor.SetChecker(CheckReturn)
+
+	// There's only a return statement.
+	if cursor.Len() <= 1 {
+		return
+	}
+
+	if w.numberOfStatementsAbove(cursor) == 0 {
+		return
+	}
+
+	// If the distance between the first statement and the return statement is
+	// less than `n` LOC we're allowed to cuddle.
+	firstStmts := cursor.Nth(0)
+	if w.lineFor(stmt.End())-w.lineFor(firstStmts.Pos()) < w.config.BranchMaxLines {
+		return
+	}
+
+	w.addErrorTooManyLines(stmt.Pos(), cursor.checkType)
 }
 
-func (w *WSL) CheckComm(stmt *ast.CommClause, cursor *Cursor) {
-	w.CheckCommLeadingNewline(stmt)
+func (w *WSL) checkSelect(stmt *ast.SelectStmt, cursor *Cursor) {
+	w.maybeCheckBlock(stmt, stmt.Body, cursor, CheckSelect)
+}
 
-	if w.Config.CaseMaxLines != 0 {
-		w.checkCaseTrailingNewline(stmt.Body, cursor)
+func (w *WSL) checkSend(stmt *ast.SendStmt, cursor *Cursor) {
+	defer w.checkExpr(stmt.Value, cursor)
+
+	if _, ok := w.config.Checks[CheckSend]; !ok {
+		return
 	}
 
-	w.checkBody(stmt.Body)
+	cursor.SetChecker(CheckSend)
+
+	var stmts []ast.Stmt
+	ast.Inspect(stmt.Value, func(n ast.Node) bool {
+		if b, ok := n.(*ast.BlockStmt); ok {
+			stmts = b.List
+			return false
+		}
+
+		return true
+	})
+
+	w.checkCuddlingBlock(stmt, stmts, cursor, 1)
+}
+
+func (w *WSL) checkSwitch(stmt *ast.SwitchStmt, cursor *Cursor) {
+	w.maybeCheckBlock(stmt, stmt.Body, cursor, CheckSwitch)
+}
+
+func (w *WSL) checkTypeSwitch(stmt *ast.TypeSwitchStmt, cursor *Cursor) {
+	w.maybeCheckBlock(stmt, stmt.Body, cursor, CheckTypeSwitch)
 }
 
 func (w *WSL) checkCaseTrailingNewline(body []ast.Stmt, cursor *Cursor) {
@@ -559,7 +781,7 @@ func (w *WSL) checkCaseTrailingNewline(body []ast.Stmt, cursor *Cursor) {
 	lastStmt := body[len(body)-1]
 	totalLines := w.lineFor(lastStmt.End()) - w.lineFor(firstStmt.Pos()) + 1
 
-	if totalLines < w.Config.CaseMaxLines {
+	if totalLines < w.config.CaseMaxLines {
 		return
 	}
 
@@ -569,300 +791,26 @@ func (w *WSL) checkCaseTrailingNewline(body []ast.Stmt, cursor *Cursor) {
 		return
 	}
 
-	w.addError(lastStmt.End(), nextCase.Pos(), nextCase.Pos(), MessageMissingWhitespaceBelow, CheckCaseTrailingNewline)
+	w.addError(lastStmt.End(), nextCase.Pos(), nextCase.Pos(), messageMissingWhitespaceBelow, CheckCaseTrailingNewline)
 }
 
-func (w *WSL) CheckReturn(stmt *ast.ReturnStmt, cursor *Cursor) {
-	for _, expr := range stmt.Results {
-		w.CheckExpr(expr, cursor)
-	}
-
-	if _, ok := w.Config.Checks[CheckReturn]; !ok {
-		return
-	}
-
-	cursor.SetChecker(CheckReturn)
-
-	// There's only a return statement.
-	if cursor.Len() <= 1 {
-		return
-	}
-
-	if w.numberOfStatementsAbove(cursor) == 0 {
-		return
-	}
-
-	// If the distance between the first statement and the return statement is
-	// less than `n` LOC we're allowed to cuddle.
-	firstStmts := cursor.Nth(0)
-	if w.lineFor(stmt.End())-w.lineFor(firstStmts.Pos()) < w.Config.BranchMaxLines {
-		return
-	}
-
-	w.addErrorTooManyLines(stmt.Pos(), cursor.checkType)
+func (w *WSL) checkBlockLeadingNewline(body *ast.BlockStmt) {
+	comments := ast.NewCommentMap(w.fset, body, w.file.Comments)
+	w.checkLeadingNewline(body.Lbrace, body.List, comments)
 }
 
-func (w *WSL) CheckAssign(stmt *ast.AssignStmt, cursor *Cursor) {
-	defer func() {
-		for _, expr := range stmt.Rhs {
-			w.CheckExpr(expr, cursor)
-		}
-	}()
-
-	if _, ok := w.Config.Checks[CheckAssign]; !ok {
-		return
-	}
-
-	cursor.SetChecker(CheckAssign)
-
-	w.CheckCuddlingWithoutIntersection(stmt, cursor)
-	w.strictAppendCheck(stmt, cursor)
+func (w *WSL) checkCaseLeadingNewline(caseClause *ast.CaseClause) {
+	comments := ast.NewCommentMap(w.fset, caseClause, w.file.Comments)
+	w.checkLeadingNewline(caseClause.Colon, caseClause.Body, comments)
 }
 
-func (w *WSL) CheckIncDec(stmt *ast.IncDecStmt, cursor *Cursor) {
-	defer w.CheckExpr(stmt.X, cursor)
-
-	if _, ok := w.Config.Checks[CheckIncDec]; !ok {
-		return
-	}
-
-	cursor.SetChecker(CheckIncDec)
-
-	w.CheckCuddlingWithoutIntersection(stmt, cursor)
+func (w *WSL) checkCommLeadingNewline(commClause *ast.CommClause) {
+	comments := ast.NewCommentMap(w.fset, commClause, w.file.Comments)
+	w.checkLeadingNewline(commClause.Colon, commClause.Body, comments)
 }
 
-func (w *WSL) CheckLabel(stmt *ast.LabeledStmt, cursor *Cursor) {
-	// We check the statement last because the statement is the same node as the
-	// label (it's a labeled statement). This means that we _first_ want to
-	// check any violations of cuddling the label (never cuddle label) before we
-	// actually check the inner statement.
-	//
-	// It's a subtle difference, but it makes the diagnostic make more sense.
-	// We do this by deferring the statmenet check so it happens last no matter
-	// if we have label checking enabled or not.
-	defer w.CheckStmt(stmt.Stmt, cursor)
-
-	if _, ok := w.Config.Checks[CheckLabel]; !ok {
-		return
-	}
-
-	cursor.SetChecker(CheckLabel)
-
-	if w.numberOfStatementsAbove(cursor) == 0 {
-		return
-	}
-
-	w.addErrorNeverAllow(stmt.Pos(), cursor.checkType)
-}
-
-func (w *WSL) strictAppendCheck(stmt *ast.AssignStmt, cursor *Cursor) {
-	if _, ok := w.Config.Checks[CheckAppend]; !ok {
-		return
-	}
-
-	if w.numberOfStatementsAbove(cursor) == 0 {
-		return
-	}
-
-	previousNode := cursor.PreviousNode()
-
-	var appendNode *ast.CallExpr
-
-	for _, expr := range stmt.Rhs {
-		e, ok := expr.(*ast.CallExpr)
-		if !ok {
-			continue
-		}
-
-		if f, ok := e.Fun.(*ast.Ident); ok && f.Name == "append" {
-			appendNode = e
-			break
-		}
-	}
-
-	if appendNode == nil {
-		return
-	}
-
-	if !hasIntersection(appendNode, previousNode) {
-		w.addErrorNoIntersection(stmt.Pos(), cursor.checkType)
-	}
-}
-
-func (w *WSL) checkBody(body []ast.Stmt) *Cursor {
-	cursor := NewCursor(body)
-
-	for cursor.Next() {
-		w.CheckStmt(cursor.Stmt(), cursor)
-	}
-
-	return cursor
-}
-
-func (w *WSL) CheckStmt(stmt ast.Stmt, cursor *Cursor) {
-	//nolint:gocritic // This is not commented out code, it's examples
-	switch s := stmt.(type) {
-	// if a {} else if b {} else {}
-	case *ast.IfStmt:
-		w.CheckIf(s, cursor, false)
-	// for {} / for a; b; c {}
-	case *ast.ForStmt:
-		w.CheckFor(s, cursor)
-	// for _, _ = range a {}
-	case *ast.RangeStmt:
-		w.CheckRange(s, cursor)
-	// switch {} // switch a {}
-	case *ast.SwitchStmt:
-		w.CheckSwitch(s, cursor)
-	// switch a.(type) {}
-	case *ast.TypeSwitchStmt:
-		w.CheckTypeSwitch(s, cursor)
-	// return a
-	case *ast.ReturnStmt:
-		w.CheckReturn(s, cursor)
-	// continue / break
-	case *ast.BranchStmt:
-		w.CheckBranch(s, cursor)
-	// var a
-	case *ast.DeclStmt:
-		w.CheckDeclStmt(s, cursor)
-	// a := a
-	case *ast.AssignStmt:
-		w.CheckAssign(s, cursor)
-	// a++ / a--
-	case *ast.IncDecStmt:
-		w.CheckIncDec(s, cursor)
-	// defer func() {}
-	case *ast.DeferStmt:
-		w.CheckDefer(s, cursor)
-	// go func() {}
-	case *ast.GoStmt:
-		w.CheckGo(s, cursor)
-	// e.g. someFn()
-	case *ast.ExprStmt:
-		w.CheckExprStmt(s, cursor)
-	// case:
-	case *ast.CaseClause:
-		w.CheckCase(s, cursor)
-	// case:
-	case *ast.CommClause:
-		w.CheckComm(s, cursor)
-	// { }
-	case *ast.BlockStmt:
-		w.CheckBlock(s)
-	// select { }
-	case *ast.SelectStmt:
-		w.CheckSelect(s, cursor)
-	// ch <- ...
-	case *ast.SendStmt:
-		w.CheckSend(s, cursor)
-	// LABEL:
-	case *ast.LabeledStmt:
-		w.CheckLabel(s, cursor)
-	case *ast.EmptyStmt:
-	default:
-		fmt.Printf("Not implemented stmt: %T\n", s)
-	}
-}
-
-func (w *WSL) CheckExpr(expr ast.Expr, cursor *Cursor) {
-	switch s := expr.(type) {
-	// func() {}
-	case *ast.FuncLit:
-		w.CheckBlock(s.Body)
-	// Call(args...)
-	case *ast.CallExpr:
-		w.CheckExpr(s.Fun, cursor)
-
-		for _, e := range s.Args {
-			w.CheckExpr(e, cursor)
-		}
-	case *ast.IndexExpr:
-		w.CheckExpr(s.X, cursor)
-	case *ast.StarExpr:
-		w.CheckExpr(s.X, cursor)
-	case *ast.ArrayType,
-		*ast.BasicLit,
-		*ast.BinaryExpr,
-		*ast.ChanType,
-		*ast.CompositeLit,
-		*ast.Ident,
-		*ast.MapType,
-		*ast.ParenExpr,
-		*ast.SelectorExpr,
-		*ast.SliceExpr,
-		*ast.TypeAssertExpr,
-		*ast.UnaryExpr,
-		nil:
-	default:
-		fmt.Printf("Not implemented expr: %T\n", s)
-	}
-}
-
-func (w *WSL) CheckDecl(decl ast.Decl, cursor *Cursor) {
-	switch d := decl.(type) {
-	case *ast.GenDecl:
-		for _, spec := range d.Specs {
-			w.CheckSpec(spec, cursor)
-		}
-	case *ast.FuncDecl:
-		w.CheckStmt(d.Body, cursor)
-	case *ast.BadDecl:
-	default:
-		fmt.Printf("Not implemented decl: %T\n", d)
-	}
-}
-
-func (w *WSL) CheckSpec(spec ast.Spec, cursor *Cursor) {
-	switch s := spec.(type) {
-	case *ast.ValueSpec:
-		for _, expr := range s.Values {
-			w.CheckExpr(expr, cursor)
-		}
-	case *ast.ImportSpec, *ast.TypeSpec:
-	default:
-		fmt.Printf("Not implemented spec: %T\n", s)
-	}
-}
-
-// numberOfStatementsAbove will find out how many lines above the cursor's
-// current statement there is without any newlines between.
-func (w *WSL) numberOfStatementsAbove(cursor *Cursor) int {
-	defer cursor.Save()()
-
-	statementsWithoutNewlines := 0
-	currentStmtStartLine := w.lineFor(cursor.Stmt().Pos())
-
-	for cursor.Previous() {
-		previousStmtEndLine := w.lineFor(cursor.Stmt().End())
-		if previousStmtEndLine != currentStmtStartLine-1 {
-			break
-		}
-
-		currentStmtStartLine = w.lineFor(cursor.Stmt().Pos())
-		statementsWithoutNewlines++
-	}
-
-	return statementsWithoutNewlines
-}
-
-func (w *WSL) CheckBlockLeadingNewline(body *ast.BlockStmt) {
-	comments := ast.NewCommentMap(w.Fset, body, w.File.Comments)
-	w.CheckLeadingNewline(body.Lbrace, body.List, comments)
-}
-
-func (w *WSL) CheckCaseLeadingNewline(caseClause *ast.CaseClause) {
-	comments := ast.NewCommentMap(w.Fset, caseClause, w.File.Comments)
-	w.CheckLeadingNewline(caseClause.Colon, caseClause.Body, comments)
-}
-
-func (w *WSL) CheckCommLeadingNewline(commClause *ast.CommClause) {
-	comments := ast.NewCommentMap(w.Fset, commClause, w.File.Comments)
-	w.CheckLeadingNewline(commClause.Colon, commClause.Body, comments)
-}
-
-func (w *WSL) CheckLeadingNewline(startPos token.Pos, body []ast.Stmt, comments ast.CommentMap) {
-	if _, ok := w.Config.Checks[CheckLeadingWhitespace]; !ok {
+func (w *WSL) checkLeadingNewline(startPos token.Pos, body []ast.Stmt, comments ast.CommentMap) {
+	if _, ok := w.config.Checks[CheckLeadingWhitespace]; !ok {
 		return
 	}
 
@@ -910,16 +858,16 @@ func (w *WSL) CheckLeadingNewline(startPos token.Pos, body []ast.Stmt, comments 
 		}
 	}
 
-	openingPosLine := w.Fset.PositionFor(openingPos, false).Line
-	firstStmtLine := w.Fset.PositionFor(firstStmt, false).Line
+	openingPosLine := w.fset.PositionFor(openingPos, false).Line
+	firstStmtLine := w.fset.PositionFor(firstStmt, false).Line
 
 	if firstStmtLine > openingPosLine+1 {
-		w.addError(openingPos+1, openingPos, firstStmt, MessageRemoveWhitespace, CheckLeadingWhitespace)
+		w.addError(openingPos+1, openingPos, firstStmt, messageRemoveWhitespace, CheckLeadingWhitespace)
 	}
 }
 
-func (w *WSL) CheckTrailingNewline(body *ast.BlockStmt) {
-	if _, ok := w.Config.Checks[CheckTrailingWhitespace]; !ok {
+func (w *WSL) checkTrailingNewline(body *ast.BlockStmt) {
+	if _, ok := w.config.Checks[CheckTrailingWhitespace]; !ok {
 		return
 	}
 
@@ -946,7 +894,7 @@ func (w *WSL) CheckTrailingNewline(body *ast.BlockStmt) {
 		}
 	}
 
-	comments := ast.NewCommentMap(w.Fset, body, w.File.Comments)
+	comments := ast.NewCommentMap(w.fset, body, w.file.Comments)
 	for _, commentGroup := range comments {
 		for _, comment := range commentGroup {
 			if comment.End() < closingPos && comment.Pos() > lastStmtOrComment {
@@ -955,20 +903,74 @@ func (w *WSL) CheckTrailingNewline(body *ast.BlockStmt) {
 		}
 	}
 
-	closingPosLine := w.Fset.PositionFor(closingPos, false).Line
-	lastStmtLine := w.Fset.PositionFor(lastStmtOrComment, false).Line
+	closingPosLine := w.fset.PositionFor(closingPos, false).Line
+	lastStmtLine := w.fset.PositionFor(lastStmtOrComment, false).Line
 
 	if closingPosLine > lastStmtLine+1 {
-		w.addError(lastStmtOrComment+1, lastStmtOrComment, closingPos, MessageRemoveWhitespace, CheckTrailingWhitespace)
+		w.addError(lastStmtOrComment+1, lastStmtOrComment, closingPos, messageRemoveWhitespace, CheckTrailingWhitespace)
 	}
 }
 
+func (w *WSL) maybeCheckBlock(
+	node ast.Node,
+	blockStmt *ast.BlockStmt,
+	cursor *Cursor,
+	check CheckType,
+) {
+	w.checkBlock(blockStmt)
+
+	if _, ok := w.config.Checks[check]; ok {
+		cursor.SetChecker(check)
+		w.checkCuddlingBlock(node, blockStmt.List, cursor, 1)
+	}
+}
+
+func (w *WSL) maybeCheckExpr(
+	node ast.Node,
+	expr ast.Expr,
+	cursor *Cursor,
+	predicate func(ast.Node) (int, bool),
+	check CheckType,
+) {
+	w.checkExpr(expr, cursor)
+
+	if _, ok := w.config.Checks[check]; ok {
+		cursor.SetChecker(check)
+		previousNode := cursor.PreviousNode()
+
+		if n, ok := predicate(previousNode); ok {
+			w.checkCuddling(node, cursor, n)
+		}
+	}
+}
+
+// numberOfStatementsAbove will find out how many lines above the cursor's
+// current statement there is without any newlines between.
+func (w *WSL) numberOfStatementsAbove(cursor *Cursor) int {
+	defer cursor.Save()()
+
+	statementsWithoutNewlines := 0
+	currentStmtStartLine := w.lineFor(cursor.Stmt().Pos())
+
+	for cursor.Previous() {
+		previousStmtEndLine := w.lineFor(cursor.Stmt().End())
+		if previousStmtEndLine != currentStmtStartLine-1 {
+			break
+		}
+
+		currentStmtStartLine = w.lineFor(cursor.Stmt().Pos())
+		statementsWithoutNewlines++
+	}
+
+	return statementsWithoutNewlines
+}
+
 func (w *WSL) lineFor(pos token.Pos) int {
-	return w.Fset.PositionFor(pos, false).Line
+	return w.fset.PositionFor(pos, false).Line
 }
 
 func (w *WSL) implementsErr(node *ast.Ident) bool {
-	typeInfo := w.TypeInfo.TypeOf(node)
+	typeInfo := w.typeInfo.TypeOf(node)
 	if typeInfo == nil {
 		return false
 	}
@@ -982,27 +984,27 @@ func (w *WSL) implementsErr(node *ast.Ident) bool {
 }
 
 func (w *WSL) addErrorInvalidTypeCuddle(pos token.Pos, ct CheckType) {
-	reportMessage := fmt.Sprintf("%s (invalid statement above %s)", MessageMissingWhitespaceAbove, ct)
+	reportMessage := fmt.Sprintf("%s (invalid statement above %s)", messageMissingWhitespaceAbove, ct)
 	w.addErrorWithMessage(pos, pos, pos, reportMessage)
 }
 
 func (w *WSL) addErrorTooManyStatements(pos token.Pos, ct CheckType) {
-	reportMessage := fmt.Sprintf("%s (too many statements above %s)", MessageMissingWhitespaceAbove, ct)
+	reportMessage := fmt.Sprintf("%s (too many statements above %s)", messageMissingWhitespaceAbove, ct)
 	w.addErrorWithMessage(pos, pos, pos, reportMessage)
 }
 
 func (w *WSL) addErrorNoIntersection(pos token.Pos, ct CheckType) {
-	reportMessage := fmt.Sprintf("%s (no shared variables above %s)", MessageMissingWhitespaceAbove, ct)
+	reportMessage := fmt.Sprintf("%s (no shared variables above %s)", messageMissingWhitespaceAbove, ct)
 	w.addErrorWithMessage(pos, pos, pos, reportMessage)
 }
 
 func (w *WSL) addErrorTooManyLines(pos token.Pos, ct CheckType) {
-	reportMessage := fmt.Sprintf("%s (too many lines above %s)", MessageMissingWhitespaceAbove, ct)
+	reportMessage := fmt.Sprintf("%s (too many lines above %s)", messageMissingWhitespaceAbove, ct)
 	w.addErrorWithMessage(pos, pos, pos, reportMessage)
 }
 
 func (w *WSL) addErrorNeverAllow(pos token.Pos, ct CheckType) {
-	reportMessage := fmt.Sprintf("%s (never cuddle %s)", MessageMissingWhitespaceAbove, ct)
+	reportMessage := fmt.Sprintf("%s (never cuddle %s)", messageMissingWhitespaceAbove, ct)
 	w.addErrorWithMessage(pos, pos, pos, reportMessage)
 }
 
@@ -1012,20 +1014,20 @@ func (w *WSL) addError(report, start, end token.Pos, message string, ct CheckTyp
 }
 
 func (w *WSL) addErrorWithMessage(report, start, end token.Pos, message string) {
-	issue, ok := w.Issues[report]
+	iss, ok := w.issues[report]
 	if !ok {
-		issue = Issue{
-			Message:   message,
-			FixRanges: []FixRange{},
+		iss = issue{
+			message:   message,
+			fixRanges: []fixRange{},
 		}
 	}
 
-	issue.FixRanges = append(issue.FixRanges, FixRange{
-		FixRangeStart: start,
-		FixRangeEnd:   end,
+	iss.fixRanges = append(iss.fixRanges, fixRange{
+		fixRangeStart: start,
+		fixRangeEnd:   end,
 	})
 
-	w.Issues[report] = issue
+	w.issues[report] = iss
 }
 
 func hasIntersection(a, b ast.Node) bool {
