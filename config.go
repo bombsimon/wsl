@@ -158,7 +158,7 @@ func NewCheckSet(
 	var cs CheckSet
 
 	switch strings.ToLower(defaultChecks) {
-	case "":
+	case "", "default":
 		cs = DefaultChecks()
 	case "all":
 		cs = AllChecks()
@@ -207,6 +207,7 @@ func DefaultChecks() CheckSet {
 		CheckRange:              {},
 		CheckReturn:             {},
 		CheckSelect:             {},
+		CheckSend:               {},
 		CheckSwitch:             {},
 		CheckTypeSwitch:         {},
 	}
@@ -216,7 +217,6 @@ func AllChecks() CheckSet {
 	c := DefaultChecks()
 	c.Add(CheckAssignExclusive)
 	c.Add(CheckErr)
-	c.Add(CheckSend)
 
 	return c
 }

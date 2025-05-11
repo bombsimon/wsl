@@ -53,7 +53,7 @@ For more details and examples, see [RULES](RULES.md).
   lines where `n` is the value of [`branch-max-lines`](#configuration)
 - ✅ **select** - Select should only be cuddled with a single variable used on the
   line above
-- ❌ **send** - Send should only be cuddled with a single variable used on the line
+- ✅ **send** - Send should only be cuddled with a single variable used on the line
   above
 - ✅ **switch** - Switch should only be cuddled with a single variable used on the
   line above
@@ -134,7 +134,7 @@ linters:
       allow-whole-block: false
       branch-max-lines: 2
       case-max-lines: 0
-      default: ~ # Can be `all`, `none` or empty
+      default: ~ # Can be `all`, `none`, `default` or empty
       enable:
         - assign
         - branch
@@ -149,6 +149,7 @@ linters:
         - range
         - return
         - select
+        - send
         - switch
         - type-switch
         - append
@@ -157,7 +158,6 @@ linters:
       disable:
         - assign-exclusive
         - err
-        - send
 ```
 
 ## See also
