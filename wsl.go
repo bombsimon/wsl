@@ -619,7 +619,15 @@ func (w *WSL) CheckIncDec(stmt *ast.IncDecStmt, cursor *Cursor) {
 }
 
 func (w *WSL) CheckLabel(stmt *ast.LabeledStmt, cursor *Cursor) {
-	w.CheckStmt(stmt.Stmt, cursor)
+	// We check the statement last because the statement is the same node as the
+	// label (it's a labeled statement). This means that we _first_ want to
+	// check any violations of cuddling the label (never cuddle label) before we
+	// actually check the inner statement.
+	//
+	// It's a subtle difference, but it makes the diagnostic make more sense.
+	// We do this by deferring the statmenet check so it happens last no matter
+	// if we have label checking enabled or not.
+	defer w.CheckStmt(stmt.Stmt, cursor)
 
 	if _, ok := w.Config.Checks[CheckLabel]; !ok {
 		return

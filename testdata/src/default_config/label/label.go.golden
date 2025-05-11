@@ -23,14 +23,13 @@ func fn2() {
 	}
 }
 
-// TODO: L2 should be valid?
 func fn3() {
 L1:
 	if true {
 		_ = 1
 	}
 
-L2: // want `missing whitespace above this line \(invalid statement above if\)`
+L2: // want `missing whitespace above this line \(never cuddle label\)`
 	if true {
 		_ = 1
 	}
