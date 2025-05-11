@@ -64,3 +64,8 @@ func assignAfterBlock() {
 	}
 	x = 2 // want `missing whitespace above this line \(invalid statement above assign\)`
 }
+
+func decl() {
+	var x string
+	y := "" // want `missing whitespace above this line \(invalid statement above assign\)`
+}

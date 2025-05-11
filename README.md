@@ -36,13 +36,13 @@ For more details and examples, see [RULES](RULES.md).
   value of [`branch-max-lines`](#configuration)
 - ✅ **decl** - Declarations should never be cuddled
 - ✅ **defer** - Defer should only be cuddled with other `defer`, after error
-  checking or with variable used on the line above
+  checking or with a single variable used on the line above
 - ✅ **expr** - Expressions are e.g. function calls or index expressions, they
   should only be cuddled with variables used on the line above
-- ✅ **for** - For loops should only be cuddled with a single variable used on the
-  line above
-- ✅ **go** - Go should only be cuddled with other `go` or with variables used on
+- ✅ **for** - For loops should only be cuddled with a single variable used on
   the line above
+- ✅ **go** - Go should only be cuddled with other `go` or a single variable
+  used on the line above
 - ✅ **if** - If should only be cuddled with a single variable used on the line
   above
 - ✅ **inc-dec** - Increment/decrement (`++/--`) has the same rules as `assign`

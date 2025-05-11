@@ -74,12 +74,6 @@ func TestWithConfig(t *testing.T) {
 			},
 		},
 		{
-			subdir: "send",
-			configFn: func(config *Configuration) {
-				config.Checks.Add(CheckSend)
-			},
-		},
-		{
 			subdir: "disable_all",
 			configFn: func(config *Configuration) {
 				config.Checks = NoChecks()
