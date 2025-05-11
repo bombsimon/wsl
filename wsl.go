@@ -62,14 +62,14 @@ func (w *WSL) CheckCuddlingBlock(stmt ast.Node, blockList []ast.Stmt, cursor *Cu
 		firstBlockStmt = blockList[0]
 	}
 
-	w.checkCuddlingWithDecl(stmt, firstBlockStmt, cursor, maxAllowedStatements)
+	w.checkCuddlingMaxAllowed(stmt, firstBlockStmt, cursor, maxAllowedStatements)
 }
 
 func (w *WSL) CheckCuddling(stmt ast.Node, cursor *Cursor, maxAllowedStatements int) {
-	w.checkCuddlingWithDecl(stmt, nil, cursor, maxAllowedStatements)
+	w.checkCuddlingMaxAllowed(stmt, nil, cursor, maxAllowedStatements)
 }
 
-func (w *WSL) checkCuddlingWithDecl(
+func (w *WSL) checkCuddlingMaxAllowed(
 	stmt ast.Node,
 	firstBlockStmt ast.Node,
 	cursor *Cursor,
