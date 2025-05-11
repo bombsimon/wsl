@@ -96,24 +96,6 @@ func (c CheckType) String() string {
 	}[c]
 }
 
-/*
-Configuration migration
-
-- StrictAppend                     | Deprecate. Replaced with `CheckAppend`
-- AllowAssignAndCallCuddle         | TBD deprecate. Implemented, not configurable
-- AllowAssignAndAnythingCuddle     | Deprecated. Replaced with `CheckAssign`
-- AllowMultiLineAssignCuddle       | Deprecate.
-- ForceCaseTrailingWhitespaceLimit | Done.
-- AllowTrailingComment             | TBD deprecate. Should be seen same as leading (allowed)
-- AllowSeparatedLeadingComment     | Deprecate. Always allowed.
-- AllowCuddleDeclaration           | Deprecate. Use `CheckDecl` instead.
-- AllowCuddleWithCalls             | TBD deprecate. Should not be needed. Was added to support mutex unlocking
-- AllowCuddleWithRHS               | TBD deprecate. Should not be needed. Not clear why separate from above
-- ForceCuddleErrCheckAndAssign     | Deprecate. Replaced with `CheckErr`
-- ErrorVariableNames               | Deprecate. We're now looking if the variable implements the error interface
-- ForceExclusiveShortDeclarations  | Done.
-- IncludeGenerated                 | Done.
-*/
 type Configuration struct {
 	IncludeGenerated  bool
 	AllowFirstInBlock bool

@@ -39,6 +39,19 @@ type NewConfig struct {
 	} `yaml:"linters"`
 }
 
+// StrictAppend                 is replaced with CheckAppend
+// AllowAssignAndCall           is in TODO for deprecation - needs investigation
+// AllowAssignAndAnything       is replaced with CheckAssign
+// AllowMultilineAssign         is deprecated and always allowed in v5
+// AllowTrailingComment         is deprecated and always allowed in v5
+// AllowCuddleDeclarations      is replaced with CheckDecl
+// AllowSeparatedLeadingComment is deprecated and always allowed in v5
+// ForceErrCuddling             is replaced with CheckErr
+// ForceShortDeclCuddling       is replaced with CheckAssignExclusive
+// ForceCaseTrailingWhitespace  is deprecated and replaced with CaseMaxLines
+// AllowCuddlingWithCalls       is deprecated and not needed in v5
+// AllowCuddleWithRHS           is deprecated and not needed in v5
+// ErrorVariableNames           is deprecated and not needed in v5
 type WSL struct {
 	StrictAppend                 bool `yaml:"strict-append"`
 	AllowAssignAndCall           bool `yaml:"allow-assign-and-call"`
@@ -119,11 +132,6 @@ func main() {
 	if v1cfg.ForceShortDeclCuddling {
 		v5cfg.Enable = append(v5cfg.Enable, wsl.CheckAssignExclusive.String())
 	}
-
-	// These are deprecated and not needed in v5
-	// v1cfg.AllowCuddlingWithCalls
-	// v1cfg.AllowCuddleWithRhs
-	// v1cfg.ErrorVariableNames
 
 	slices.Sort(v5cfg.Enable)
 	slices.Sort(v5cfg.Disable)
