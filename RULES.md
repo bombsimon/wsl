@@ -464,7 +464,7 @@ if xUsedFirstInBlock() {
 
 // Allowed with `allow-whole-block`
 x := 1
-if xUsedFirstInBlock() {
+if xUsedLaterInBlock() {
     fmt.Println("will use x later")
 
     if orEvenNestedWouldWork() {
