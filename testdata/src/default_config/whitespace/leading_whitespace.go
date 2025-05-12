@@ -126,3 +126,32 @@ func fn9() {
 
 	}
 }
+
+func fn10() {
+	switch {
+	case true || false:
+		fmt.Println("ok")
+	case true, false:
+		fmt.Println("ok")
+	case true || false:
+		fmt.Println("ok")
+	case true,
+		false: // want +1 `unnecessary whitespace \(leading-whitespace\)`
+
+		fmt.Println("nok")
+	case true ||
+		false: // want +1 `unnecessary whitespace \(leading-whitespace\)`
+
+		fmt.Println("nok")
+	case true,
+		false:
+		fmt.Println("ok")
+
+	case true ||
+		false:
+		fmt.Println("ok")
+
+	case true, false:
+		fmt.Println("all")
+	}
+}
