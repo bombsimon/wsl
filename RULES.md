@@ -746,6 +746,55 @@ See [`for`](#for), same rules apply but for the keyword `range`.
 > Configurable via `allow-whole-block` to allow cuddling if the variable is used
 > _anywhere_ in the following block (disabled by default).
 
+## `append`
+
+Append enables strict `append` checking where assignments that are
+re-assignments with `append` (e.g. `x = append(x, y)`) is only allowed to be
+cuddled with other assignments if the `append` uses the variable on the line
+above.
+
+<table>
+<thead><tr><th>Bad</th><th>Good</th></tr></thead>
+<tbody>
+<tr><td valign="top">
+
+```go
+s := []string{}
+
+a := 1
+s = append(s, 2)
+b := 3
+s = append(s, a)
+```
+
+</td><td valign="top">
+
+```go
+s := []string{}
+
+a := 1
+s = append(s, a)
+
+b := 3
+
+s = append(s, 2)
+```
+
+</td></tr>
+
+<tr><td valign="top">
+
+Assignments not related to the slice appending is mixed and matched, making
+context unclear.
+
+</td><td valign="top">
+
+Assignments used in the appending are cuddled since they share context, other
+assignments are separated with a newline.
+
+</td></tr>
+</tbody></table>
+
 ## `assign-exclusive`
 
 Assign exclusive does not allow mixing new assignments (`:=`) with
@@ -824,55 +873,6 @@ variables this is not allowed when using `assign-expr`.
 
 Assignment is separated from the expression above since it's not allowed to
 cuddle the assignment with an expression.
-
-</td></tr>
-</tbody></table>
-
-## `append`
-
-Append enables strict `append` checking where assignments that are
-re-assignments with `append` (e.g. `x = append(x, y)`) is only allowed to be
-cuddled with other assignments if the `append` uses the variable on the line
-above.
-
-<table>
-<thead><tr><th>Bad</th><th>Good</th></tr></thead>
-<tbody>
-<tr><td valign="top">
-
-```go
-s := []string{}
-
-a := 1
-s = append(s, 2)
-b := 3
-s = append(s, a)
-```
-
-</td><td valign="top">
-
-```go
-s := []string{}
-
-a := 1
-s = append(s, a)
-
-b := 3
-
-s = append(s, 2)
-```
-
-</td></tr>
-
-<tr><td valign="top">
-
-Assignments not related to the slice appending is mixed and matched, making
-context unclear.
-
-</td><td valign="top">
-
-Assignments used in the appending are cuddled since they share context, other
-assignments are separated with a newline.
 
 </td></tr>
 </tbody></table>

@@ -33,6 +33,13 @@ const (
 	CheckSwitch
 	CheckTypeSwitch
 
+	// Check append only allows assignments of `append` to be cuddled with other
+	// assignments if it's a variable used in the append statement, e.g.
+	//
+	// a := 1
+	// x = append(x, a)
+	// .
+	CheckAppend
 	// Assign exclusive only allows assignments of either new variables or
 	// re-assignment of existing ones, e.g.
 	//
@@ -51,13 +58,6 @@ const (
 	// x := t1.Fn2()
 	// t1.Fn3()
 	CheckAssignExpr
-	// Check append only allows assignments of `append` to be cuddled with other
-	// assignments if it's a variable used in the append statement, e.g.
-	//
-	// a := 1
-	// x = append(x, a)
-	// .
-	CheckAppend
 	// Force error checking to follow immediately after an error variable is
 	// assigned, e.g.
 	//
@@ -94,9 +94,9 @@ func (c CheckType) String() string {
 		"switch",
 		"type-switch",
 		//
+		"append",
 		"assign-exclusive",
 		"assign-expr",
-		"append",
 		"err",
 		"leading-whitespace",
 		"trailing-whitespace",
@@ -182,8 +182,8 @@ func NewCheckSet(
 
 func DefaultChecks() CheckSet {
 	return CheckSet{
-		CheckAssign:             {},
 		CheckAppend:             {},
+		CheckAssign:             {},
 		CheckBranch:             {},
 		CheckDecl:               {},
 		CheckDefer:              {},

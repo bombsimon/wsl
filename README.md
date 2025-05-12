@@ -62,12 +62,12 @@ For more details and examples, see [RULES](RULES.md).
 
 #### Specific `wsl` cases
 
+- ✅ **append** - Only allow reassigning with `append` if the value being appended
+  exist on the line above
 - ❌ **assign-exclusive** - Only allow cuddling either new variables or reassigning
   of existing ones
 - ❌ **assign-expr** - Don't allow assignments to be cuddled with expressions,
   e.g. function calls
-- ✅ **append** - Only allow reassigning with `append` if the value being appended
-  exist on the line above
 - ❌ **err** - Error checking must follow immediately after the error variable is
   assigned
 - ✅ **leading-whitespace** - Disallow leading empty lines in blocks
