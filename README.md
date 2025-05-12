@@ -1,7 +1,7 @@
 # wsl - Whitespace Linter
 
 [![GitHub Actions](https://github.com/bombsimon/wsl/actions/workflows/go.yml/badge.svg)](https://github.com/bombsimon/wsl/actions/workflows/go.yml)
-[![Coverage Status](https://coveralls.io/repos/github/bombsimon/wsl/badge.svg?branch=master)](https://coveralls.io/github/bombsimon/wsl?branch=master)
+[![Coverage Status](https://coveralls.io/repos/github/bombsimon/wsl/badge.svg?branch=main)](https://coveralls.io/github/bombsimon/wsl?branch=main)
 
 `wsl` (**w**hite**s**pace **l**inter) is a linter that wants you to use empty
 lines to separate grouping of different types to increase readability. There are
