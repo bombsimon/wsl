@@ -52,3 +52,22 @@ func fn5(m any, k string) string {
 
 	return k
 }
+
+func fn6() {
+	if true {
+		_ = 1
+		_ = 2
+
+		return // want `missing whitespace above this line \(too many lines above return\)`
+	} else if false {
+		_ = 1
+		_ = 2
+
+		return // want `missing whitespace above this line \(too many lines above return\)`
+	} else {
+		_ = 1
+		_ = 2
+
+		return // want `missing whitespace above this line \(too many lines above return\)`
+	}
+}
