@@ -57,6 +57,7 @@ const (
 	//
 	// x := t1.Fn2()
 	// t1.Fn3()
+	// .
 	CheckAssignExpr
 	// Force error checking to follow immediately after an error variable is
 	// assigned, e.g.

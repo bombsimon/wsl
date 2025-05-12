@@ -33,7 +33,6 @@ type WSL struct {
 	file     *ast.File
 	fset     *token.FileSet
 	typeInfo *types.Info
-	comments ast.CommentMap
 	issues   map[token.Pos]issue
 	config   *Configuration
 }
@@ -124,6 +123,7 @@ func (w *WSL) checkStmt(stmt ast.Stmt, cursor *Cursor) {
 	}
 }
 
+//nolint:unparam // False positive on `cursor`
 func (w *WSL) checkExpr(expr ast.Expr, cursor *Cursor) {
 	switch s := expr.(type) {
 	// func() {}
@@ -189,14 +189,12 @@ func (w *WSL) checkSpec(spec ast.Spec, cursor *Cursor) {
 	}
 }
 
-func (w *WSL) checkBody(body []ast.Stmt) *Cursor {
+func (w *WSL) checkBody(body []ast.Stmt) {
 	cursor := NewCursor(body)
 
 	for cursor.Next() {
 		w.checkStmt(cursor.Stmt(), cursor)
 	}
-
-	return cursor
 }
 
 func (w *WSL) checkCuddlingBlock(stmt ast.Node, blockList []ast.Stmt, cursor *Cursor, maxAllowedStatements int) {
@@ -353,11 +351,11 @@ func (w *WSL) checkCuddlingWithoutIntersection(stmt ast.Node, cursor *Cursor) {
 	w.addErrorInvalidTypeCuddle(stmt.Pos(), cursor.checkType)
 }
 
-func (w *WSL) checkBlock(block *ast.BlockStmt) *Cursor {
+func (w *WSL) checkBlock(block *ast.BlockStmt) {
 	w.checkBlockLeadingNewline(block)
 	w.checkTrailingNewline(block)
 
-	return w.checkBody(block.List)
+	w.checkBody(block.List)
 }
 
 func (w *WSL) checkCaseClause(stmt *ast.CaseClause, cursor *Cursor) {
@@ -735,6 +733,7 @@ func (w *WSL) checkSend(stmt *ast.SendStmt, cursor *Cursor) {
 	cursor.SetChecker(CheckSend)
 
 	var stmts []ast.Stmt
+
 	ast.Inspect(stmt.Value, func(n ast.Node) bool {
 		if b, ok := n.(*ast.BlockStmt); ok {
 			stmts = b.List
@@ -767,6 +766,7 @@ func (w *WSL) checkCaseTrailingNewline(body []ast.Stmt, cursor *Cursor) {
 	}
 
 	var nextCase ast.Node
+
 	switch n := cursor.Stmt().(type) {
 	case *ast.CaseClause:
 		nextCase = n

@@ -21,6 +21,7 @@ linters:
     - funlen
     - gocognit
     - gocyclo
+    - godot
     - godox
     - lll
     - maintidx
