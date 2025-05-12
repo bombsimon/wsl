@@ -926,7 +926,13 @@ func (w *WSL) maybeCheckBlock(
 
 	if _, ok := w.config.Checks[check]; ok {
 		cursor.SetChecker(check)
-		w.checkCuddlingBlock(node, blockStmt.List, cursor, 1)
+
+		blockList := []ast.Stmt{}
+		if check != CheckSwitch && check != CheckTypeSwitch {
+			blockList = blockStmt.List
+		}
+
+		w.checkCuddlingBlock(node, blockList, cursor, 1)
 	}
 }
 

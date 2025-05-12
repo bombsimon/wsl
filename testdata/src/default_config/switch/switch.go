@@ -1,5 +1,14 @@
 package testpkg
 
+func fn0() {
+	a := 1
+	switch a {
+	case 1:
+	case 2:
+		panic(a)
+	}
+}
+
 func fn1() {
 	a := 1
 	b := 2 // want `missing whitespace above this line \(too many statements above switch\)`
@@ -31,5 +40,25 @@ func fn3() {
 	case true:
 	case false:
 		panic("")
+	}
+}
+
+func fn4() {
+	timeout := 10
+	switch timeout {
+	case 5:
+		timeout = 100
+	case 10:
+		timeout = 0
+	}
+}
+
+func fn5() {
+	timeout := 10
+	switch { // want `missing whitespace above this line \(no shared variables above switch\)`
+	case timeout > 5:
+		timeout = 100
+	case timeout == 10:
+		timeout = 0
 	}
 }
