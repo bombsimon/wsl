@@ -47,7 +47,8 @@ func assignAndCall() {
 	t2 := NewT()
 
 	t1.Fn()
-	t2.I = t1.Fn()
+	x := t1.Fn()
+	t1.Fn()
 }
 
 func closureInCall() {

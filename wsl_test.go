@@ -74,6 +74,12 @@ func TestWithConfig(t *testing.T) {
 			},
 		},
 		{
+			subdir: "assign_expr",
+			configFn: func(config *Configuration) {
+				config.Checks.Add(CheckAssignExpr)
+			},
+		},
+		{
 			subdir: "disable_all",
 			configFn: func(config *Configuration) {
 				config.Checks = NoChecks()

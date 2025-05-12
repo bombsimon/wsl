@@ -40,7 +40,7 @@ type NewConfig struct {
 }
 
 // StrictAppend                 is replaced with CheckAppend
-// AllowAssignAndCall           is in TODO for deprecation - needs investigation
+// AllowAssignAndCall           is replaced with CheckAssignExpr (inverse)
 // AllowAssignAndAnything       is replaced with CheckAssign
 // AllowMultilineAssign         is deprecated and always allowed in v5
 // AllowTrailingComment         is deprecated and always allowed in v5
@@ -131,6 +131,10 @@ func main() {
 
 	if v1cfg.ForceShortDeclCuddling {
 		v5cfg.Enable = append(v5cfg.Enable, wsl.CheckAssignExclusive.String())
+	}
+
+	if !v1cfg.AllowAssignAndCall {
+		v5cfg.Enable = append(v5cfg.Enable, wsl.CheckAssignExpr.String())
 	}
 
 	slices.Sort(v5cfg.Enable)

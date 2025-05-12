@@ -42,7 +42,7 @@ linters:
 See [repo] and [rules] for details but in short, this is the change:
 
 - **strict-append** - Converted to a check called `append`
-- **allow-assign-and-call** - Deprecated
+- **allow-assign-and-call** - Converted to check called `assign-expr`
 - **allow-assign-and-anything** - Converted to a check called `assign`
 - **allow-multiline-assign** - Deprecated, always allowed
 - **force-case-trailing-whitespace** - Renamed to `case-max-lines`

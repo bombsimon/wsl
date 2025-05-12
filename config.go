@@ -43,6 +43,14 @@ const (
 	// b = 2
 	// .
 	CheckAssignExclusive
+	// CheckAssignExpr will check so assignments are not cuddled with expression
+	// nodes, e.g.
+	//
+	// t1.Fn1()
+	//
+	// x := t1.Fn2()
+	// t1.Fn3()
+	CheckAssignExpr
 	// Check append only allows assignments of `append` to be cuddled with other
 	// assignments if it's a variable used in the append statement, e.g.
 	//
@@ -87,6 +95,7 @@ func (c CheckType) String() string {
 		"type-switch",
 		//
 		"assign-exclusive",
+		"assign-expr",
 		"append",
 		"err",
 		"leading-whitespace",
@@ -198,6 +207,7 @@ func DefaultChecks() CheckSet {
 func AllChecks() CheckSet {
 	c := DefaultChecks()
 	c.Add(CheckAssignExclusive)
+	c.Add(CheckAssignExpr)
 	c.Add(CheckErr)
 
 	return c
@@ -254,6 +264,8 @@ func CheckFromString(s string) (CheckType, error) {
 		return CheckAppend, nil
 	case "assign-exclusive":
 		return CheckAssignExclusive, nil
+	case "assign-expr":
+		return CheckAssignExpr, nil
 	case "err":
 		return CheckErr, nil
 	case "leading-whitespace":

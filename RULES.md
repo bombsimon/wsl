@@ -786,6 +786,48 @@ Separating assignments and re-assignments.
 </td></tr>
 </tbody></table>
 
+## `assign-expr`
+
+Assignments are allowed to be cuddled with expressions, primarily to support
+mixing assignments and function calls which can often make sense in shorter
+flows. By enabling this check `wsl` will ensure assignments are not cuddled with
+expressions.
+
+<table>
+<thead><tr><th>Bad</th><th>Good</th></tr></thead>
+<tbody>
+<tr><td valign="top">
+
+```go
+t1.Fn1()
+x := t1.Fn2()
+t1.Fn3()
+```
+
+</td><td valign="top">
+
+```go
+t1.Fn1()
+
+x := t1.Fn2()
+t1.Fn3()
+```
+
+</td></tr>
+
+<tr><td valign="top">
+
+Assignment is followed directly after an expression. Even though they share
+variables this is not allowed when using `assign-expr`.
+
+</td><td valign="top">
+
+Assignment is separated from the expression above since it's not allowed to
+cuddle the assignment with an expression.
+
+</td></tr>
+</tbody></table>
+
 ## `append`
 
 Append enables strict `append` checking where assignments that are

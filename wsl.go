@@ -302,6 +302,10 @@ func (w *WSL) checkCuddlingMaxAllowed(
 }
 
 func (w *WSL) checkCuddlingWithoutIntersection(stmt ast.Node, cursor *Cursor) {
+	if w.numberOfStatementsAbove(cursor) == 0 {
+		return
+	}
+
 	previousNode := cursor.PreviousNode()
 
 	currAssign, currIsAssign := stmt.(*ast.AssignStmt)
@@ -336,27 +340,17 @@ func (w *WSL) checkCuddlingWithoutIntersection(stmt ast.Node, cursor *Cursor) {
 
 	prevIsValidType := previousNode == nil || prevIsAssign || prevIsDecl || prevIsIncDec
 
-	// TODO: This is `allow-assign-and-call`/`AllowAssignAndCallCuddle`, should
-	// we deprecate it?
-	// ref: https://github.com/bombsimon/wsl/blob/52299dcd5c1c2a8baf77b4be4508937486d43656/wsl.go#L559-L563
-	// 1. It's not actually checking call - just that we have intersections
-	// 2. It's a bit too niche I think, either we support assign and call (or
-	// whatever) or we don't.
-	// 3. With the new check config, one could just disable checks for assign
-	// and it would allow cuddling with anything.
-	//
-	// This is also a bit odd because the reason it works in the current impl.
-	// is because we only allow this if the line above is a single line
-	// statement which it never is for e.g. if.
-	if !prevIsValidType && currIsAssign {
+	if _, ok := w.config.Checks[CheckAssignExpr]; !ok {
 		if _, ok := previousNode.(*ast.ExprStmt); ok && hasIntersection(stmt, previousNode) {
-			return
+			prevIsValidType = prevIsValidType || ok
 		}
 	}
 
-	if w.numberOfStatementsAbove(cursor) > 0 && !prevIsValidType {
-		w.addErrorInvalidTypeCuddle(stmt.Pos(), cursor.checkType)
+	if prevIsValidType {
+		return
 	}
+
+	w.addErrorInvalidTypeCuddle(stmt.Pos(), cursor.checkType)
 }
 
 func (w *WSL) checkBlock(block *ast.BlockStmt) *Cursor {
