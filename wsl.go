@@ -119,7 +119,6 @@ func (w *WSL) checkStmt(stmt ast.Stmt, cursor *Cursor) {
 		w.checkLabel(s, cursor)
 	case *ast.EmptyStmt:
 	default:
-		fmt.Printf("Not implemented stmt: %T\n", s)
 	}
 }
 
@@ -159,7 +158,6 @@ func (w *WSL) checkExpr(expr ast.Expr, cursor *Cursor) {
 		*ast.UnaryExpr,
 		nil:
 	default:
-		fmt.Printf("Not implemented expr: %T\n", s)
 	}
 }
 
@@ -173,7 +171,6 @@ func (w *WSL) checkDecl(decl ast.Decl, cursor *Cursor) {
 		w.checkStmt(d.Body, cursor)
 	case *ast.BadDecl:
 	default:
-		fmt.Printf("Not implemented decl: %T\n", d)
 	}
 }
 
@@ -185,7 +182,6 @@ func (w *WSL) checkSpec(spec ast.Spec, cursor *Cursor) {
 		}
 	case *ast.ImportSpec, *ast.TypeSpec:
 	default:
-		fmt.Printf("Not implemented spec: %T\n", s)
 	}
 }
 
