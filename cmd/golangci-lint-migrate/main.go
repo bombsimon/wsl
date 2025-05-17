@@ -101,10 +101,6 @@ func main() {
 		v5cfg.Disable = append(v5cfg.Disable, wsl.CheckAppend.String())
 	}
 
-	if v1cfg.AllowAssignAndCall {
-		log.Println("`allow-assign-and-call` is deprecated in >= v5, you can disable assign checks completely")
-	}
-
 	if v1cfg.AllowAssignAndAnything {
 		v5cfg.Disable = append(v5cfg.Disable, wsl.CheckAssign.String())
 	}
