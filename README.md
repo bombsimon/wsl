@@ -23,7 +23,7 @@ The base rule is that statements that has a block (e.g. `for`, `range`,
 `switch`, `if` etc) should always only be directly adjacent with a single
 variable and only if it's used in the expression in the block itself.
 
-For more details and examples, see [RULES](RULES.md).
+For more details and examples, see [CHECKS](CHECKS.md).
 
 ✅ = enabled by default, ❌ = disabled by default
 

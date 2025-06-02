@@ -39,7 +39,7 @@ linters:
 
 ## Info
 
-See [repo] and [rules] for details but in short, this is the change:
+See [repo] and [checks] for details but in short, this is the change:
 
 - **strict-append** - Converted to a check called `append`
 - **allow-assign-and-call** - Converted to check called `assign-expr`
@@ -56,4 +56,4 @@ See [repo] and [rules] for details but in short, this is the change:
 - **force-short-decl-cuddling** - Converted to a check called `assign-exclusive`
 
 [repo]: https://github.com/bombsimon/wsl/blob/main/README.md
-[rules]: https://github.com/bombsimon/wsl/blob/main/RULES.md
+[checks]: https://github.com/bombsimon/wsl/blob/main/CHECKS.md
