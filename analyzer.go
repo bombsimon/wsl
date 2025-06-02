@@ -151,7 +151,7 @@ type multiStringValue struct {
 func (m *multiStringValue) Set(value string) error {
 	var s []string
 
-	for v := range strings.SplitSeq(value, ",") {
+	for _, v := range strings.Split(value, ",") {
 		s = append(s, strings.TrimSpace(v))
 	}
 
