@@ -80,9 +80,10 @@ in more details.
 
 - ✅ **allow-first-in-block** - Allow cuddling a variable if it's used first in the
   immediate following block, even if the statement with the block doesn't use
-  the variable
+  the variable (see [Configuration](CHECKS.md#allow-first-in-block) for details)
 - ❌ **allow-whole-block** - Same as above, but allows cuddling if the variable is
-  used _anywhere_ in the following (or nested) block
+  used _anywhere_ in the following (or nested) block (see
+  [Configuration](CHECKS.md#allow-whole-block) for details)
 - **branch-max-lines** - If a block contains more than this number of lines the
   branch statement (e.g. `return`, `break`, `continue`) need to be separated by
   a whitespace (default 2)

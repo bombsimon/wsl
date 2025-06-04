@@ -17,12 +17,12 @@ with other assignments, declarations or increment/decrement.
 if true {
     fmt.Println("hello")
 }
-a := 1
+a := 1 // 1
 
 defer func() {
     fmt.Println("hello")
 }()
-a := 1
+a := 1 // 2
 ```
 
 </td><td valign="top">
@@ -49,13 +49,11 @@ c := 3
 
 <tr><td valign="top">
 
-Assignments cuddled with statements that are not assignments, e.g. `if` or
-`defer`.
+<sup>1</sup> Not an assign statement above
+
+<sup>2</sup> Not an assign statement above
 
 </td><td valign="top">
-
-The assignment is separated from non-assignment statement with an empty line.
-This also shows multiple assignments cuddled together which is allowed.
 
 </td></tr>
 </tbody></table>
@@ -81,7 +79,7 @@ for {
     }
 
     fmt.Println(a)
-    break
+    break // 1
 }
 ```
 
@@ -109,13 +107,9 @@ for {
 
 <tr><td valign="top">
 
-The block with the `break` control flow spans over quite some lines so it's easy
-to miss the cuddled control flow.
+<sup>1</sup> Block is more than 2 lines so should be a blank line above
 
 </td><td valign="top">
-
-In the bigger block the control flow is separated with an empty line. For
-smaller blocks with only 2 lines it's ok to cuddled the `break`.
 
 </td></tr>
 </tbody></table>
@@ -137,16 +131,16 @@ assignment increasing readability.
 
 ```go
 var a string
-var b int
+var b int // 1
 
 const a = 1
-const b = 2
+const b = 2 // 2
 
 a := 1
-var b string
+var b string // 3
 
 fmt.Println("hello")
-var a string
+var a string // 4
 ```
 
 </td><td valign="top">
@@ -175,13 +169,15 @@ var a string
 
 <tr><td valign="top">
 
-Declarations mixed with both assignments and expressions. Consecutive
-declarations are not grouped together.
+<sup>1</sup> Multiple declarations should be grouped to one
+
+<sup>2</sup> Multiple declarations should be grouped to one
+
+<sup>3</sup> Declaration should always have a whitespace above
+
+<sup>4</sup> Declaration should always have a whitespace above
 
 </td><td valign="top">
-
-All declarations are grouped in a single declaration, aligning them for
-increased readability. Declarations are separated from other statements.
 
 </td></tr>
 </tbody></table>
@@ -200,11 +196,11 @@ deferred and there should only be one statement above.
 val, closeFn := SomeFn()
 val2 := fmt.Sprintf("v-%s", val)
 fmt.Println(val)
-defer closeFn()
+defer closeFn() // 1
 
 defer fn1()
 a := 1
-defer fn3()
+defer fn3() // 2
 
 f, err := os.Open("/path/to/f.txt")
 if err != nil {
@@ -213,10 +209,7 @@ if err != nil {
 
 lines := ReadFile(f)
 trimLines(lines)
-defer f.Close()
-
-m.Lock()
-defer m.Unlock()
+defer f.Close() // 3
 ```
 
 </td><td valign="top">
@@ -243,15 +236,13 @@ defer m.Unlock()
 
 <tr><td valign="top">
 
-Defer calls not related to the what's being deferred. Squeezing extra statements
-between assignments and when the defer happens makes it easier to lose context
-of what's actually being deferred.
+<sup>1</sup> More than a single statement between `defer` and `closeFn`
+
+<sup>2</sup> `a` is not used in expression
+
+<sup>3</sup> More than a single statement between `defer` and `f.Close`
 
 </td><td valign="top">
-
-Examples of defer statements close to its context. Immediately after a function
-variable is assigned, multiple defer in a row, immediately after error handling
-and immediately after a mutex is locked.
 
 </td></tr>
 </tbody></table>
@@ -269,7 +260,7 @@ Expressions can be multiple things and a big part of them are not handled by
 ```go
 a := 1
 b := 2
-fmt.Println("not b")
+fmt.Println("not b") // 1
 ```
 
 </td><td valign="top">
@@ -288,25 +279,22 @@ fmt.Println(a)
 
 <tr><td valign="top">
 
-The function call to `Println` isn't related to the variables on the line above.
+<sup>1</sup> `b` is not used in expression
 
 </td><td valign="top">
-
-The call to `Println` uses the variable immediately above and is therefor in the
-same context as the assignment.
 
 </td></tr>
 </tbody></table>
 
 ## `for`
 
-See [`if`](#if), same rules apply but for the keyword `for`.
-
 > Configurable via `allow-first-in-block` to allow cuddling if the variable is
 > used _first_ in the block (enabled by default).
 >
 > Configurable via `allow-whole-block` to allow cuddling if the variable is used
 > _anywhere_ in the following block (disabled by default).
+>
+> See [Configuration](#configuration) for details.
 
 <table>
 <thead><tr><th>Bad</th><th>Good</th></tr></thead>
@@ -315,12 +303,18 @@ See [`if`](#if), same rules apply but for the keyword `for`.
 
 ```go
 i := 0
-for j := 0; j < 3; j++ {
+for j := 0; j < 3; j++ { // 1
+    fmt.Println(j)
+}
+
+a := 0
+i := 3
+for j := 0; j < i; j++ { // 2
     fmt.Println(j)
 }
 
 x := 1
-for {
+for { // 3
     fmt.Println("hello")
     break
 }
@@ -330,6 +324,13 @@ for {
 
 ```go
 i := 0
+for j := 0; j < i; j++ {
+    fmt.Println(j)
+}
+
+a := 0
+
+i := 3
 for j := 0; j < i; j++ {
     fmt.Println(j)
 }
@@ -356,19 +357,66 @@ for {
 
 <tr><td valign="top">
 
-Variables above the `for` loop is not used in the `for` statement.
+<sup>1</sup> `i` is not used in expression
+
+<sup>2</sup> More than one variable above statement
+
+<sup>3</sup> No variable in expression
 
 </td><td valign="top">
-
-The variable on the line above is used in the loop condition. Additionally there
-are examples for `allow-first-in-block` and `allow-whole-block`.
 
 </td></tr>
 </tbody></table>
 
 ## `go`
 
-See [`defer`](#defer), same rules apply but for the keyword `go`.
+<table>
+<thead><tr><th>Bad</th><th>Good</th></tr></thead>
+<tbody>
+<tr><td valign="top">
+
+```go
+someFunc := func() {}
+go anotherFunc() // 1
+
+x := 1
+go func () // 2
+    fmt.Println(y)
+}()
+
+someArg := 1
+go Fn(notArg) // 3
+```
+
+</td><td valign="top">
+
+```go
+someFunc := func() {}
+go someFunc()
+
+x := 1
+go func (s string) {
+    fmt.Println(s)
+}(x)
+
+someArg := 1
+go Fn(someArg)
+```
+
+</td></tr>
+
+<tr><td valign="top">
+
+<sup>1</sup> `someFunc` is not used in expression
+
+<sup>2</sup> `x` is not used in expression
+
+<sup>3</sup> `someArg` is not used in expression
+
+</td><td valign="top">
+
+</td></tr>
+</tbody></table>
 
 ## `if`
 
@@ -377,6 +425,8 @@ See [`defer`](#defer), same rules apply but for the keyword `go`.
 >
 > Configurable via `allow-whole-block` to allow cuddling if the variable is used
 > _anywhere_ in the following block (disabled by default).
+>
+> See [Configuration](#configuration) for details.
 
 `if` statements are one of several block statements (a statement with a block)
 that can have some form of expression or condition. To make block context more
@@ -390,30 +440,30 @@ the variable must be used in the condition (unless configured otherwise).
 
 ```go
 x := 1
-if y > 1 {
+if y > 1 { // 1
     fmt.Println("y > 1")
 }
 
 a := 1
 b := 2
-if b > 1 {
+if b > 1 { // 2
     fmt.Println("a > 1")
 }
 
 a := 1
 b := 2
-if a > 1 {
+if a > 1 { // 3
     fmt.Println("a > 1")
 }
 
 a := 1
 b := 2
-if notEvenAOrB() {
+if notEvenAOrB() { // 4
     fmt.Println("not a or b")
 }
 
 a := 1
-x, err := SomeFn()
+x, err := SomeFn() // 5
 if err != nil {
     return err
 }
@@ -477,21 +527,65 @@ if xUsedLaterInBlock() {
 
 <tr><td valign="top">
 
-Multiple `if` statements where the variable on the line above is either not used
-in the `if` statement or there are more than one cuddled assignment above.
+<sup>1</sup> `x` is not used in expression
+
+<sup>2</sup> More than one variable above statement
+
+<sup>3</sup> `b` is not used in expression and too many statements
+
+<sup>4</sup> No variable in expression
+
+<sup>5</sup> More than one variable above statement
 
 </td><td valign="top">
-
-Only when a single variable that is used in the `if` statement below is declared
-or assigned do we cuddled it. This also shows examples for the configuration.
 
 </td></tr>
 </tbody></table>
 
 ## `inc-dec`
 
-See [`assign`](#assign), same rules apply but for increment (`++`) and decrement
-(`--`)
+<table>
+<thead><tr><th>Bad</th><th>Good</th></tr></thead>
+<tbody>
+<tr><td valign="top">
+
+```go
+i := 1
+
+if true {
+    fmt.Println("hello")
+}
+i++ // 1
+
+defer func() {
+    fmt.Println("hello")
+}()
+i++ // 2
+```
+
+</td><td valign="top">
+
+```go
+i := 1
+i++
+
+i--
+j := i
+j++
+```
+
+</td></tr>
+
+<tr><td valign="top">
+
+<sup>1</sup> Not an assign or inc/dec statement above
+
+<sup>2</sup> Not an assign or inc/dec statement above
+
+</td><td valign="top">
+
+</td></tr>
+</tbody></table>
 
 ## `label`
 
@@ -508,7 +602,7 @@ L1:
     if true {
         _ = 1
     }
-L2:
+L2: // 1
     if true {
         _ = 1
     }
@@ -532,24 +626,22 @@ L2:
 
 <tr><td valign="top">
 
-The label `L2` is directly cuddled with the statement above.
+<sup>1</sup> Labels should always have a whitespabe above
 
 </td><td valign="top">
-
-The label `L2` has an empty line above.
 
 </td></tr>
 </tbody></table>
 
 ## `range`
 
-See [`for`](#for), same rules apply but for the keyword `range`.
-
 > Configurable via `allow-first-in-block` to allow cuddling if the variable is
 > used _first_ in the block (enabled by default).
 >
 > Configurable via `allow-whole-block` to allow cuddling if the variable is used
 > _anywhere_ in the following block (disabled by default).
+>
+> See [Configuration](#configuration) for details.
 
 <table>
 <thead><tr><th>Bad</th><th>Good</th></tr></thead>
@@ -558,19 +650,19 @@ See [`for`](#for), same rules apply but for the keyword `range`.
 
 ```go
 someRange := []int{1, 2, 3}
-for _, i := range thisIsNotSomeRange {
+for _, i := range thisIsNotSomeRange { // 1
     fmt.Println(i)
 }
 
 x := 1
-for i := range make([]int, 3) {
+for i := range make([]int, 3) { // 2
     fmt.Println("hello")
     break
 }
 
 s1 := []int{1, 2, 3}
 s2 := []int{3, 2, 1}
-for _, v := range s2 {
+for _, v := range s2 { // 3
     fmt.Println(v)
 }
 ```
@@ -606,13 +698,13 @@ for _, v := range s2 {
 
 <tr><td valign="top">
 
-Slices that are not related to the `range` is cuddled with the `range`
-statement. Multiple statements are cuddled above the range statement.
+<sup>1</sup> `someRange` is not used in expression
+
+<sup>2</sup> `x` is not used in expression
+
+<sup>3</sup> More than one variable above statement
 
 </td><td valign="top">
-
-Only variables used in the `range` are cuddled and at most one statement above the
-`range` statement.
 
 </td></tr>
 </tbody></table>
@@ -639,7 +731,7 @@ func Fn() int {
     }
 
     fmt.Println(x)
-    return
+    return // 1
 }
 ```
 
@@ -662,26 +754,70 @@ func Fn() int {
 
 <tr><td valign="top">
 
-The block is big enough to warrant an explicit return which is otherwise easy to
-miss.
+<sup>1</sup> Block is more than 2 lines so should be a blank line above
 
 </td><td valign="top">
-
-The return statement is isolated on it's own line, making it stand out a bit
-more.
 
 </td></tr>
 </tbody></table>
 
 ## `select`
 
-See [`for`](#for), same rules apply but for the keyword `range`.
-
 > Configurable via `allow-first-in-block` to allow cuddling if the variable is
 > used _first_ in the block (enabled by default).
 >
 > Configurable via `allow-whole-block` to allow cuddling if the variable is used
 > _anywhere_ in the following block (disabled by default).
+>
+> See [Configuration](#configuration) for details.
+
+<table>
+<thead><tr><th>Bad</th><th>Good</th></tr></thead>
+<tbody>
+<tr><td valign="top">
+
+```go
+x := 0
+select { // 1
+case <-time.After(time.Second):
+    // ...
+case <-stop:
+    // ...
+}
+```
+
+</td><td valign="top">
+
+```go
+x := 0
+
+select {
+case <-time.After(time.Second):
+    // ...
+case <-stop:
+    // ...
+}
+
+// Allowed with `allow-whole-block`
+x := 1
+select {
+case <-time.After(time.Second):
+    // ...
+case <-stop:
+    Fn(x)
+}
+```
+
+</td></tr>
+
+<tr><td valign="top">
+
+<sup>1</sup> `x` is not used in expression
+
+</td><td valign="top">
+
+</td></tr>
+</tbody></table>
 
 ## `send`
 
@@ -695,10 +831,10 @@ the line above.
 
 ```go
 a := 1
-ch <- 1
+ch <- 1 // 1
 
 b := 2
-<-ch
+<-ch // 2
 ```
 
 </td><td valign="top">
@@ -716,35 +852,174 @@ b := 1
 
 <tr><td valign="top">
 
-Send statement cuddled with assignments that doesn't exist on the line above or
-with multiple assignments.
+<sup>1</sup> `a` is not used in expression
+
+<sup>2</sup> `b` is not used in expression
 
 </td><td valign="top">
-
-Send statements are only cuddled with single variables on the line above.
 
 </td></tr>
 </tbody></table>
 
 ## `switch`
 
-See [`for`](#for), same rules apply but for the keyword `range`.
-
 > Configurable via `allow-first-in-block` to allow cuddling if the variable is
 > used _first_ in the block (enabled by default).
 >
 > Configurable via `allow-whole-block` to allow cuddling if the variable is used
 > _anywhere_ in the following block (disabled by default).
+>
+> See [Configuration](#configuration) for details.
+
+<table>
+<thead><tr><th>Bad</th><th>Good</th></tr></thead>
+<tbody>
+<tr><td valign="top">
+
+```go
+x := 0
+switch y { // 1
+case 1:
+    // ...
+case 2:
+    // ...
+}
+
+
+x := 0
+y := 1
+switch y { // 2
+case 1:
+    // ...
+case 2:
+    // ...
+}
+```
+
+</td><td valign="top">
+
+```go
+x := 0
+
+switch y {
+case 1:
+    // ...
+case 2:
+    // ...
+}
+
+
+x := 0
+
+y := 1
+switch y {
+case 1:
+    // ...
+case 2:
+    // ...
+}
+
+// Allowed with `allow-whole-block`
+x := 1
+switch y {
+case 1:
+    // ...
+case 2:
+    fmt.Println(x)
+}
+```
+
+</td></tr>
+
+<tr><td valign="top">
+
+<sup>1</sup> `x` is not used in expression
+
+<sup>2</sup> More than one variable above statement
+
+</td><td valign="top">
+
+</td></tr>
+</tbody></table>
 
 ## `type-switch`
 
-See [`for`](#for), same rules apply but for the keyword `range`.
-
 > Configurable via `allow-first-in-block` to allow cuddling if the variable is
 > used _first_ in the block (enabled by default).
 >
 > Configurable via `allow-whole-block` to allow cuddling if the variable is used
 > _anywhere_ in the following block (disabled by default).
+>
+> See [Configuration](#configuration) for details.
+
+<table>
+<thead><tr><th>Bad</th><th>Good</th></tr></thead>
+<tbody>
+<tr><td valign="top">
+
+```go
+x := someType()
+switch y.(type) { // 1
+case int32:
+    // ...
+case int64:
+    // ...
+}
+
+
+x := 0
+y := someType()
+switch y.(type) {
+case int32:
+    // ...
+case int64:
+    // ...
+}
+```
+
+</td><td valign="top">
+
+```go
+x := someType()
+
+switch y.(type) {
+case int32:
+    // ...
+case int64:
+    // ...
+}
+
+
+x := 0
+
+y := someType()
+switch y.(type) {
+case int32:
+    // ...
+case int64:
+    // ...
+}
+
+// Allowed with `allow-whole-block`
+x := 1
+switch y.(type) {
+case int32:
+    // ...
+case int64:
+    fmt.Println(x)
+}
+```
+
+</td></tr>
+
+<tr><td valign="top">
+
+<sup>1</sup> `x` is not used in expression
+
+</td><td valign="top">
+
+</td></tr>
+</tbody></table>
 
 ## `append`
 
@@ -762,9 +1037,9 @@ above.
 s := []string{}
 
 a := 1
-s = append(s, 2)
+s = append(s, 2) // 1
 b := 3
-s = append(s, a)
+s = append(s, a) // 2
 ```
 
 </td><td valign="top">
@@ -784,13 +1059,11 @@ s = append(s, 2)
 
 <tr><td valign="top">
 
-Assignments not related to the slice appending is mixed and matched, making
-context unclear.
+<sup>1</sup> `a` is not used in append
+
+<sup>2</sup> `a` is not used in append
 
 </td><td valign="top">
-
-Assignments used in the appending are cuddled since they share context, other
-assignments are separated with a newline.
 
 </td></tr>
 </tbody></table>
@@ -807,9 +1080,9 @@ re-assignments (`=`).
 
 ```go
 a := 1
-b = 2
-c := 3
-d = 4
+b = 2  // 1
+c := 3 // 2
+d = 4  // 3
 ```
 
 </td><td valign="top">
@@ -826,11 +1099,13 @@ d = 4
 
 <tr><td valign="top">
 
-Alternating new assignments and re-assignments.
+<sup>1</sup> `a` is not a re-assignment
+
+<sup>2</sup> `b` is not a new assignment
+
+<sup>3</sup> `c` is not a re-assignment
 
 </td><td valign="top">
-
-Separating assignments and re-assignments.
 
 </td></tr>
 </tbody></table>
@@ -849,7 +1124,7 @@ expressions.
 
 ```go
 t1.Fn1()
-x := t1.Fn2()
+x := t1.Fn2() // 1
 t1.Fn3()
 ```
 
@@ -866,13 +1141,9 @@ t1.Fn3()
 
 <tr><td valign="top">
 
-Assignment is followed directly after an expression. Even though they share
-variables this is not allowed when using `assign-expr`.
+<sup>1</sup> Line above is not an assignment
 
 </td><td valign="top">
-
-Assignment is separated from the expression above since it's not allowed to
-cuddle the assignment with an expression.
 
 </td></tr>
 </tbody></table>
@@ -887,7 +1158,7 @@ cuddle the assignment with an expression.
 ```go
 _, err := SomeFn()
 
-if err != nil {
+if err != nil { // 1
     return fmt.Errorf("failed to fn: %w", err)
 }
 ```
@@ -905,12 +1176,9 @@ if err != nil {
 
 <tr><td valign="top">
 
-The error checking is separated from the context where it was assigned with an
-unnecessary newline.
+<sup>1</sup> Whitespace between error assignment and error checking
 
 </td><td valign="top">
-
-The error checking happens immediately after the assignment.
 
 </td></tr>
 </tbody></table>
@@ -939,15 +1207,6 @@ if true {
 
 </td></tr>
 
-<tr><td valign="top">
-
-The block starts with an unnecessary trailing whitespace.
-
-</td><td valign="top">
-
-The block does not have any unnecessary whitespaces.
-
-</td></tr>
 </tbody></table>
 
 ## `trailing-whitespace`
@@ -974,13 +1233,54 @@ if true {
 
 </td></tr>
 
-<tr><td valign="top">
-
-The block ends with an unnecessary trailing whitespace.
-
-</td><td valign="top">
-
-The block does not have any unnecessary whitespaces.
-
-</td></tr>
 </tbody></table>
+
+## Configuration
+
+One shared logic across different checks is the logic around statements
+containing a block, i.e. a statement with a following `{}` (e.g. `if`, `for`,
+`switch` etc).
+
+`wsl` only allows one statement immediately above and that statement must also
+be referenced in the expression in the statement with the block. E.g.
+
+```go
+someVariable := true
+if someVariable {
+    // Here `someVariable` used in the `if` expression is the only variable
+    // immediately above the statement.
+}
+```
+
+This can be configured to be more "laxed" by also allowing a single statement
+immediately above if it's used either first in the following block or anywhere
+inside the following block.
+
+### `allow-first-in-block`
+
+By setting this to true (default), the variable doesn't have to be used in the
+expression itself but is also allowed if it's the first statement in the block
+body.
+
+```go
+someVariable := 1
+if anotherVariable {
+    someVariable++
+}
+```
+
+### `allow-whole-block`
+
+This is similar to `allow-first-in-block` but now allows the lack of whitespace
+if it's used anywhere in the following block.
+
+```go
+someVariable := 1
+if anotherVariable {
+    someFn(yetAnotherVariable)
+
+    if stillNotSomeVariable {
+        someVariable++
+    }
+}
+```
