@@ -24,6 +24,13 @@ func TestDefaultConfig(t *testing.T) {
 	}
 }
 
+func TestDefaultConfigFromAnalyzer(t *testing.T) {
+	testdata := analysistest.TestData()
+	analyzer := NewAnalyzer(nil)
+
+	analysistest.RunWithSuggestedFixes(t, testdata, analyzer, filepath.Join("default_config", "if"))
+}
+
 func TestWithConfig(t *testing.T) {
 	testdata := analysistest.TestData()
 
