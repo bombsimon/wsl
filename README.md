@@ -1,4 +1,4 @@
-# wsl - Whitespace Linter
+# wsl - whitespace linter
 
 [![GitHub Actions](https://github.com/bombsimon/wsl/actions/workflows/go.yml/badge.svg)](https://github.com/bombsimon/wsl/actions/workflows/go.yml)
 [![Coverage Status](https://coveralls.io/repos/github/bombsimon/wsl/badge.svg?branch=main)](https://coveralls.io/github/bombsimon/wsl?branch=main)
