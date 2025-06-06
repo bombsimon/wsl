@@ -1,94 +1,181 @@
-# wsl - Whitespace Linter
-
-[![forthebadge](https://forthebadge.com/images/badges/made-with-go.svg)](https://forthebadge.com)
-[![forthebadge](https://forthebadge.com/images/badges/built-with-love.svg)](https://forthebadge.com)
+# wsl - whitespace linter
 
 [![GitHub Actions](https://github.com/bombsimon/wsl/actions/workflows/go.yml/badge.svg)](https://github.com/bombsimon/wsl/actions/workflows/go.yml)
-[![Coverage Status](https://coveralls.io/repos/github/bombsimon/wsl/badge.svg?branch=master)](https://coveralls.io/github/bombsimon/wsl?branch=master)
+[![Coverage Status](https://coveralls.io/repos/github/bombsimon/wsl/badge.svg?branch=main)](https://coveralls.io/github/bombsimon/wsl?branch=main)
 
-`wsl` is a linter that enforces a very **non scientific** vision of how to make
-code more readable by enforcing empty lines at the right places.
+`wsl` (**w**hite**s**pace **l**inter) is a linter that wants you to use empty
+lines to separate grouping of different types to increase readability. There are
+also a few places where it encourages you to _remove_ whitespaces which is at
+the start and the end of blocks.
 
-**This linter is aggressive** and a lot of projects I've tested it on have
-failed miserably. For this linter to be useful at all I want to be open to new
-ideas, configurations and discussions! Also note that some of the warnings might
-be bugs or unintentional false positives so I would love an
-[issue](https://github.com/bombsimon/wsl/issues/new) to fix, discuss, change or
-make something configurable!
+## Checks and configuration
+
+Each check can be disabled or enabled individually to the point where no checks
+can be run. The idea with this is to attract more users. Some checks have
+configuration that affect how they work but most of them can only be turned on
+or off.
+
+### Checks
+
+This is an exhaustive list of all the checks that can be enabled or disabled and
+their default value. The names are the same as the Go
+[AST](https://pkg.go.dev/go/ast) type name for built-ins.
+
+The base rule is that statements that has a block (e.g. `for`, `range`,
+`switch`, `if` etc) should always only be directly adjacent with a single
+variable and only if it's used in the expression in the block itself.
+
+For more details and examples, see [CHECKS](CHECKS.md).
+
+✅ = enabled by default, ❌ = disabled by default
+
+#### Built-ins and keywords
+
+- ✅ **assign** - Assignments should only be cuddled with other assignments,
+  or increment/decrement
+- ✅ **branch** - Branch statement (`break`, `continue`, `fallthrough`, `goto`)
+  should only be cuddled if the block is less than `n` lines where `n` is the
+  value of [`branch-max-lines`](#configuration)
+- ✅ **decl** - Declarations should never be cuddled
+- ✅ **defer** - Defer should only be cuddled with other `defer`, after error
+  checking or with a single variable used on the line above
+- ✅ **expr** - Expressions are e.g. function calls or index expressions, they
+  should only be cuddled with variables used on the line above
+- ✅ **for** - For loops should only be cuddled with a single variable used on
+  the line above
+- ✅ **go** - Go should only be cuddled with other `go` or a single variable
+  used on the line above
+- ✅ **if** - If should only be cuddled with a single variable used on the line
+  above
+- ✅ **inc-dec** - Increment/decrement (`++/--`) has the same rules as `assign`
+- ✅ **label** - Labels should never be cuddled
+- ✅ **range** - Range should only be cuddled with a single variable used on the
+  line above
+- ✅ **return** - Return should only be cuddled if the block is less than `n`
+  lines where `n` is the value of [`branch-max-lines`](#configuration)
+- ✅ **select** - Select should only be cuddled with a single variable used on
+  the line above
+- ✅ **send** - Send should only be cuddled with a single variable used on the
+  line above
+- ✅ **switch** - Switch should only be cuddled with a single variable used on
+  the line above
+- ✅ **type-switch** - Type switch should only be cuddled with a single variable
+  used on the line above
+
+#### Specific `wsl` cases
+
+- ✅ **append** - Only allow re-assigning with `append` if the value being
+  appended exist on the line above
+- ❌ **assign-exclusive** - Only allow cuddling either new variables or
+  re-assigning of existing ones
+- ❌ **assign-expr** - Don't allow assignments to be cuddled with expressions,
+  e.g. function calls
+- ❌ **err** - Error checking must follow immediately after the error variable
+  is assigned
+- ✅ **leading-whitespace** - Disallow leading empty lines in blocks
+- ✅ **trailing-whitespace** - Disallow trailing empty lines in blocks
+
+### Configuration
+
+Other than enabling or disabling specific checks some checks can be configured
+in more details.
+
+- ✅ **allow-first-in-block** - Allow cuddling a variable if it's used first in
+  the immediate following block, even if the statement with the block doesn't
+  use the variable (see [Configuration](CHECKS.md#allow-first-in-block) for
+  details)
+- ❌ **allow-whole-block** - Same as above, but allows cuddling if the variable
+  is used _anywhere_ in the following (or nested) block (see
+  [Configuration](CHECKS.md#allow-whole-block) for details)
+- **branch-max-lines** - If a block contains more than this number of lines the
+  branch statement (e.g. `return`, `break`, `continue`) need to be separated by
+  a whitespace (default 2)
+- **case-max-lines** - If set to a non negative number, `case` blocks needs to
+  end with a whitespace if exceeding this number (default 0, 0 = off, 1 =
+  always)
+- ❌ **include-generated** - Include generated files when checking
 
 ## Installation
 
 ```sh
-go install github.com/bombsimon/wsl/v4/cmd...@master
+# Latest release
+go install github.com/bombsimon/wsl/v5/cmd/wsl@latest
+
+# Main branch
+go install github.com/bombsimon/wsl/v5/cmd/wsl@main
 ```
 
 ## Usage
 
 > **Note**: This linter provides a fixer that can fix most issues with the
-`--fix` flag. However, currently `golangci-lint` [does not support suggested
-fixes](https://github.com/golangci/golangci-lint/issues/1779) so the `--fix`
-flag in `golangci-lint` will **not** work.
+> `--fix` flag.
 
-`wsl` uses the [analysis](https://pkg.go.dev/golang.org/x/tools/go/analysis)
-package meaning it will operate on package level with the default analysis flags
-and way of working.
+`wsl` uses the [analysis] package meaning it will operate on package level with
+the default analysis flags and way of working.
 
 ```sh
 wsl --help
 wsl [flags] </path/to/package/...>
 
-wsl --allow-cuddle-declarations --fix ./...
+wsl --default none --enable branch,return --fix ./...
 ```
 
-`wsl` is also integrated in [`golangci-lint`](https://golangci-lint.run)
+`wsl` is also integrated in [`golangci-lint`][golangci-lint]
 
 ```sh
-golangci-lint run --no-config --disable-all --enable wsl
+golangci-lint run --no-config --enable-only wsl --fix
 ```
 
-## Issues and configuration
+This is an exhaustive, default, configuration for `wsl` in `golangci-lint`.
 
-The linter suppers a few ways to configure it to satisfy more than one kind of
-code style. These settings could be set either with flags or with YAML
-configuration if used via `golangci-lint`.
+```yaml
+linters:
+  default: none
+  enable:
+    - wsl
 
-The supported configuration can be found [in the
-documentation](doc/configuration.md).
+  settings:
+    wsl:
+      allow-first-in-block: true
+      allow-whole-block: false
+      branch-max-lines: 2
+      case-max-lines: 0
+      default: ~ # Can be `all`, `none`, `default` or empty
+      enable:
+        - append
+        - assign
+        - branch
+        - decl
+        - defer
+        - expr
+        - for
+        - go
+        - if
+        - inc-dec
+        - label
+        - range
+        - return
+        - select
+        - send
+        - switch
+        - type-switch
+        - leading-whitespace
+        - trailing-whitespace
+      disable:
+        - assign-exclusive
+        - assign-expr
+        - err
+```
 
-Below are the available checklist for any hit from `wsl`. If you do not see any,
-feel free to raise an [issue](https://github.com/bombsimon/wsl/issues/new).
+## See also
 
-> **Note**:  this linter doesn't take in consideration the issues that will be
-> fixed with `go fmt -s` so ensure that the code is properly formatted before
-> use.
+- [`nlreturn`][nlreturn] - Use empty lines before `return`
+- [`whitespace`][whitespace] - Don't use a blank newline at the start or end of
+  a block.
+- [`gofumpt`][gofumpt] - Stricter formatter than `gofmt`.
 
-* [Anonymous switch statements should never be cuddled](doc/rules.md#anonymous-switch-statements-should-never-be-cuddled)
-* [Append only allowed to cuddle with appended value](doc/rules.md#append-only-allowed-to-cuddle-with-appended-value)
-* [Assignments should only be cuddled with other assignments](doc/rules.md#assignments-should-only-be-cuddled-with-other-assignments)
-* [Block should not end with a whitespace (or comment)](doc/rules.md#block-should-not-end-with-a-whitespace-or-comment)
-* [Block should not start with a whitespace](doc/rules.md#block-should-not-start-with-a-whitespace)
-* [Case block should end with newline at this size](doc/rules.md#case-block-should-end-with-newline-at-this-size)
-* [Branch statements should not be cuddled if block has more than two lines](doc/rules.md#branch-statements-should-not-be-cuddled-if-block-has-more-than-two-lines)
-* [Declarations should never be cuddled](doc/rules.md#declarations-should-never-be-cuddled)
-* [Defer statements should only be cuddled with expressions on same variable](doc/rules.md#defer-statements-should-only-be-cuddled-with-expressions-on-same-variable)
-* [Expressions should not be cuddled with blocks](doc/rules.md#expressions-should-not-be-cuddled-with-blocks)
-* [Expressions should not be cuddled with declarations or returns](doc/rules.md#expressions-should-not-be-cuddled-with-declarations-or-returns)
-* [For statement without condition should never be cuddled](doc/rules.md#for-statement-without-condition-should-never-be-cuddled)
-* [For statements should only be cuddled with assignments used in the iteration](doc/rules.md#for-statements-should-only-be-cuddled-with-assignments-used-in-the-iteration)
-* [Go statements can only invoke functions assigned on line above](doc/rules.md#go-statements-can-only-invoke-functions-assigned-on-line-above)
-* [If statements should only be cuddled with assignments](doc/rules.md#if-statements-should-only-be-cuddled-with-assignments)
-* [If statements should only be cuddled with assignments used in the if statement itself](doc/rules.md#if-statements-should-only-be-cuddled-with-assignments-used-in-the-if-statement-itself)
-* [If statements that check an error must be cuddled with the statement that assigned the error](doc/rules.md#if-statements-that-check-an-error-must-be-cuddled-with-the-statement-that-assigned-the-error)
-* [Only cuddled expressions if assigning variable or using from line above](doc/rules.md#only-cuddled-expressions-if-assigning-variable-or-using-from-line-above)
-* [Only one cuddle assignment allowed before defer statement](doc/rules.md#only-one-cuddle-assignment-allowed-before-defer-statement)
-* [Only one cuddle assignment allowed before for statement](doc/rules.md#only-one-cuddle-assignment-allowed-before-for-statement)
-* [Only one cuddle assignment allowed before go statement](doc/rules.md#only-one-cuddle-assignment-allowed-before-go-statement)
-* [Only one cuddle assignment allowed before if statement](doc/rules.md#only-one-cuddle-assignment-allowed-before-if-statement)
-* [Only one cuddle assignment allowed before range statement](doc/rules.md#only-one-cuddle-assignment-allowed-before-range-statement)
-* [Only one cuddle assignment allowed before switch statement](doc/rules.md#only-one-cuddle-assignment-allowed-before-switch-statement)
-* [Only one cuddle assignment allowed before type switch statement](doc/rules.md#only-one-cuddle-assignment-allowed-before-type-switch-statement)
-* [Ranges should only be cuddled with assignments used in the iteration](doc/rules.md#ranges-should-only-be-cuddled-with-assignments-used-in-the-iteration)
-* [Return statements should not be cuddled if block has more than two lines](doc/rules.md#return-statements-should-not-be-cuddled-if-block-has-more-than-two-lines)
-* [Short declarations should cuddle only with other short declarations](doc/rules.md#short-declaration-should-cuddle-only-with-other-short-declarations)
-* [Switch statements should only be cuddled with variables switched](doc/rules.md#switch-statements-should-only-be-cuddled-with-variables-switched)
-* [Type switch statements should only be cuddled with variables switched](doc/rules.md#type-switch-statements-should-only-be-cuddled-with-variables-switched)
+  [analysis]: https://pkg.go.dev/golang.org/x/tools/go/analysis
+  [gofumpt]: https://github.com/mvdan/gofumpt
+  [golangci-lint]: https://golangci-lint.run
+  [nlreturn]: https://github.com/ssgreg/nlreturn
+  [whitespace]: https://github.com/ultraware/whitespace

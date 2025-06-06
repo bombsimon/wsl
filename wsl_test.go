@@ -1,24 +1,27 @@
 package wsl
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
 	"golang.org/x/tools/go/analysis/analysistest"
 )
 
-func TestWIP(t *testing.T) {
-	testdata := analysistest.TestData()
-	analyzer := NewAnalyzer(nil)
-
-	analysistest.RunWithSuggestedFixes(t, testdata, analyzer, "wip")
-}
-
 func TestDefaultConfig(t *testing.T) {
-	testdata := analysistest.TestData()
-	analyzer := NewAnalyzer(nil)
+	dirs, err := os.ReadDir("./testdata/src/default_config")
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	analysistest.RunWithSuggestedFixes(t, testdata, analyzer, "default_config")
+	for _, tc := range dirs {
+		t.Run(tc.Name(), func(t *testing.T) {
+			testdata := analysistest.TestData()
+			analyzer := NewAnalyzer(NewConfig())
+
+			analysistest.RunWithSuggestedFixes(t, testdata, analyzer, filepath.Join("default_config", tc.Name()))
+		})
+	}
 }
 
 func TestWithConfig(t *testing.T) {
@@ -29,68 +32,62 @@ func TestWithConfig(t *testing.T) {
 		configFn func(*Configuration)
 	}{
 		{
-			subdir: "case_blocks",
+			subdir: "if_errcheck",
 			configFn: func(config *Configuration) {
-				config.ForceCaseTrailingWhitespaceLimit = 3
+				config.Checks.Add(CheckErr)
 			},
 		},
 		{
-			subdir: "multi_line_assign",
+			subdir: "no_check_decl",
 			configFn: func(config *Configuration) {
-				config.AllowMultiLineAssignCuddle = false
+				config.Checks.Remove(CheckDecl)
 			},
 		},
 		{
-			subdir: "assign_and_call",
+			subdir: "whole_block",
 			configFn: func(config *Configuration) {
-				config.AllowAssignAndCallCuddle = false
+				config.AllowWholeBlock = true
 			},
 		},
 		{
-			subdir: "trailing_comments",
+			subdir: "first_in_block_n1",
 			configFn: func(config *Configuration) {
-				config.AllowTrailingComment = true
+				config.AllowFirstInBlock = true
 			},
 		},
 		{
-			subdir: "separate_leading_whitespace",
+			subdir: "case_max_lines",
 			configFn: func(config *Configuration) {
-				config.AllowSeparatedLeadingComment = true
+				config.CaseMaxLines = 3
 			},
 		},
 		{
-			subdir: "error_check",
+			subdir: "branch_max_lines",
 			configFn: func(config *Configuration) {
-				config.ForceCuddleErrCheckAndAssign = true
+				config.BranchMaxLines = 5
 			},
 		},
 		{
-			subdir: "short_decl",
+			subdir: "exclusive_short_decl",
 			configFn: func(config *Configuration) {
-				config.ForceExclusiveShortDeclarations = true
+				config.Checks.Add(CheckAssignExclusive)
 			},
 		},
 		{
-			subdir: "strict_append",
+			subdir: "assign_expr",
 			configFn: func(config *Configuration) {
-				config.StrictAppend = false
+				config.Checks.Add(CheckAssignExpr)
 			},
 		},
 		{
-			subdir: "assign_and_anything",
+			subdir: "disable_all",
 			configFn: func(config *Configuration) {
-				config.AllowAssignAndAnythingCuddle = true
-			},
-		},
-		{
-			subdir: "decl",
-			configFn: func(config *Configuration) {
-				config.AllowCuddleDeclaration = true
+				config.Checks = NoChecks()
 			},
 		},
 	} {
 		t.Run(tc.subdir, func(t *testing.T) {
-			config := defaultConfig()
+			config := NewConfig()
 			tc.configFn(config)
 
 			analyzer := NewAnalyzer(config)

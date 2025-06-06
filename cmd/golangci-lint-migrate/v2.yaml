@@ -1,0 +1,85 @@
+---
+version: "2"
+
+linters:
+  enable:
+    - wsl
+  settings:
+    wsl:
+      # Do strict checking when assigning from append (x = append(x, y)).
+      # If this is set to true - the append call must append either a variable
+      # assigned, called or used on the line above.
+      # https://github.com/bombsimon/wsl/blob/HEAD/doc/configuration.md#strict-append
+      # Default: true
+      strict-append: false
+
+      # Allows assignments to be cuddled with variables used in calls on
+      # line above and calls to be cuddled with assignments of variables
+      # used in call on line above.
+      # https://github.com/bombsimon/wsl/blob/HEAD/doc/configuration.md#allow-assign-and-call
+      # Default: true
+      allow-assign-and-call: false
+
+      # Allows assignments to be cuddled with anything.
+      # https://github.com/bombsimon/wsl/blob/HEAD/doc/configuration.md#allow-assign-and-anything
+      # Default: false
+      allow-assign-and-anything: true
+
+      # Allows cuddling to assignments even if they span over multiple lines.
+      # https://github.com/bombsimon/wsl/blob/HEAD/doc/configuration.md#allow-multiline-assign
+      # Default: true
+      allow-multiline-assign: false
+
+      # If the number of lines in a case block is equal to or lager than this number,
+      # the case *must* end white a newline.
+      # https://github.com/bombsimon/wsl/blob/HEAD/doc/configuration.md#force-case-trailing-whitespace
+      # Default: 0
+      force-case-trailing-whitespace: 1
+
+      # Allow blocks to end with comments.
+      # https://github.com/bombsimon/wsl/blob/HEAD/doc/configuration.md#allow-trailing-comment
+      # Default: false
+      allow-trailing-comment: true
+
+      # Allow multiple comments in the beginning of a block separated with newline.
+      # https://github.com/bombsimon/wsl/blob/HEAD/doc/configuration.md#allow-separated-leading-comment
+      # Default: false
+      allow-separated-leading-comment: true
+
+      # Allow multiple var/declaration statements to be cuddled.
+      # https://github.com/bombsimon/wsl/blob/HEAD/doc/configuration.md#allow-cuddle-declarations
+      # Default: false
+      allow-cuddle-declarations: true
+
+      # A list of call idents that everything can be cuddled with.
+      # Defaults: [ "Lock", "RLock" ]
+      allow-cuddle-with-calls: ["Foo", "Bar"]
+
+      # AllowCuddleWithRHS is a list of right hand side variables that is allowed
+      # to be cuddled with anything.
+      # Defaults: [ "Unlock", "RUnlock" ]
+      allow-cuddle-with-rhs: ["Foo", "Bar"]
+
+      # Allow cuddling with any block as long as the variable is used somewhere in
+      # the block.
+      # https://github.com/bombsimon/wsl/blob/HEAD/doc/configuration.md#allow-cuddle-used-in-block
+      # Default: false
+      allow-cuddle-used-in-block: true
+
+      # Causes an error when an If statement that checks an error variable doesn't
+      # cuddle with the assignment of that variable.
+      # https://github.com/bombsimon/wsl/blob/HEAD/doc/configuration.md#force-err-cuddling
+      # Default: false
+      force-err-cuddling: true
+
+      # When force-err-cuddling is enabled this is a list of names
+      # used for error variables to check for in the conditional.
+      # Default: [ "err" ]
+      error-variable-names: ["foo"]
+
+      # Causes an error if a short declaration (:=) cuddles with anything other than
+      # another short declaration.
+      # This logic overrides force-err-cuddling among others.
+      # https://github.com/bombsimon/wsl/blob/HEAD/doc/configuration.md#force-short-decl-cuddling
+      # Default: false
+      force-short-decl-cuddling: true

@@ -1,0 +1,41 @@
+package testpkg
+
+import "context"
+
+func fn1(n int) {
+	switch n {
+	case 1:
+		n++
+	case 2:
+		n++
+		n++
+	case 3:
+		n++
+		n++
+		n++ // want `missing whitespace below this line \(case-trailing-newline\)`
+	case 4:
+		n++
+		n++
+		n++
+		n++
+		// Just a comment
+	default:
+		n++
+		n++
+		n++
+		n++
+	}
+}
+
+func fn2(ctx context.Context, ch1 chan struct{}) {
+	select {
+	case ctx.Done():
+		_ = 1
+		_ = 1
+		_ = 1 // want `missing whitespace below this line \(case-trailing-newline\)`
+	case <-ch1:
+		_ = 1
+	default:
+		_ = 1
+	}
+}

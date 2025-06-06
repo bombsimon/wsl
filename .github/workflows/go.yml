@@ -2,6 +2,8 @@
 name: CI
 on:
   push:
+    branches:
+      - main
   pull_request:
 
 jobs:
@@ -9,53 +11,51 @@ jobs:
     name: golangci-lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-go@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
-          go-version: '1.20'
-      - uses: actions/checkout@v3
-      - uses: golangci/golangci-lint-action@v3
+          go-version: stable
+      - uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.1.6
 
   tests:
-    # run after golangci-lint action to not produce duplicated errors
     name: tests
     needs: golangci-lint
     strategy:
       matrix:
         go:
-          - '1.20'
+          - oldstable
+          - stable
         os:
           - ubuntu-latest
     runs-on: ${{ matrix.os }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Install Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go }}
-
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Setup cache
-        uses: actions/cache@v3
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: ${{ runner.os }}-go-
 
       - name: Test code
         run: go test -race -v ./...
 
+      - name: Run
+        run: go run ./cmd/wsl/ ./...
+
   coverage:
     runs-on: ubuntu-latest
     steps:
-      - name: Install Go
-        if: success()
-        uses: actions/setup-go@v3
-        with:
-          go-version: '1.20'
-
       - name: Checkout code
-        uses: actions/checkout@v3
+        if: success()
+        uses: actions/checkout@v4
+
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
 
       - name: Calc coverage
         run: |

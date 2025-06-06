@@ -1,0 +1,30 @@
+package testpkg
+
+func fn1() {
+	var a = 1
+	var b = 2 // want `missing whitespace above this line \(never cuddle decl\)`
+
+	const c = 3
+	const d = 4 // want `missing whitespace above this line \(never cuddle decl\)`
+
+	e := 5
+	var f = 6 // want `missing whitespace above this line \(never cuddle decl\)`
+	g := 7 // want `missing whitespace above this line \(invalid statement above assign\)`
+}
+
+func fn2() {
+	var a = 1
+	var b = a // want `missing whitespace above this line \(never cuddle decl\)`
+}
+
+func fn3() {
+	a := 1
+	var b = a // want `missing whitespace above this line \(never cuddle decl\)`
+}
+
+func fn4() {
+	var x = func() { // want +1 `unnecessary whitespace \(leading-whitespace\)`
+
+		return 1
+	}()
+}

@@ -2,7 +2,10 @@ package wsl
 
 import (
 	"flag"
+	"go/ast"
+	"go/token"
 	"strings"
+	"sync"
 
 	"golang.org/x/tools/go/analysis"
 )
@@ -19,72 +22,97 @@ func NewAnalyzer(config *Configuration) *analysis.Analyzer {
 	}
 }
 
-func defaultConfig() *Configuration {
-	return &Configuration{
-		AllowAssignAndAnythingCuddle:     false,
-		AllowAssignAndCallCuddle:         true,
-		AllowCuddleDeclaration:           false,
-		AllowMultiLineAssignCuddle:       true,
-		AllowSeparatedLeadingComment:     false,
-		AllowTrailingComment:             false,
-		ForceCuddleErrCheckAndAssign:     false,
-		ForceExclusiveShortDeclarations:  false,
-		StrictAppend:                     true,
-		AllowCuddleWithCalls:             []string{"Lock", "RLock"},
-		AllowCuddleWithRHS:               []string{"Unlock", "RUnlock"},
-		ErrorVariableNames:               []string{"err"},
-		ForceCaseTrailingWhitespaceLimit: 0,
-	}
-}
-
 // wslAnalyzer is a wrapper around the configuration which is used to be able to
 // set the configuration when creating the analyzer and later be able to update
 // flags and running method.
 type wslAnalyzer struct {
 	config *Configuration
+
+	// When we use flags, we need to parse the ones used for checks into
+	// temporary variables so we can create the check set once the flag is being
+	// parsed by the analyzer and we run our analyzer.
+	defaultChecks string
+	enable        []string
+	disable       []string
+
+	// To only validate and convert the parsed flags once we use a `sync.Once`
+	// to only create a check set once and store the set and potential error. We
+	// also store if we actually had a configuration to ensure we don't
+	// overwrite the checks if the analyzer was created with a proper wsl
+	// config.
+	cfgOnce       sync.Once
+	didHaveConfig bool
+	checkSetErr   error
 }
 
 func (wa *wslAnalyzer) flags() flag.FlagSet {
-	flags := flag.NewFlagSet("", flag.ExitOnError)
+	flags := flag.NewFlagSet("wsl", flag.ExitOnError)
 
-	// If we have a configuration set we're not running from the command line so
-	// we don't use any flags.
 	if wa.config != nil {
+		wa.didHaveConfig = true
 		return *flags
 	}
 
-	wa.config = defaultConfig()
+	wa.config = NewConfig()
 
-	flags.BoolVar(&wa.config.AllowAssignAndAnythingCuddle, "allow-assign-and-anything", false, "Allow assignments and anything to be cuddled")
-	flags.BoolVar(&wa.config.AllowAssignAndCallCuddle, "allow-assign-and-call", true, "Allow assignments and calls to be cuddled (if using same variable/type)")
-	flags.BoolVar(&wa.config.AllowCuddleDeclaration, "allow-cuddle-declarations", false, "Allow declarations to be cuddled")
-	flags.BoolVar(&wa.config.AllowMultiLineAssignCuddle, "allow-multi-line-assign", true, "Allow cuddling with multi line assignments")
-	flags.BoolVar(&wa.config.AllowSeparatedLeadingComment, "allow-separated-leading-comment", false, "Allow empty newlines in leading comments")
-	flags.BoolVar(&wa.config.AllowTrailingComment, "allow-trailing-comment", false, "Allow blocks to end with a comment")
-	flags.BoolVar(&wa.config.ForceCuddleErrCheckAndAssign, "force-err-cuddling", false, "Force cuddling of error checks with error var assignment")
-	flags.BoolVar(&wa.config.ForceExclusiveShortDeclarations, "force-short-decl-cuddling", false, "Force short declarations to cuddle by themselves")
-	flags.BoolVar(&wa.config.StrictAppend, "strict-append", true, "Strict rules for append")
-	flags.IntVar(&wa.config.ForceCaseTrailingWhitespaceLimit, "force-case-trailing-whitespace", 0, "Force newlines for case blocks > this number.")
+	flags.BoolVar(&wa.config.IncludeGenerated, "include-generated", false, "Include generated files")
+	flags.BoolVar(&wa.config.AllowFirstInBlock, "allow-first-in-block", true, "Allow cuddling if variable is used in the first statement in the block")
+	flags.BoolVar(&wa.config.AllowWholeBlock, "allow-whole-block", false, "Allow cuddling if variable is used anywhere in the block")
+	flags.IntVar(&wa.config.BranchMaxLines, "branch-max-lines", 2, "Max lines before requiring newline before branching, e.g. `return`, `break`, `continue` (0 = never)")
+	flags.IntVar(&wa.config.CaseMaxLines, "case-max-lines", 0, "Max lines before requiring a newline at the end of case (0 = never)")
 
-	flags.Var(&multiStringValue{slicePtr: &wa.config.AllowCuddleWithCalls}, "allow-cuddle-with-calls", "Comma separated list of idents that can have cuddles after")
-	flags.Var(&multiStringValue{slicePtr: &wa.config.AllowCuddleWithRHS}, "allow-cuddle-with-rhs", "Comma separated list of idents that can have cuddles before")
-	flags.Var(&multiStringValue{slicePtr: &wa.config.ErrorVariableNames}, "error-variable-names", "Comma separated list of error variable names")
+	flags.StringVar(&wa.defaultChecks, "default", "", "Can be 'all' for all checks or 'none' for no checks or empty for default checks")
+	flags.Var(&multiStringValue{slicePtr: &wa.enable}, "enable", "Comma separated list of checks to enable")
+	flags.Var(&multiStringValue{slicePtr: &wa.disable}, "disable", "Comma separated list of checks to disable")
 
 	return *flags
 }
 
-func (wa *wslAnalyzer) run(pass *analysis.Pass) (interface{}, error) {
+func (wa *wslAnalyzer) run(pass *analysis.Pass) (any, error) {
+	wa.cfgOnce.Do(func() {
+		// No need to update checks if config was passed when creating the
+		// analyzer.
+		if wa.didHaveConfig {
+			return
+		}
+
+		// Parse the check params once if we set our config from flags.
+		wa.config.Checks, wa.checkSetErr = NewCheckSet(wa.defaultChecks, wa.enable, wa.disable)
+	})
+
+	if wa.checkSetErr != nil {
+		return nil, wa.checkSetErr
+	}
+
 	for _, file := range pass.Files {
-		filename := pass.Fset.Position(file.Pos()).Filename
+		filename := getFilename(pass.Fset, file)
 		if !strings.HasSuffix(filename, ".go") {
 			continue
 		}
 
-		processor := newProcessorWithConfig(file, pass.Fset, wa.config)
-		processor.parseAST()
+		// if the file is related to cgo the filename of the unadjusted position
+		// is a not a '.go' file.
+		unadjustedFilename := pass.Fset.PositionFor(file.Pos(), false).Filename
 
-		for pos, fix := range processor.result {
+		// if the file is related to cgo the filename of the unadjusted position
+		// is a not a '.go' file.
+		if !strings.HasSuffix(unadjustedFilename, ".go") {
+			continue
+		}
+
+		// The file is skipped if the "unadjusted" file is a Go file, and it's a
+		// generated file (ex: "_test.go" file). The other non-Go files are
+		// skipped by the first 'if' with the adjusted position.
+		if !wa.config.IncludeGenerated && ast.IsGenerated(file) {
+			continue
+		}
+
+		wsl := New(file, pass, wa.config)
+		wsl.Run()
+
+		for pos, fix := range wsl.issues {
 			textEdits := []analysis.TextEdit{}
+
 			for _, f := range fix.fixRanges {
 				textEdits = append(textEdits, analysis.TextEdit{
 					Pos:     f.fixRangeStart,
@@ -96,7 +124,7 @@ func (wa *wslAnalyzer) run(pass *analysis.Pass) (interface{}, error) {
 			pass.Report(analysis.Diagnostic{
 				Pos:      pos,
 				Category: "whitespace",
-				Message:  fix.reason,
+				Message:  fix.message,
 				SuggestedFixes: []analysis.SuggestedFix{
 					{
 						TextEdits: textEdits,
@@ -117,10 +145,11 @@ type multiStringValue struct {
 	slicePtr *[]string
 }
 
-// Set implements the flag.Value interface and will overwrite the pointer to the
+// Set implements the flag.Value interface and will overwrite the pointer to
+// the
 // slice with a new pointer after splitting the flag by comma.
 func (m *multiStringValue) Set(value string) error {
-	s := []string{}
+	var s []string
 
 	for _, v := range strings.Split(value, ",") {
 		s = append(s, strings.TrimSpace(v))
@@ -131,11 +160,20 @@ func (m *multiStringValue) Set(value string) error {
 	return nil
 }
 
-// Set implements the flag.Value interface.
+// String implements the flag.Value interface.
 func (m *multiStringValue) String() string {
 	if m.slicePtr == nil {
 		return ""
 	}
 
 	return strings.Join(*m.slicePtr, ", ")
+}
+
+func getFilename(fset *token.FileSet, file *ast.File) string {
+	filename := fset.PositionFor(file.Pos(), true).Filename
+	if !strings.HasSuffix(filename, ".go") {
+		return fset.PositionFor(file.Pos(), false).Filename
+	}
+
+	return filename
 }
