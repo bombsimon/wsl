@@ -11,7 +11,9 @@ the start and the end of blocks.
 ## Checks and configuration
 
 Each check can be disabled or enabled individually to the point where no checks
-can be run. The idea with this is to attract more users.
+can be run. The idea with this is to attract more users. Some checks have
+configuration that affect how they work but most of them can only be turned on
+or off.
 
 ### Checks
 
@@ -30,7 +32,7 @@ For more details and examples, see [CHECKS](CHECKS.md).
 #### Built-ins and keywords
 
 - ✅ **assign** - Assignments should only be cuddled with other assignments,
-  declarations or increment/decrement
+  or increment/decrement
 - ✅ **branch** - Branch statement (`break`, `continue`, `fallthrough`, `goto`)
   should only be cuddled if the block is less than `n` lines where `n` is the
   value of [`branch-max-lines`](#configuration)
@@ -51,25 +53,25 @@ For more details and examples, see [CHECKS](CHECKS.md).
   line above
 - ✅ **return** - Return should only be cuddled if the block is less than `n`
   lines where `n` is the value of [`branch-max-lines`](#configuration)
-- ✅ **select** - Select should only be cuddled with a single variable used on the
+- ✅ **select** - Select should only be cuddled with a single variable used on
+  the line above
+- ✅ **send** - Send should only be cuddled with a single variable used on the
   line above
-- ✅ **send** - Send should only be cuddled with a single variable used on the line
-  above
-- ✅ **switch** - Switch should only be cuddled with a single variable used on the
-  line above
+- ✅ **switch** - Switch should only be cuddled with a single variable used on
+  the line above
 - ✅ **type-switch** - Type switch should only be cuddled with a single variable
   used on the line above
 
 #### Specific `wsl` cases
 
-- ✅ **append** - Only allow reassigning with `append` if the value being appended
-  exist on the line above
-- ❌ **assign-exclusive** - Only allow cuddling either new variables or reassigning
-  of existing ones
+- ✅ **append** - Only allow re-assigning with `append` if the value being
+  appended exist on the line above
+- ❌ **assign-exclusive** - Only allow cuddling either new variables or
+  re-assigning of existing ones
 - ❌ **assign-expr** - Don't allow assignments to be cuddled with expressions,
   e.g. function calls
-- ❌ **err** - Error checking must follow immediately after the error variable is
-  assigned
+- ❌ **err** - Error checking must follow immediately after the error variable
+  is assigned
 - ✅ **leading-whitespace** - Disallow leading empty lines in blocks
 - ✅ **trailing-whitespace** - Disallow trailing empty lines in blocks
 
@@ -78,11 +80,12 @@ For more details and examples, see [CHECKS](CHECKS.md).
 Other than enabling or disabling specific checks some checks can be configured
 in more details.
 
-- ✅ **allow-first-in-block** - Allow cuddling a variable if it's used first in the
-  immediate following block, even if the statement with the block doesn't use
-  the variable (see [Configuration](CHECKS.md#allow-first-in-block) for details)
-- ❌ **allow-whole-block** - Same as above, but allows cuddling if the variable is
-  used _anywhere_ in the following (or nested) block (see
+- ✅ **allow-first-in-block** - Allow cuddling a variable if it's used first in
+  the immediate following block, even if the statement with the block doesn't
+  use the variable (see [Configuration](CHECKS.md#allow-first-in-block) for
+  details)
+- ❌ **allow-whole-block** - Same as above, but allows cuddling if the variable
+  is used _anywhere_ in the following (or nested) block (see
   [Configuration](CHECKS.md#allow-whole-block) for details)
 - **branch-max-lines** - If a block contains more than this number of lines the
   branch statement (e.g. `return`, `break`, `continue`) need to be separated by

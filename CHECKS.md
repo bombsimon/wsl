@@ -6,7 +6,7 @@ allowed and what's allowed.
 ## `assign`
 
 Assign (`foo := bar`) or re-assignments (`foo = bar`) should only be cuddled
-with other assignments, declarations or increment/decrement.
+with other assignments or increment/decrement.
 
 <table>
 <thead><tr><th>Bad</th><th>Good</th></tr></thead>
@@ -123,6 +123,7 @@ assignment increasing readability.
 
 > **NOTE** The fixer can't do smart adjustments and currently only add
 > whitespaces.
+> This is tracked in [#21](https://github.com/bombsimon/wsl/issues/121)
 
 <table>
 <thead><tr><th>Bad</th><th>Good</th></tr></thead>
@@ -1061,7 +1062,7 @@ s = append(s, 2)
 
 <sup>1</sup> `a` is not used in append
 
-<sup>2</sup> `a` is not used in append
+<sup>2</sup> `b` is not used in append
 
 </td><td valign="top">
 
