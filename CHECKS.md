@@ -764,6 +764,8 @@ func Fn() int {
 
 ## `select`
 
+Identifiers used in case arms of select statements are allowed to be cuddled.
+
 > Configurable via `allow-first-in-block` to allow cuddling if the variable is
 > used _first_ in the block (enabled by default).
 >
@@ -790,6 +792,14 @@ case <-stop:
 </td><td valign="top">
 
 ```go
+stop := make(chan struct{})
+select {
+case <-time.After(time.Second):
+    // ...
+case <-stop:
+    // ...
+}
+
 x := 0
 
 select {
@@ -864,6 +874,10 @@ b := 1
 
 ## `switch`
 
+In addition to checking the switch condition, switch statements also checks
+identifiers in all case arms. If a variable is used in one or more of the case
+arms it's allowed to be cuddled.
+
 > Configurable via `allow-first-in-block` to allow cuddling if the variable is
 > used _first_ in the block (enabled by default).
 >
@@ -900,6 +914,22 @@ case 2:
 </td><td valign="top">
 
 ```go
+n := 1
+switch n {
+case 1:
+    // ...
+case 2:
+    // ...
+}
+
+n := 1
+switch {
+case n < 1:
+    // ...
+case n > 1:
+    // ...
+}
+
 x := 0
 
 switch y {
