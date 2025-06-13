@@ -57,3 +57,23 @@ func fn5() {
 		"b",
 	}
 }
+
+func issue153(b bool) {
+	for i := 0; i < 4; i++ {
+		fmt.Println()
+	}
+
+	Up(3) // want `missing whitespace above this line \(invalid statement above expr\)`
+
+	if autoheight != 3 {
+		fmt.Printf("height should be 3 but is %d", autoheight)
+	}
+
+	Down(3) // want `missing whitespace above this line \(invalid statement above expr\)`
+
+	if b {
+		fmt.Println()
+	}
+
+	Up(b) // want `missing whitespace above this line \(invalid statement above expr\)`
+}
