@@ -27,3 +27,33 @@ func fn1(ctx context.Context, ch1 chan struct{}) {
 
 	_ = x
 }
+
+func fn2(ch1 chan struct{}) {
+	ch := make(chan struct{})
+	select {
+	case <-ch1:
+		_ = 1
+	case <-ch:
+		_ = 1
+	}
+
+	ctx := getCtx()
+	select {
+	case <-ch1:
+		_ = 1
+	case <-ctx.Done():
+		_ = 1
+	}
+
+	ch2 := make(chan struct{})
+
+	ch3 := make(chan struct{}) // want `missing whitespace above this line \(too many statements above select\)`
+	select {
+	case <-ch1:
+		_ = 1
+	case <-ch2:
+		_ = 1
+	case <-ch3:
+		_ = 1
+	}
+}

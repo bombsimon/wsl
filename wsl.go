@@ -193,22 +193,29 @@ func (w *WSL) checkBody(body []ast.Stmt) {
 	}
 }
 
-func (w *WSL) checkCuddlingBlock(stmt ast.Node, blockList []ast.Stmt, cursor *Cursor, maxAllowedStatements int) {
+func (w *WSL) checkCuddlingBlock(
+	stmt ast.Node,
+	blockList []ast.Stmt,
+	allowedIdents []*ast.Ident,
+	cursor *Cursor,
+	maxAllowedStatements int,
+) {
 	var firstBlockStmt ast.Node
 	if len(blockList) > 0 {
 		firstBlockStmt = blockList[0]
 	}
 
-	w.checkCuddlingMaxAllowed(stmt, firstBlockStmt, cursor, maxAllowedStatements)
+	w.checkCuddlingMaxAllowed(stmt, firstBlockStmt, allowedIdents, cursor, maxAllowedStatements)
 }
 
 func (w *WSL) checkCuddling(stmt ast.Node, cursor *Cursor, maxAllowedStatements int) {
-	w.checkCuddlingMaxAllowed(stmt, nil, cursor, maxAllowedStatements)
+	w.checkCuddlingMaxAllowed(stmt, nil, []*ast.Ident{}, cursor, maxAllowedStatements)
 }
 
 func (w *WSL) checkCuddlingMaxAllowed(
 	stmt ast.Node,
 	firstBlockStmt ast.Node,
+	allowedIdents []*ast.Ident,
 	cursor *Cursor,
 	maxAllowedStatements int,
 ) {
@@ -282,6 +289,10 @@ func (w *WSL) checkCuddlingMaxAllowed(
 
 	currentIdents := identsFromNode(stmt, true)
 	if checkIntersection(currentIdents) {
+		return
+	}
+
+	if checkIntersection(allowedIdents) {
 		return
 	}
 
@@ -641,7 +652,7 @@ func (w *WSL) checkIf(stmt *ast.IfStmt, cursor *Cursor, isElse bool) {
 
 	if _, ok := w.config.Checks[CheckIf]; !isElse && ok {
 		cursor.SetChecker(CheckIf)
-		w.checkCuddlingBlock(stmt, stmt.Body.List, cursor, 1)
+		w.checkCuddlingBlock(stmt, stmt.Body.List, []*ast.Ident{}, cursor, 1)
 	}
 }
 
@@ -739,7 +750,7 @@ func (w *WSL) checkSend(stmt *ast.SendStmt, cursor *Cursor) {
 		return true
 	})
 
-	w.checkCuddlingBlock(stmt, stmts, cursor, 1)
+	w.checkCuddlingBlock(stmt, stmts, []*ast.Ident{}, cursor, 1)
 }
 
 func (w *WSL) checkSwitch(stmt *ast.SwitchStmt, cursor *Cursor) {
@@ -917,12 +928,18 @@ func (w *WSL) maybeCheckBlock(
 	if _, ok := w.config.Checks[check]; ok {
 		cursor.SetChecker(check)
 
-		blockList := []ast.Stmt{}
-		if check != CheckSwitch && check != CheckTypeSwitch {
+		var (
+			blockList     []ast.Stmt
+			allowedIdents []*ast.Ident
+		)
+
+		if check != CheckSwitch && check != CheckTypeSwitch && check != CheckSelect {
 			blockList = blockStmt.List
+		} else {
+			allowedIdents = identsFromCaseArms(node)
 		}
 
-		w.checkCuddlingBlock(node, blockList, cursor, 1)
+		w.checkCuddlingBlock(node, blockList, allowedIdents, cursor, 1)
 	}
 }
 
@@ -1082,6 +1099,51 @@ func identsFromNode(node ast.Node, skipBlock bool) []*ast.Ident {
 
 		return true
 	})
+
+	return idents
+}
+
+func identsFromCaseArms(node ast.Node) []*ast.Ident {
+	var (
+		idents []*ast.Ident
+		nodes  []ast.Stmt
+		seen   = map[string]struct{}{}
+
+		addUnseen = func(node ast.Node) {
+			for _, ident := range identsFromNode(node, true) {
+				if _, ok := seen[ident.Name]; ok {
+					continue
+				}
+
+				seen[ident.Name] = struct{}{}
+				idents = append(idents, ident)
+			}
+		}
+	)
+
+	switch v := node.(type) {
+	case *ast.SwitchStmt:
+		nodes = v.Body.List
+	case *ast.TypeSwitchStmt:
+		nodes = v.Body.List
+	case *ast.SelectStmt:
+		nodes = v.Body.List
+	default:
+		return idents
+	}
+
+	for _, node := range nodes {
+		switch n := node.(type) {
+		case *ast.CommClause:
+			addUnseen(n.Comm)
+		case *ast.CaseClause:
+			for _, n := range n.List {
+				addUnseen(n)
+			}
+		default:
+			continue
+		}
+	}
 
 	return idents
 }

@@ -58,11 +58,33 @@ func fn4() {
 
 func fn5() {
 	timeout := 10
-
-	switch { // want `missing whitespace above this line \(no shared variables above switch\)`
+	switch {
 	case timeout > 5:
 		timeout = 100
 	case timeout == 10:
 		timeout = 0
+	}
+
+	timeout2 := 20
+
+	timeout3 := 30 // want `missing whitespace above this line \(too many statements above switch\)`
+	switch {
+	case timeout2 > 5:
+		timeout = 100
+	case timeout3 == 10:
+		timeout = 0
+	}
+}
+
+func fn6(a, b int) {
+	n := 1
+
+	switch { // want `missing whitespace above this line \(no shared variables above switch\)`
+	case a > b:
+		_ = n
+	case b > a:
+		_ = n
+	default:
+		_ = n
 	}
 }
