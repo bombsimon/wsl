@@ -1,8 +1,10 @@
 package wsl
 
 import (
+	"bytes"
 	"fmt"
 	"go/ast"
+	"go/format"
 	"go/token"
 	"go/types"
 	"slices"
@@ -19,6 +21,7 @@ const (
 type fixRange struct {
 	fixRangeStart token.Pos
 	fixRangeEnd   token.Pos
+	fix           []byte
 }
 
 type issue struct {
@@ -478,6 +481,12 @@ func (w *WSL) checkDeclStmt(stmt *ast.DeclStmt, cursor *Cursor) {
 		return
 	}
 
+	// Try to do smart grouping and if we succeed return, otherwise do
+	// line-by-line fixing.
+	if w.maybeGroupDecl(stmt, cursor) {
+		return
+	}
+
 	w.addErrorNeverAllow(stmt.Pos(), cursor.checkType)
 }
 
@@ -917,6 +926,99 @@ func (w *WSL) checkTrailingNewline(body *ast.BlockStmt) {
 	}
 }
 
+func (w *WSL) maybeGroupDecl(stmt *ast.DeclStmt, cursor *Cursor) bool {
+	nodeAsGenDecl := func(n ast.Node) *ast.GenDecl {
+		decl, ok := n.(*ast.DeclStmt)
+		if !ok {
+			return nil
+		}
+
+		genDecl, ok := decl.Decl.(*ast.GenDecl)
+		if !ok {
+			return nil
+		}
+
+		for _, spec := range genDecl.Specs {
+			valueSpec, ok := spec.(*ast.ValueSpec)
+			if !ok {
+				return nil
+			}
+
+			if valueSpec.Doc != nil || valueSpec.Comment != nil {
+				return nil
+			}
+		}
+
+		return genDecl
+	}
+
+	firstNode := nodeAsGenDecl(cursor.PreviousNode())
+	if firstNode == nil {
+		return false
+	}
+
+	currentNode := nodeAsGenDecl(stmt)
+	if currentNode == nil {
+		return false
+	}
+
+	// Both are not same type, e.g. `const` or `var`
+	if firstNode.Tok != currentNode.Tok {
+		return false
+	}
+
+	group := &ast.GenDecl{
+		Tok:    firstNode.Tok,
+		Lparen: 1,
+		Specs:  firstNode.Specs,
+	}
+
+	group.Specs = append(group.Specs, currentNode.Specs...)
+
+	reportNodes := []ast.Node{currentNode}
+
+	for {
+		save := cursor.Save()
+
+		if !cursor.Next() {
+			break
+		}
+
+		n := nodeAsGenDecl(cursor.Stmt())
+		if n == nil {
+			save()
+			break
+		}
+
+		if n.Tok != firstNode.Tok {
+			save()
+			break
+		}
+
+		group.Specs = append(group.Specs, n.Specs...)
+		reportNodes = append(reportNodes, n)
+	}
+
+	var buf bytes.Buffer
+	if err := format.Node(&buf, token.NewFileSet(), group); err != nil {
+		return false
+	}
+
+	lastNode := reportNodes[len(reportNodes)-1]
+
+	for _, n := range reportNodes {
+		w.addErrorWithMessageAndFix(
+			n.Pos(),
+			firstNode.Pos(),
+			lastNode.End(),
+			fmt.Sprintf("%s (never cuddle %s)", messageMissingWhitespaceAbove, CheckDecl),
+			buf.Bytes(),
+		)
+	}
+
+	return true
+}
+
 func (w *WSL) maybeCheckBlock(
 	node ast.Node,
 	blockStmt *ast.BlockStmt,
@@ -1032,6 +1134,10 @@ func (w *WSL) addError(report, start, end token.Pos, message string, ct CheckTyp
 }
 
 func (w *WSL) addErrorWithMessage(report, start, end token.Pos, message string) {
+	w.addErrorWithMessageAndFix(report, start, end, message, []byte("\n"))
+}
+
+func (w *WSL) addErrorWithMessageAndFix(report, start, end token.Pos, message string, fix []byte) {
 	iss, ok := w.issues[report]
 	if !ok {
 		iss = issue{
@@ -1043,6 +1149,7 @@ func (w *WSL) addErrorWithMessage(report, start, end token.Pos, message string) 
 	iss.fixRanges = append(iss.fixRanges, fixRange{
 		fixRangeStart: start,
 		fixRangeEnd:   end,
+		fix:           fix,
 	})
 
 	w.issues[report] = iss
