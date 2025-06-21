@@ -117,7 +117,7 @@ func (wa *wslAnalyzer) run(pass *analysis.Pass) (any, error) {
 				textEdits = append(textEdits, analysis.TextEdit{
 					Pos:     f.fixRangeStart,
 					End:     f.fixRangeEnd,
-					NewText: []byte("\n"),
+					NewText: f.fix,
 				})
 			}
 

@@ -121,9 +121,8 @@ together they should be declared in the same group with parenthesis into a
 single statement. The benefit of this is that it also aligns the declaration or
 assignment increasing readability.
 
-> **NOTE** The fixer can't do smart adjustments and currently only add
-> whitespaces.
-> This is tracked in [#21](https://github.com/bombsimon/wsl/issues/121)
+> **NOTE** The fixer can't do smart adjustments if there are comments on the
+> same line as the declaration.
 
 <table>
 <thead><tr><th>Bad</th><th>Good</th></tr></thead>
