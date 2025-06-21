@@ -939,6 +939,9 @@ func (w *WSL) maybeGroupDecl(stmt *ast.DeclStmt, cursor *Cursor) bool {
 		}
 
 		for _, spec := range genDecl.Specs {
+			// We only care about value specs and not type specs or import
+			// specs. We will never see any import specs but type specs we just
+			// separate with an empty line as usual.
 			valueSpec, ok := spec.(*ast.ValueSpec)
 			if !ok {
 				return nil
