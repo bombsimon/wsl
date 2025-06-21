@@ -976,11 +976,17 @@ func (w *WSL) maybeGroupDecl(stmt *ast.DeclStmt, cursor *Cursor) bool {
 	group.Specs = append(group.Specs, currentNode.Specs...)
 
 	reportNodes := []ast.Node{currentNode}
+	lastNode := currentNode
 
 	for {
 		save := cursor.Save()
 
 		if !cursor.Next() {
+			break
+		}
+
+		if w.lineFor(lastNode.End()) < w.lineFor(cursor.Stmt().Pos())-1 {
+			save()
 			break
 		}
 
@@ -997,14 +1003,13 @@ func (w *WSL) maybeGroupDecl(stmt *ast.DeclStmt, cursor *Cursor) bool {
 
 		group.Specs = append(group.Specs, n.Specs...)
 		reportNodes = append(reportNodes, n)
+		lastNode = n
 	}
 
 	var buf bytes.Buffer
 	if err := format.Node(&buf, token.NewFileSet(), group); err != nil {
 		return false
 	}
-
-	lastNode := reportNodes[len(reportNodes)-1]
 
 	for _, n := range reportNodes {
 		w.addErrorWithMessageAndFix(

@@ -78,3 +78,15 @@ func fn6() {
 	var d = 4
 	var e = 5
 }
+
+func fn7() {
+	// want +2 `missing whitespace above this line \(never cuddle decl\)`
+	var a = 1
+	var b = 2
+
+	var c = 3
+
+	// want +2 `missing whitespace above this line \(never cuddle decl\)`
+	var d = 4
+	var e = 5
+}
