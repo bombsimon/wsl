@@ -105,3 +105,13 @@ func fn7() {
 		e = 5
 	)
 }
+
+func fn8() {
+ 	// want +3 `missing whitespace above this line \(never cuddle decl\)`
+	// Comment above
+	var (
+	    g = 7
+	    h = 8
+	)
+	// Comment after
+}
