@@ -25,6 +25,17 @@ func (c *Cursor) SetChecker(ct CheckType) {
 	c.checkType = ct
 }
 
+func (c *Cursor) NextNode() ast.Node {
+	defer c.Save()()
+
+	var nextNode ast.Node
+	if c.Next() {
+		nextNode = c.Stmt()
+	}
+
+	return nextNode
+}
+
 func (c *Cursor) Next() bool {
 	if c.currentIdx >= len(c.statements)-1 {
 		return false

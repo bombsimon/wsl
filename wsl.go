@@ -927,40 +927,12 @@ func (w *WSL) checkTrailingNewline(body *ast.BlockStmt) {
 }
 
 func (w *WSL) maybeGroupDecl(stmt *ast.DeclStmt, cursor *Cursor) bool {
-	nodeAsGenDecl := func(n ast.Node) *ast.GenDecl {
-		decl, ok := n.(*ast.DeclStmt)
-		if !ok {
-			return nil
-		}
-
-		genDecl, ok := decl.Decl.(*ast.GenDecl)
-		if !ok {
-			return nil
-		}
-
-		for _, spec := range genDecl.Specs {
-			// We only care about value specs and not type specs or import
-			// specs. We will never see any import specs but type specs we just
-			// separate with an empty line as usual.
-			valueSpec, ok := spec.(*ast.ValueSpec)
-			if !ok {
-				return nil
-			}
-
-			if valueSpec.Doc != nil || valueSpec.Comment != nil {
-				return nil
-			}
-		}
-
-		return genDecl
-	}
-
-	firstNode := nodeAsGenDecl(cursor.PreviousNode())
+	firstNode := asGenDeclWithValueSpecs(cursor.PreviousNode())
 	if firstNode == nil {
 		return false
 	}
 
-	currentNode := nodeAsGenDecl(stmt)
+	currentNode := asGenDeclWithValueSpecs(stmt)
 	if currentNode == nil {
 		return false
 	}
@@ -982,31 +954,29 @@ func (w *WSL) maybeGroupDecl(stmt *ast.DeclStmt, cursor *Cursor) bool {
 	lastNode := currentNode
 
 	for {
-		save := cursor.Save()
-
-		if !cursor.Next() {
+		nextPeeked := cursor.NextNode()
+		if nextPeeked == nil {
 			break
 		}
 
-		if w.lineFor(lastNode.End()) < w.lineFor(cursor.Stmt().Pos())-1 {
-			save()
+		if w.lineFor(lastNode.End()) < w.lineFor(nextPeeked.Pos())-1 {
 			break
 		}
 
-		n := nodeAsGenDecl(cursor.Stmt())
-		if n == nil {
-			save()
+		nextNode := asGenDeclWithValueSpecs(nextPeeked)
+		if nextNode == nil {
 			break
 		}
 
-		if n.Tok != firstNode.Tok {
-			save()
+		if nextNode.Tok != firstNode.Tok {
 			break
 		}
 
-		group.Specs = append(group.Specs, n.Specs...)
-		reportNodes = append(reportNodes, n)
-		lastNode = n
+		cursor.Next()
+
+		group.Specs = append(group.Specs, nextNode.Specs...)
+		reportNodes = append(reportNodes, nextNode)
+		lastNode = nextNode
 	}
 
 	var buf bytes.Buffer
@@ -1014,6 +984,8 @@ func (w *WSL) maybeGroupDecl(stmt *ast.DeclStmt, cursor *Cursor) bool {
 		return false
 	}
 
+	// We add a diagnostic to every subsequent statement to properly represent
+	// the violations. Duplicate fixes for the same range is fine.
 	for _, n := range reportNodes {
 		w.addErrorWithMessageAndFix(
 			n.Pos(),
@@ -1161,6 +1133,34 @@ func (w *WSL) addErrorWithMessageAndFix(report, start, end token.Pos, message st
 	})
 
 	w.issues[report] = iss
+}
+
+func asGenDeclWithValueSpecs(n ast.Node) *ast.GenDecl {
+	decl, ok := n.(*ast.DeclStmt)
+	if !ok {
+		return nil
+	}
+
+	genDecl, ok := decl.Decl.(*ast.GenDecl)
+	if !ok {
+		return nil
+	}
+
+	for _, spec := range genDecl.Specs {
+		// We only care about value specs and not type specs or import
+		// specs. We will never see any import specs but type specs we just
+		// separate with an empty line as usual.
+		valueSpec, ok := spec.(*ast.ValueSpec)
+		if !ok {
+			return nil
+		}
+
+		if valueSpec.Doc != nil || valueSpec.Comment != nil {
+			return nil
+		}
+	}
+
+	return genDecl
 }
 
 func hasIntersection(a, b ast.Node) bool {
