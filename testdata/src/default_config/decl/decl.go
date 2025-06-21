@@ -98,3 +98,12 @@ func fn8() {
 	var h = 8
 	// Comment after
 }
+
+func fn9() {
+	type S1 struct {
+		N int
+	}
+	type S2 struct { // want `missing whitespace above this line \(never cuddle decl\)`
+		N int
+	}
+}
