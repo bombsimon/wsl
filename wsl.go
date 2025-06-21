@@ -33,20 +33,22 @@ type issue struct {
 }
 
 type WSL struct {
-	file     *ast.File
-	fset     *token.FileSet
-	typeInfo *types.Info
-	issues   map[token.Pos]issue
-	config   *Configuration
+	file         *ast.File
+	fset         *token.FileSet
+	typeInfo     *types.Info
+	issues       map[token.Pos]issue
+	config       *Configuration
+	groupedDecls map[token.Pos]struct{}
 }
 
 func New(file *ast.File, pass *analysis.Pass, cfg *Configuration) *WSL {
 	return &WSL{
-		fset:     pass.Fset,
-		file:     file,
-		typeInfo: pass.TypesInfo,
-		issues:   make(map[token.Pos]issue),
-		config:   cfg,
+		fset:         pass.Fset,
+		file:         file,
+		typeInfo:     pass.TypesInfo,
+		issues:       make(map[token.Pos]issue),
+		config:       cfg,
+		groupedDecls: make(map[token.Pos]struct{}),
 	}
 }
 
@@ -222,15 +224,14 @@ func (w *WSL) checkCuddlingMaxAllowed(
 	cursor *Cursor,
 	maxAllowedStatements int,
 ) {
-	var previousNode ast.Node
+	previousNode := cursor.PreviousNode()
 
-	resetCursor := cursor.Save()
-
-	if cursor.Previous() {
-		previousNode = cursor.Stmt()
+	if previousNode != nil {
+		if _, ok := w.groupedDecls[previousNode.End()]; ok {
+			w.addErrorTooManyStatements(cursor.Stmt().Pos(), cursor.checkType)
+			return
+		}
 	}
-
-	resetCursor()
 
 	numStmtsAbove := w.numberOfStatementsAbove(cursor)
 	previousIdents := identsFromNode(previousNode, true)
@@ -987,6 +988,8 @@ func (w *WSL) maybeGroupDecl(stmt *ast.DeclStmt, cursor *Cursor) bool {
 	// We add a diagnostic to every subsequent statement to properly represent
 	// the violations. Duplicate fixes for the same range is fine.
 	for _, n := range reportNodes {
+		w.groupedDecls[n.End()] = struct{}{}
+
 		w.addErrorWithMessageAndFix(
 			n.Pos(),
 			firstNode.Pos(),

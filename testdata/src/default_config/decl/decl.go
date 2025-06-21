@@ -119,3 +119,21 @@ func fn10() {
 	var e string = "string"
 	f := 3 // want `missing whitespace above this line \(invalid statement above assign\)`
 }
+
+func fn11() {
+ 	// want +2 `missing whitespace above this line \(never cuddle decl\)`
+	var a int
+	var b int
+	if b > 0 { // want `missing whitespace above this line \(too many statements above if\)`
+		_ = 1
+	}
+}
+
+func fn12() {
+	// want +2 `missing whitespace above this line \(never cuddle decl\)`
+	var a int
+	var b int // Split by comma
+	if b > 0 {
+		_ = 1
+	}
+}
