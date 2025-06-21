@@ -110,8 +110,8 @@ func fn8() {
  	// want +3 `missing whitespace above this line \(never cuddle decl\)`
 	// Comment above
 	var (
-	    g = 7
-	    h = 8
+		g = 7
+		h = 8
 	)
 	// Comment after
 }
@@ -124,4 +124,20 @@ func fn9() {
 	type S2 struct { // want `missing whitespace above this line \(never cuddle decl\)`
 		N int
 	}
+}
+
+func fn10() {
+ 	// want +5 `missing whitespace above this line \(never cuddle decl\)`
+ 	// want +5 `missing whitespace above this line \(never cuddle decl\)`
+ 	// want +5 `missing whitespace above this line \(never cuddle decl\)`
+	a := 1
+	b := 2
+
+	var (
+		c int
+		d        = "string"
+		e string = "string"
+	)
+
+	f := 3 // want `missing whitespace above this line \(invalid statement above assign\)`
 }

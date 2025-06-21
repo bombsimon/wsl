@@ -107,3 +107,15 @@ func fn9() {
 		N int
 	}
 }
+
+func fn10() {
+ 	// want +5 `missing whitespace above this line \(never cuddle decl\)`
+ 	// want +5 `missing whitespace above this line \(never cuddle decl\)`
+ 	// want +5 `missing whitespace above this line \(never cuddle decl\)`
+	a := 1
+	b := 2
+	var c int
+	var d = "string"
+	var e string = "string"
+	f := 3 // want `missing whitespace above this line \(invalid statement above assign\)`
+}
