@@ -1158,6 +1158,9 @@ func asGenDeclWithValueSpecs(n ast.Node) *ast.GenDecl {
 			return nil
 		}
 
+		// It's very hard to get comments right in the ast and with the current
+		// way the ast package works we simply don't support grouping at all if
+		// there are any comments related to the node.
 		if valueSpec.Doc != nil || valueSpec.Comment != nil {
 			return nil
 		}
