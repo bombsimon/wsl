@@ -1,8 +1,10 @@
 package wsl
 
 import (
+	"bytes"
 	"fmt"
 	"go/ast"
+	"go/format"
 	"go/token"
 	"go/types"
 	"slices"
@@ -19,6 +21,7 @@ const (
 type fixRange struct {
 	fixRangeStart token.Pos
 	fixRangeEnd   token.Pos
+	fix           []byte
 }
 
 type issue struct {
@@ -30,20 +33,22 @@ type issue struct {
 }
 
 type WSL struct {
-	file     *ast.File
-	fset     *token.FileSet
-	typeInfo *types.Info
-	issues   map[token.Pos]issue
-	config   *Configuration
+	file         *ast.File
+	fset         *token.FileSet
+	typeInfo     *types.Info
+	issues       map[token.Pos]issue
+	config       *Configuration
+	groupedDecls map[token.Pos]struct{}
 }
 
 func New(file *ast.File, pass *analysis.Pass, cfg *Configuration) *WSL {
 	return &WSL{
-		fset:     pass.Fset,
-		file:     file,
-		typeInfo: pass.TypesInfo,
-		issues:   make(map[token.Pos]issue),
-		config:   cfg,
+		fset:         pass.Fset,
+		file:         file,
+		typeInfo:     pass.TypesInfo,
+		issues:       make(map[token.Pos]issue),
+		config:       cfg,
+		groupedDecls: make(map[token.Pos]struct{}),
 	}
 }
 
@@ -219,15 +224,14 @@ func (w *WSL) checkCuddlingMaxAllowed(
 	cursor *Cursor,
 	maxAllowedStatements int,
 ) {
-	var previousNode ast.Node
+	previousNode := cursor.PreviousNode()
 
-	resetCursor := cursor.Save()
-
-	if cursor.Previous() {
-		previousNode = cursor.Stmt()
+	if previousNode != nil {
+		if _, ok := w.groupedDecls[previousNode.End()]; ok {
+			w.addErrorTooManyStatements(cursor.Stmt().Pos(), cursor.checkType)
+			return
+		}
 	}
-
-	resetCursor()
 
 	numStmtsAbove := w.numberOfStatementsAbove(cursor)
 	previousIdents := identsFromNode(previousNode, true)
@@ -475,6 +479,12 @@ func (w *WSL) checkDeclStmt(stmt *ast.DeclStmt, cursor *Cursor) {
 	cursor.SetChecker(CheckDecl)
 
 	if w.numberOfStatementsAbove(cursor) == 0 {
+		return
+	}
+
+	// Try to do smart grouping and if we succeed return, otherwise do
+	// line-by-line fixing.
+	if w.maybeGroupDecl(stmt, cursor) {
 		return
 	}
 
@@ -917,6 +927,81 @@ func (w *WSL) checkTrailingNewline(body *ast.BlockStmt) {
 	}
 }
 
+func (w *WSL) maybeGroupDecl(stmt *ast.DeclStmt, cursor *Cursor) bool {
+	firstNode := asGenDeclWithValueSpecs(cursor.PreviousNode())
+	if firstNode == nil {
+		return false
+	}
+
+	currentNode := asGenDeclWithValueSpecs(stmt)
+	if currentNode == nil {
+		return false
+	}
+
+	// Both are not same type, e.g. `const` or `var`
+	if firstNode.Tok != currentNode.Tok {
+		return false
+	}
+
+	group := &ast.GenDecl{
+		Tok:    firstNode.Tok,
+		Lparen: 1,
+		Specs:  firstNode.Specs,
+	}
+
+	group.Specs = append(group.Specs, currentNode.Specs...)
+
+	reportNodes := []ast.Node{currentNode}
+	lastNode := currentNode
+
+	for {
+		nextPeeked := cursor.NextNode()
+		if nextPeeked == nil {
+			break
+		}
+
+		if w.lineFor(lastNode.End()) < w.lineFor(nextPeeked.Pos())-1 {
+			break
+		}
+
+		nextNode := asGenDeclWithValueSpecs(nextPeeked)
+		if nextNode == nil {
+			break
+		}
+
+		if nextNode.Tok != firstNode.Tok {
+			break
+		}
+
+		cursor.Next()
+
+		group.Specs = append(group.Specs, nextNode.Specs...)
+		reportNodes = append(reportNodes, nextNode)
+		lastNode = nextNode
+	}
+
+	var buf bytes.Buffer
+	if err := format.Node(&buf, token.NewFileSet(), group); err != nil {
+		return false
+	}
+
+	// We add a diagnostic to every subsequent statement to properly represent
+	// the violations. Duplicate fixes for the same range is fine.
+	for _, n := range reportNodes {
+		w.groupedDecls[n.End()] = struct{}{}
+
+		w.addErrorWithMessageAndFix(
+			n.Pos(),
+			firstNode.Pos(),
+			lastNode.End(),
+			fmt.Sprintf("%s (never cuddle %s)", messageMissingWhitespaceAbove, CheckDecl),
+			buf.Bytes(),
+		)
+	}
+
+	return true
+}
+
 func (w *WSL) maybeCheckBlock(
 	node ast.Node,
 	blockStmt *ast.BlockStmt,
@@ -1032,6 +1117,10 @@ func (w *WSL) addError(report, start, end token.Pos, message string, ct CheckTyp
 }
 
 func (w *WSL) addErrorWithMessage(report, start, end token.Pos, message string) {
+	w.addErrorWithMessageAndFix(report, start, end, message, []byte("\n"))
+}
+
+func (w *WSL) addErrorWithMessageAndFix(report, start, end token.Pos, message string, fix []byte) {
 	iss, ok := w.issues[report]
 	if !ok {
 		iss = issue{
@@ -1043,9 +1132,41 @@ func (w *WSL) addErrorWithMessage(report, start, end token.Pos, message string) 
 	iss.fixRanges = append(iss.fixRanges, fixRange{
 		fixRangeStart: start,
 		fixRangeEnd:   end,
+		fix:           fix,
 	})
 
 	w.issues[report] = iss
+}
+
+func asGenDeclWithValueSpecs(n ast.Node) *ast.GenDecl {
+	decl, ok := n.(*ast.DeclStmt)
+	if !ok {
+		return nil
+	}
+
+	genDecl, ok := decl.Decl.(*ast.GenDecl)
+	if !ok {
+		return nil
+	}
+
+	for _, spec := range genDecl.Specs {
+		// We only care about value specs and not type specs or import
+		// specs. We will never see any import specs but type specs we just
+		// separate with an empty line as usual.
+		valueSpec, ok := spec.(*ast.ValueSpec)
+		if !ok {
+			return nil
+		}
+
+		// It's very hard to get comments right in the ast and with the current
+		// way the ast package works we simply don't support grouping at all if
+		// there are any comments related to the node.
+		if valueSpec.Doc != nil || valueSpec.Comment != nil {
+			return nil
+		}
+	}
+
+	return genDecl
 }
 
 func hasIntersection(a, b ast.Node) bool {
