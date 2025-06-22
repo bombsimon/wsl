@@ -132,7 +132,7 @@ func fn11() {
 func fn12() {
 	// want +2 `missing whitespace above this line \(never cuddle decl\)`
 	var a int
-	var b int // Split by comma
+	var b int // Not grouped due to this comment
 	if b > 0 {
 		_ = 1
 	}
