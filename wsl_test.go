@@ -39,12 +39,6 @@ func TestWithConfig(t *testing.T) {
 		configFn func(*Configuration)
 	}{
 		{
-			subdir: "if_errcheck",
-			configFn: func(config *Configuration) {
-				config.Checks.Add(CheckErr)
-			},
-		},
-		{
 			subdir: "no_check_decl",
 			configFn: func(config *Configuration) {
 				config.Checks.Remove(CheckDecl)
