@@ -533,27 +533,55 @@ func (w *WSL) checkError(
 	previousIdents []*ast.Ident,
 	cursor *Cursor,
 ) {
+	if _, ok := w.config.Checks[CheckErr]; !ok {
+		return
+	}
+
 	defer cursor.Save()()
 
 	if _, ok := ifStmt.(*ast.IfStmt); !ok {
 		return
 	}
 
-	if _, ok := w.config.Checks[CheckErr]; !ok {
+	// Previous node must be assign or decl where the error was actually
+	// defined.
+	_, isAssign := previousNode.(*ast.AssignStmt)
+	_, isDecl := previousNode.(*ast.DeclStmt)
+
+	if !isAssign && !isDecl {
 		return
 	}
 
-	cursor.SetChecker(CheckErr)
-
+	// If there are no statements above or the statement above doesn't contain
+	// any idents there can't be any error to cuddle.
 	if stmtsAbove > 0 || len(previousIdents) == 0 {
 		return
 	}
 
+	// Ensure the previous node has at least one variable implementing the error
+	// interface.
 	if !slices.ContainsFunc(previousIdents, func(ident *ast.Ident) bool {
 		return w.implementsErr(ident)
 	}) {
 		return
 	}
+
+	// Ensure at least one variable from the previous node is used in the if
+	// statement.
+	ifIdents := identsFromNode(ifStmt, true)
+	if len(identIntersection(ifIdents, previousIdents)) == 0 {
+		return
+	}
+
+	// And that at least one ident in the if statement implements the error
+	// interface.
+	if !slices.ContainsFunc(ifIdents, func(ident *ast.Ident) bool {
+		return w.implementsErr(ident)
+	}) {
+		return
+	}
+
+	cursor.SetChecker(CheckErr)
 
 	previousNodeEnd := previousNode.End()
 
@@ -663,6 +691,16 @@ func (w *WSL) checkIf(stmt *ast.IfStmt, cursor *Cursor, isElse bool) {
 	if _, ok := w.config.Checks[CheckIf]; !isElse && ok {
 		cursor.SetChecker(CheckIf)
 		w.checkCuddlingBlock(stmt, stmt.Body.List, []*ast.Ident{}, cursor, 1)
+	} else if _, ok := w.config.Checks[CheckErr]; !isElse && ok {
+		previousNode := cursor.PreviousNode()
+
+		w.checkError(
+			w.numberOfStatementsAbove(cursor),
+			stmt,
+			previousNode,
+			identsFromNode(previousNode, true),
+			cursor,
+		)
 	}
 }
 
