@@ -6,7 +6,7 @@
 `wsl` (**w**hite**s**pace **l**inter) is a linter that wants you to use empty
 lines to separate grouping of different types to increase readability. There are
 also a few places where it encourages you to _remove_ whitespaces which is at
-the start and the end of blocks.
+the start and the end of blocks or between assigning and error checking.
 
 ## Checks and configuration
 
@@ -70,7 +70,7 @@ For more details and examples, see [CHECKS](CHECKS.md).
   re-assigning of existing ones
 - ❌ **assign-expr** - Don't allow assignments to be cuddled with expressions,
   e.g. function calls
-- ❌ **err** - Error checking must follow immediately after the error variable
+- ✅ **err** - Error checking must follow immediately after the error variable
   is assigned
 - ✅ **leading-whitespace** - Disallow leading empty lines in blocks
 - ✅ **trailing-whitespace** - Disallow trailing empty lines in blocks
@@ -132,10 +132,10 @@ This is an exhaustive, default, configuration for `wsl` in `golangci-lint`.
 linters:
   default: none
   enable:
-    - wsl
+    - wsl_v5
 
   settings:
-    wsl:
+    wsl_v5:
       allow-first-in-block: true
       allow-whole-block: false
       branch-max-lines: 2
@@ -147,6 +147,7 @@ linters:
         - branch
         - decl
         - defer
+        - err
         - expr
         - for
         - go
@@ -164,7 +165,6 @@ linters:
       disable:
         - assign-exclusive
         - assign-expr
-        - err
 ```
 
 ## See also

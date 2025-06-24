@@ -188,6 +188,7 @@ func DefaultChecks() CheckSet {
 		CheckBranch:             {},
 		CheckDecl:               {},
 		CheckDefer:              {},
+		CheckErr:                {},
 		CheckExpr:               {},
 		CheckFor:                {},
 		CheckGo:                 {},
@@ -209,7 +210,6 @@ func AllChecks() CheckSet {
 	c := DefaultChecks()
 	c.Add(CheckAssignExclusive)
 	c.Add(CheckAssignExpr)
-	c.Add(CheckErr)
 
 	return c
 }
