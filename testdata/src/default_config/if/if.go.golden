@@ -27,8 +27,7 @@ func fn2() {
 }
 
 func fn3() {
-	err := errors.New("error")
-
+	err := errors.New("error") // want +1 `unnecessary whitespace \(err\)`
 	if err != nil {
 		panic(err)
 	}
