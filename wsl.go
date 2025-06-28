@@ -402,6 +402,8 @@ func (w *WSL) checkAssign(stmt *ast.AssignStmt, cursor *Cursor) {
 		for _, expr := range stmt.Rhs {
 			w.checkExpr(expr, cursor)
 		}
+
+		w.checkAppend(stmt, cursor)
 	}()
 
 	if _, ok := w.config.Checks[CheckAssign]; !ok {
@@ -411,7 +413,6 @@ func (w *WSL) checkAssign(stmt *ast.AssignStmt, cursor *Cursor) {
 	cursor.SetChecker(CheckAssign)
 
 	w.checkCuddlingWithoutIntersection(stmt, cursor)
-	w.checkAppend(stmt, cursor)
 }
 
 func (w *WSL) checkAppend(stmt *ast.AssignStmt, cursor *Cursor) {
@@ -444,7 +445,7 @@ func (w *WSL) checkAppend(stmt *ast.AssignStmt, cursor *Cursor) {
 	}
 
 	if !hasIntersection(appendNode, previousNode) {
-		w.addErrorNoIntersection(stmt.Pos(), cursor.checkType)
+		w.addErrorNoIntersection(stmt.Pos(), CheckAppend)
 	}
 }
 
