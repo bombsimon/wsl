@@ -29,7 +29,7 @@ func strictAppend() {
 	x := "c"
 	s = append(s, x)
 	y := "e"
-	s = append(s, "d") // want `missing whitespace above this line \(no shared variables above assign\)`
+	s = append(s, "d") // want `missing whitespace above this line \(no shared variables above append\)`
 	s = append(s, y)
 }
 
