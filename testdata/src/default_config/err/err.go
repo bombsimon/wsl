@@ -8,6 +8,12 @@ func fn1() {
 	if err != nil {
 		panic(err)
 	}
+
+	err2 := errors.New("y") // want +1 `unnecessary whitespace \(err\)`
+
+	if err2 == nil {
+		panic(err)
+	}
 }
 
 func fn11() { // want +2 `unnecessary whitespace \(err\)`
@@ -105,9 +111,10 @@ func fn7() {
 }
 
 func fn8() {
-	var err = errors.New("x") // want +1 `unnecessary whitespace \(err\)`
+	aErr := errors.New("a")
+	bErr := errors.New("b")
 
-	if err != nil {
-		panic(err)
+	if aErr != nil && bErr != nil {
+		panic(aErr)
 	}
 }
