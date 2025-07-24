@@ -1,0 +1,18 @@
+---
+name: Check version constant matches tag
+
+on:
+  push:
+    tags:
+      - "v*" # Trigger only on tag pushes
+
+jobs:
+  version-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check version constant
+        run: .github/scripts/check-version.sh "${GITHUB_REF#refs/tags/}"
