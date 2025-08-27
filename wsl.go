@@ -145,6 +145,9 @@ func (w *WSL) checkExpr(expr ast.Expr, cursor *Cursor) {
 		for _, e := range s.Elts {
 			w.checkExpr(e, cursor)
 		}
+	// Key: Value, e.g. in T{Key: Value}
+	case *ast.KeyValueExpr:
+		w.checkExpr(s.Value, cursor)
 	case *ast.ArrayType,
 		*ast.BasicLit,
 		*ast.BinaryExpr,
@@ -153,7 +156,6 @@ func (w *WSL) checkExpr(expr ast.Expr, cursor *Cursor) {
 		*ast.Ident,
 		*ast.IndexExpr,
 		*ast.IndexListExpr,
-		*ast.KeyValueExpr,
 		*ast.MapType,
 		*ast.ParenExpr,
 		*ast.SelectorExpr,
