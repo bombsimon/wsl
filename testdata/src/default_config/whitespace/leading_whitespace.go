@@ -157,11 +157,20 @@ func fn10() {
 }
 
 func fn11() {
+	aBool := func(f func() bool) bool {
+		return f()
+	}
+
 	type T struct {
+		B  bool
 		Fn func()
 	}
 
 	t := T{
+		B: aBool(func() bool { // want +1 `unnecessary whitespace \(leading-whitespace\)`
+
+			return true
+		}),
 		Fn: func() { // want +1 `unnecessary whitespace \(leading-whitespace\)`
 
 			fmt.Println("nok")
