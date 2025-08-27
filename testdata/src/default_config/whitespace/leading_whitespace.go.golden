@@ -134,3 +134,17 @@ func fn10() {
 		fmt.Println("all")
 	}
 }
+
+func fn11() {
+	type T struct {
+		Fn func()
+	}
+
+	t := T{
+		Fn: func() { // want +1 `unnecessary whitespace \(leading-whitespace\)`
+			fmt.Println("nok")
+		},
+	}
+
+	_ = t
+}
