@@ -179,3 +179,42 @@ func fn11() {
 
 	_ = t
 }
+
+func fn12() {
+	// Assorted weird anonymous functions inside subexpressions,
+	// unlikely to be encountered in practice.
+
+	// parenthesized expression
+	_ = (func() bool { // want +1 `unnecessary whitespace \(leading-whitespace\)`
+
+		return true
+	})
+
+	// binary op
+	_ = 1 + func() int { // want +1 `unnecessary whitespace \(leading-whitespace\)`
+
+		return 123
+	}()
+
+	// type assertion expression
+	_ = func() interface{} { // want +1 `unnecessary whitespace \(leading-whitespace\)`
+
+		return 2
+	}().(int)
+
+	// test for proper FuncType traversal in type assertion below
+	var f any = func() { // want +1 `unnecessary whitespace \(leading-whitespace\)`
+
+		panic("TODO")
+	}
+
+	_ = f.(func())
+
+	var arr [10]byte
+
+	// slice expression
+	_ = b[func() int { // want +1 `unnecessary whitespace \(leading-whitespace\)`
+
+		return 5
+	}()]
+}
