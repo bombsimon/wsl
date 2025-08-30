@@ -278,6 +278,10 @@ func (w *WSL) checkCuddlingMaxAllowed(
 	cursor *Cursor,
 	maxAllowedStatements int,
 ) {
+	if _, ok := cursor.Stmt().(*ast.LabeledStmt); ok {
+		return
+	}
+
 	previousNode := cursor.PreviousNode()
 
 	if previousNode != nil {
@@ -366,6 +370,10 @@ func (w *WSL) checkCuddlingMaxAllowed(
 
 func (w *WSL) checkCuddlingWithoutIntersection(stmt ast.Node, cursor *Cursor) {
 	if w.numberOfStatementsAbove(cursor) == 0 {
+		return
+	}
+
+	if _, ok := cursor.Stmt().(*ast.LabeledStmt); ok {
 		return
 	}
 
@@ -589,6 +597,10 @@ func (w *WSL) checkError(
 	cursor *Cursor,
 ) {
 	if _, ok := w.config.Checks[CheckErr]; !ok {
+		return
+	}
+
+	if _, ok := cursor.Stmt().(*ast.LabeledStmt); ok {
 		return
 	}
 
