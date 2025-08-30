@@ -115,3 +115,12 @@ func fn8() {
 		panic(aErr)
 	}
 }
+
+func fn9() {
+	err := errors.New("x")
+
+LABEL:
+	if err != nil {
+		panic(err)
+	}
+}

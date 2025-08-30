@@ -2,6 +2,17 @@ package testpkg
 
 import "fmt"
 
+func fn() {
+LABEL:
+	if true {
+		fmt.Println("")
+		fmt.Println("")
+		fmt.Println("")
+		fmt.Println("")
+		break // want `missing whitespace above this line \(too many lines above branch\)`
+	}
+}
+
 func fn1() {
 	for i := range make([]int, 2) {
 		if i == 1 {
@@ -38,13 +49,26 @@ L3: // want `missing whitespace above this line \(never cuddle label\)`
 	_ = 1
 }
 
-func fn() {
-LABEL:
-	if true {
-		fmt.Println("")
-		fmt.Println("")
-		fmt.Println("")
-		fmt.Println("")
-		break // want `missing whitespace above this line \(too many lines above branch\)`
+func fn4() {
+	if true { // want +1 `unnecessary whitespace \(leading-whitespace\)`
+
+	LABEL:
+		panic(err)
 	}
+}
+
+func fn5() {
+	a := 1
+LABEL: // want `missing whitespace above this line \(never cuddle label\)`
+	if true {
+	}
+}
+
+func fn6() {
+	i := 0
+	i++
+ADD: // want `missing whitespace above this line \(never cuddle label\)`
+	i++
+SUB: // want `missing whitespace above this line \(never cuddle label\)`
+	i--
 }
