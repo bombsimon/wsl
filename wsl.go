@@ -297,7 +297,7 @@ func (w *WSL) checkCuddlingMaxAllowed(
 	// If we don't have any statements above, we only care about potential error
 	// cuddling (for if statements) so check that.
 	if numStmtsAbove == 0 {
-		w.checkError(numStmtsAbove, stmt, previousNode, previousIdents, cursor)
+		w.checkError(numStmtsAbove, stmt, previousNode, cursor)
 		return
 	}
 
@@ -593,7 +593,6 @@ func (w *WSL) checkError(
 	stmtsAbove int,
 	ifStmt ast.Node,
 	previousNode ast.Node,
-	previousIdents []*ast.Ident,
 	cursor *Cursor,
 ) {
 	if _, ok := w.config.Checks[CheckErr]; !ok {
@@ -609,6 +608,18 @@ func (w *WSL) checkError(
 	// It must be an if statement
 	stmt, ok := ifStmt.(*ast.IfStmt)
 	if !ok {
+		return
+	}
+
+	// If we actually have statements above we can't possibly need to remove any
+	// empty lines.
+	if stmtsAbove > 0 {
+		return
+	}
+
+	// If the error checking has an init condition (e.g. if err := f();) we
+	// don't want to check cuddling since the error is now assigned on this row.
+	if stmt.Init != nil {
 		return
 	}
 
@@ -643,22 +654,25 @@ func (w *WSL) checkError(
 		return
 	}
 
-	// Previous node must be assign or decl where the error was actually
-	// defined.
-	_, isAssign := previousNode.(*ast.AssignStmt)
-	_, isDecl := previousNode.(*ast.DeclStmt)
-
-	if !isAssign && !isDecl {
-		return
+	previousIdents := []*ast.Ident{}
+	if assign, ok := previousNode.(*ast.AssignStmt); ok {
+		for _, lhs := range assign.Lhs {
+			previousIdents = append(previousIdents, identsFromNode(lhs, true)...)
+		}
 	}
 
-	// If there are no statements above or the statement above doesn't contain
-	// any idents there can't be any error to cuddle.
-	if stmtsAbove > 0 || len(previousIdents) == 0 {
-		return
+	if decl, ok := previousNode.(*ast.DeclStmt); ok {
+		if genDecl, ok := decl.Decl.(*ast.GenDecl); ok {
+			for _, spec := range genDecl.Specs {
+				if vs, ok := spec.(*ast.ValueSpec); ok {
+					previousIdents = append(previousIdents, vs.Names...)
+				}
+			}
+		}
 	}
 
-	// Ensure that the error was defined on the line above.
+	// Ensure that the error checked on this line was assigned or declared in
+	// the previous statement.
 	if len(identIntersection([]*ast.Ident{xIdent}, previousIdents)) == 0 {
 		return
 	}
@@ -780,7 +794,6 @@ func (w *WSL) checkIf(stmt *ast.IfStmt, cursor *Cursor, isElse bool) {
 			w.numberOfStatementsAbove(cursor),
 			stmt,
 			previousNode,
-			identsFromNode(previousNode, true),
 			cursor,
 		)
 	}
