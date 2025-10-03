@@ -140,17 +140,21 @@ func fn10() error {
 	if err := aFunctionThatCanFail(); err != nil {
 		return withContext(err)
 	}
+
+	return nil
 }
 
 func fn11() error {
 	err := fmt.Errorf("some error, %w", err)
 
 	if err := aFunctionThatCanFail(); err != nil {
-		return withContext(err)
+		return err
 	}
+
+	return nil
 }
 
-func fn12() error {
+func fn12(err error) error {
 	withContext := func(err error) error {
 		return fmt.Errorf("some error, %w", err)
 	}
@@ -158,6 +162,8 @@ func fn12() error {
 	if err != nil {
 		return withContext(err)
 	}
+
+	return nil
 }
 
 func fn13() error {
@@ -166,11 +172,13 @@ func fn13() error {
 	}
 
 	if err != nil {
-		return withContext(err)
+		return err
 	}
+
+	return nil
 }
 
-func fn14() error {
+func fn14(err error) error {
 	var withContext = func(err error) error {
 		return fmt.Errorf("some error, %w", err)
 	}
@@ -178,21 +186,28 @@ func fn14() error {
 	if err != nil {
 		return withContext(err)
 	}
+
+	return nil
 }
 
-func fn15() error {
+func fn15(err error) error {
 	withContext := func(err error) error {
 		return fmt.Errorf("some error, %w", err)
 	}(nil) // want +1 `unnecessary whitespace \(err\)`
 	if withContext != nil {
 		return withContext(err)
 	}
+
+	return nil
 }
 
 func fn16(err error) error {
 	var notErr = fmt.Errorf("some error, %w", err)
 
 	if err != nil {
-		return withContext(notErr)
+		return notErr
 	}
+
+	return nil
 }
+
