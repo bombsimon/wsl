@@ -29,7 +29,7 @@ func fn1(n int) {
 
 func fn2(ctx context.Context, ch1 chan struct{}) {
 	select {
-	case ctx.Done():
+	case <-ctx.Done():
 		_ = 1
 		_ = 1
 		_ = 1 // want `missing whitespace below this line \(case-trailing-newline\)`

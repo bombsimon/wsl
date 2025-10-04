@@ -9,8 +9,7 @@ func fn1() {
 		panic(1)
 	}
 
-	_ = a
-	_ = b
+	_, _ = a, b
 }
 
 func fn2() {
@@ -20,8 +19,7 @@ func fn2() {
 		panic(1)
 	}
 
-	_ = a
-	_ = b
+	_, _ = a, b
 }
 
 func fn3() {
@@ -43,14 +41,14 @@ func fn4() {
 
 func fn5(m any, k string) string {
 	v := m.(map[string]string)
-	if r, ok := m[k]; ok {
+	if r, ok := v[k]; ok {
 		return r
 	}
 
 	return k
 }
 
-func fn6() {
+func allIfBranches() {
 	if true {
 		_ = 1
 		_ = 2

@@ -14,8 +14,6 @@ func Fn() T {
 
 func (*T) Close() {}
 
-func Fn() {}
-
 func fn() {
 	a := Fn()
 	b := Fn()
@@ -47,7 +45,7 @@ func fn() {
 	c := true
 	defer func(b bool) { // want `missing whitespace above this line \(no shared variables above defer\)`
 		fmt.Printf("%v", b)
-	}()
+	}(false)
 
 	_ = c
 }

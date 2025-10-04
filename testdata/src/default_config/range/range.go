@@ -7,8 +7,7 @@ func fn1() {
 		panic(1)
 	}
 
-	_ = a
-	_ = b
+	_, _ = a, b
 }
 
 func fn2() {
@@ -18,8 +17,7 @@ func fn2() {
 		panic(1)
 	}
 
-	_ = a
-	_ = b
+	_, _ = a, b
 }
 
 func fn3() {

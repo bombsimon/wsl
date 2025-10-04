@@ -1,5 +1,12 @@
 package testpkg
 
+import (
+	"context"
+	"fmt"
+)
+
+func Fn(func ()) {}
+
 func assign() {
 	var a = 1
 	b := 1
@@ -9,14 +16,14 @@ func assign() {
 }
 
 func branch() {
-	for i := range(make(int[], 2)) {
+	for range make([]int, 2) {
 		_ = 1
 		_ = 1
 		_ = 1
 		continue
 	}
 
-	for i := range(make(int[], 2)) {
+	for range make([]int, 2) {
 		_ = 1
 		_ = 1
 		_ = 1
@@ -34,9 +41,11 @@ func decl() {
 	_ = c
 }
 
-func defer() {
+func deferFunc() {
 	d := 1
 	defer func() {}()
+
+	_ = d
 }
 
 func expr() {
@@ -45,9 +54,11 @@ func expr() {
 	fmt.Println("")
 	c := 3
 	d := 4
+
+	_, _, _, _ = a, b, c, d
 }
 
-func for() {
+func forLoop() {
 	a := 1
 	b := 2
 	for i := 0; i < b; i++ {
@@ -65,7 +76,7 @@ func for() {
 	_ = b
 }
 
-func go() {
+func goRoutine() {
 	f1 := func() {}
 
 	f2 := func() {}
@@ -73,9 +84,11 @@ func go() {
 
 	f3 := func() {}
 	go Fn(f1)
+
+	_, _, _ = f1, f2, f3
 }
 
-func if() {
+func ifStmt() {
 	a := 1
 	b := 2
 	if b == 2 {
@@ -101,9 +114,13 @@ L2:
 	if true {
 		_ = 1
 	}
+
+	goto L1
+
+	goto L2
 }
 
-func range() {
+func rangeLoop() {
 	a := []int{}
 	b := []int{}
 	for range b {
@@ -114,7 +131,7 @@ func range() {
 	_ = b
 }
 
-func return() {
+func returnStmt() int {
 	if true {
 		_ = 1
 		_ = 2
@@ -123,10 +140,10 @@ func return() {
 	return 1
 }
 
-func select(ctx context.Context, ch1 chan struct{}) {
+func selectStmt(ctx context.Context, ch1 chan struct{}) {
 	x := 1
 	select {
-	case ctx.Done():
+	case <-ctx.Done():
 		_ = 1
 	case <-ch1:
 		_ = 1
@@ -138,9 +155,11 @@ func select(ctx context.Context, ch1 chan struct{}) {
 func send(ch chan int) {
 	a := 1
 	ch <- 1
+
+	_ = a
 }
 
-func switch() {
+func switchStmt() {
 	a := 1
 	b := 2
 	switch b {
@@ -164,7 +183,7 @@ func typeSwitch() {
 }
 
 func whitespace() {
-	
+
 	if true {
 
 		_ = 1

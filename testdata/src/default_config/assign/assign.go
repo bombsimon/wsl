@@ -49,13 +49,17 @@ func assignAndCall() {
 	t1.Fn()
 	x := t1.Fn()
 	t1.Fn()
+
+	_, _ = t2, x
 }
 
 func closureInCall() {
 	buf := &bytes.Buffer{}
-	err := Fnc("buf", func() error {
+	err := FnC("buf", func() error {
 		return json.NewEncoder(buf).Encode("x")
 	})
+
+	_ = err
 }
 
 func assignAfterBlock() {
@@ -69,4 +73,6 @@ func assignAfterBlock() {
 func decl() {
 	var x string
 	y := "" // want `missing whitespace above this line \(invalid statement above assign\)`
+
+	_, _ = x, y
 }

@@ -49,7 +49,7 @@ func fn2() {
 	}
 }
 
-func fn3(a, b, c itn) {
+func fn3(a, b, c int) {
 	a = 1
 	for range make([]int, 10) {
 		if true {

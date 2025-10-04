@@ -53,11 +53,5 @@ func Go() {
 	go t5()
 	go t4()
 
-	_ = t1
-	_ = t2
-	_ = t3
-	_ = t4
-	_ = t5
-	_ = multiCuddle1
-	_ = multiCuddle2
+	_, _, _, _, _, _, _ = t1, t2, t3, t4, t5, multiCuddle1, multiCuddle2
 }

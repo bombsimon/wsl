@@ -1,5 +1,9 @@
 package testpkg
 
+func someFn(_ int) int {
+	return 1
+}
+
 func fn1(ch chan int) {
 	a := 1
 	ch <- a
@@ -19,4 +23,6 @@ func fn1(ch chan int) {
 	ch <- func() int {
 		return e
 	}()
+
+	_ = d
 }

@@ -1,6 +1,6 @@
 package testpkg
 
-func fn1() {
+func keepCuddledVar() {
 	a := 1
 
 	b := 2 // want `missing whitespace above this line \(too many statements above for\)`
@@ -8,11 +8,10 @@ func fn1() {
 		panic(1)
 	}
 
-	_ = a
-	_ = b
+	_, _ = a, b
 }
 
-func fn2() {
+func keepNone() {
 	b := 2
 	a := 1
 
@@ -20,11 +19,10 @@ func fn2() {
 		panic(1)
 	}
 
-	_ = a
-	_ = b
+	_, _ = a, b
 }
 
-func fn3() {
+func separateBlocks() {
 	for i := 0; i < 1; i++ {
 		panic("")
 	}
