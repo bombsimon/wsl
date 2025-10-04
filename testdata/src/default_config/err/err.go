@@ -1,6 +1,9 @@
 package testpkg
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 func fn1() {
 	err := errors.New("x") // want +1 `unnecessary whitespace \(err\)`
@@ -126,4 +129,88 @@ LABEL:
 	if err != nil {
 		panic(err)
 	}
+}
+
+func aFunctionThatCanFail() error {
+	return nil
+}
+
+func fn10() error {
+	withContext := func(err error) error {
+		return fmt.Errorf("some error, %w", err)
+	}
+
+	if err := aFunctionThatCanFail(); err != nil {
+		return withContext(err)
+	}
+
+	return nil
+}
+
+func fn11() error {
+	err := fmt.Errorf("some error, %w", err)
+
+	if err := aFunctionThatCanFail(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func fn12(err error) error {
+	withContext := func(err error) error {
+		return fmt.Errorf("some error, %w", err)
+	}
+
+	if err != nil {
+		return withContext(err)
+	}
+
+	return nil
+}
+
+func fn13() error {
+	err := func(err error) error {
+		return fmt.Errorf("some error, %w", err)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func fn14(err error) error {
+	var withContext = func(err error) error {
+		return fmt.Errorf("some error, %w", err)
+	}
+
+	if err != nil {
+		return withContext(err)
+	}
+
+	return nil
+}
+
+func fn15(err error) error {
+	withContext := func(err error) error {
+		return fmt.Errorf("some error, %w", err)
+	}(nil) // want +1 `unnecessary whitespace \(err\)`
+
+	if withContext != nil {
+		return withContext(err)
+	}
+
+	return nil
+}
+
+func fn16(err error) error {
+	var notErr = fmt.Errorf("some error, %w", err)
+
+	if err != nil {
+		return notErr
+	}
+
+	return nil
 }
