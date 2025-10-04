@@ -9,9 +9,7 @@ func fn() {
 	a = 4
 	b = 3
 
-	_ = a
-	_ = b
-	_ = c
+	_, _, _ = a, b, c
 }
 
 func fn2() {
@@ -21,10 +19,7 @@ func fn2() {
 	c := 3          // want `missing whitespace above this line \(invalid statement above assign\)`
 	d := 4
 
-	_ = a
-	_ = b
-	_ = c
-	_ = d
+	_, _, _, _ = a, b, c, d
 }
 
 func fn3() {
@@ -34,32 +29,36 @@ func fn3() {
 	c := 3 // want `missing whitespace above this line \(invalid statement above assign\)`
 	d := 4
 
-	_ = a
-	_ = b
-	_ = c
-	_ = d
+	_, _, _, _ = a, b, c, d
 }
 
-func fn4() {
+func fn4(ch chan struct{}) {
 	b := 2
 	<-ch // want `missing whitespace above this line \(no shared variables above expr\)`
+
+	_, _ = b, ch
 }
 
 func fn5() {
 	s := []string{
 		func() string { // want +1 `unnecessary whitespace \(leading-whitespace\)`
 
-			"a"
-		},
+			return "a"
+		}(),
 		"b",
 	}
+
+	_ = s
 }
 
-func issue153(b bool) {
+func Up(_ bool)  {}
+func Down(_ int) {}
+
+func issue153(autoheight int, b bool) {
 	for i := 0; i < 4; i++ {
 		fmt.Println()
 	}
-	Up(3) // want `missing whitespace above this line \(invalid statement above expr\)`
+	Up(true) // want `missing whitespace above this line \(invalid statement above expr\)`
 
 	if autoheight != 3 {
 		fmt.Printf("height should be 3 but is %d", autoheight)

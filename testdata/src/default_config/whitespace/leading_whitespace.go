@@ -2,53 +2,53 @@ package testpkg
 
 import "fmt"
 
-func Call(fn func()) func() {
+func CallLeading(fn func()) func() {
 	return fn
 }
 
-func fn0() { fmt.Println("Hello, World") }
+func oneliner() { fmt.Println("Hello, World") }
 
-func fn1() { // want +1 `unnecessary whitespace \(leading-whitespace\)`
+func leadingWhitespace() { // want +1 `unnecessary whitespace \(leading-whitespace\)`
 
 	fmt.Println("Hello, World")
 }
 
-func fn2() { // want +1 `unnecessary whitespace \(leading-whitespace\)`
+func leadingWhitespaceThenComment() { // want +1 `unnecessary whitespace \(leading-whitespace\)`
 
 	// Space before comment.
 	fmt.Println("Hello, World")
 }
 
-func fn3() { // want +2 `unnecessary whitespace \(leading-whitespace\)`
+func commentThenLeadingWhitespace() { // want +2 `unnecessary whitespace \(leading-whitespace\)`
 	// Space after comment
 
 	fmt.Println("Hello, World")
 }
 
-func fn4() {
+func noWhitespace() {
 	fmt.Println("Hello, World")
 }
 
-func fn5() {
+func leadingComment() {
 	// Comment without space before or after.
 	fmt.Println("Hello, World")
 }
 
-func fn51() {
+func multipleLeadingComments() {
 	// Comment with
 
 	// a newline between
 	_ = 1
 }
 
-func fn6() {
+func leadingIf() {
 	if true { // want +1 `unnecessary whitespace \(leading-whitespace\)`
 
 		_ = 1
 	}
 }
 
-func fn7() {
+func leadingElseElseIf() {
 	if true {
 		_ = 1
 	} else if true { // want +1 `unnecessary whitespace \(leading-whitespace\)`
@@ -60,7 +60,7 @@ func fn7() {
 	}
 }
 
-func fn8(a string, b any, s []string) { // want +1 `unnecessary whitespace \(leading-whitespace\)`
+func leadingFnAndIfChain(a string, b any, s []string) { // want +1 `unnecessary whitespace \(leading-whitespace\)`
 
 	if true { // want +1 `unnecessary whitespace \(leading-whitespace\)`
 
@@ -100,7 +100,7 @@ func fn8(a string, b any, s []string) { // want +1 `unnecessary whitespace \(lea
 		_ = 1
 	}
 
-	f2 := Call(func() { // want +1 `unnecessary whitespace \(leading-whitespace\)`
+	f2 := CallLeading(func() { // want +1 `unnecessary whitespace \(leading-whitespace\)`
 
 		_ = 1
 	})
@@ -109,8 +109,8 @@ func fn8(a string, b any, s []string) { // want +1 `unnecessary whitespace \(lea
 	_ = f2
 }
 
-func fn9() {
-	switch {
+func leadingSwitch() {
+	switch 1 {
 	case 1: // want +1 `unnecessary whitespace \(leading-whitespace\)`
 
 		_ = 1
@@ -127,7 +127,7 @@ func fn9() {
 	}
 }
 
-func fn10() {
+func leadingComplexCase() {
 	switch {
 	case true || false:
 		fmt.Println("ok")
@@ -156,7 +156,7 @@ func fn10() {
 	}
 }
 
-func fn11() {
+func leadingStructAssignment() {
 	aBool := func(f func() bool) bool {
 		return f()
 	}
@@ -180,7 +180,7 @@ func fn11() {
 	_ = t
 }
 
-func fn12() {
+func variousLeading() {
 	// Assorted weird anonymous functions inside subexpressions,
 	// unlikely to be encountered in practice.
 
@@ -213,7 +213,7 @@ func fn12() {
 	var arr [10]byte
 
 	// slice expression
-	_ = b[func() int { // want +1 `unnecessary whitespace \(leading-whitespace\)`
+	_ = arr[func() int { // want +1 `unnecessary whitespace \(leading-whitespace\)`
 
 		return 5
 	}()]

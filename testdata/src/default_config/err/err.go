@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-func fn1() {
+func errFoundForAnyName() {
 	err := errors.New("x") // want +1 `unnecessary whitespace \(err\)`
 
 	if err != nil {
@@ -19,15 +19,7 @@ func fn1() {
 	}
 }
 
-func fn11() { // want +2 `unnecessary whitespace \(err\)`
-	err := errors.New("x")
-
-	if err != nil {
-		panic(err)
-	}
-}
-
-func fn12() {
+func noReportsWithComment() {
 	err := errors.New("x")
 	// Some comment
 	if err != nil {
@@ -35,7 +27,7 @@ func fn12() {
 	}
 }
 
-func fn13() {
+func noReportsWithCommentAndWhitespace() {
 	err := errors.New("x")
 
 	// Some comment
@@ -44,7 +36,7 @@ func fn13() {
 	}
 }
 
-func fn2() {
+func multiAssignSplit() {
 	a := 1
 	err := errors.New("x") // want +1 `unnecessary whitespace \(err\)`
 
@@ -55,18 +47,7 @@ func fn2() {
 	_ = a
 }
 
-func fn21() {
-	a := 1 // want +2 `unnecessary whitespace \(err\)`
-	err := errors.New("x")
-
-	if err != nil {
-		panic(err)
-	}
-
-	_ = a
-}
-
-func fn3() {
+func alreadyCuddledErrReportsOther() {
 	a := 1
 	err := errors.New("x") // want `missing whitespace above this line \(too many statements above if\)`
 	if err != nil {
@@ -76,7 +57,7 @@ func fn3() {
 	_ = a
 }
 
-func fn4() {
+func noReportsForNonErrors() {
 	msg := "not an error"
 	err := &msg
 
@@ -85,19 +66,7 @@ func fn4() {
 	}
 }
 
-func fn5() {
-	err := errors.New("x") // want +1 `unnecessary whitespace \(err\)`
-
-	if err != nil {
-		panic(err)
-	}
-
-	if false {
-		_ = 1
-	}
-}
-
-func fn6() {
+func noReportsIfNotErrCheck() {
 	err := errors.New("x")
 
 	if false {
@@ -105,7 +74,7 @@ func fn6() {
 	}
 }
 
-func fn7() {
+func noReportsIfBoolCheck() {
 	err, ok := errors.New("x"), true
 
 	if !ok {
@@ -113,7 +82,7 @@ func fn7() {
 	}
 }
 
-func fn8() {
+func noReportsForMultipleErrors() {
 	aErr := errors.New("a")
 	bErr := errors.New("b")
 
@@ -122,20 +91,22 @@ func fn8() {
 	}
 }
 
-func fn9() {
+func noReportsForLabeledStatements() {
 	err := errors.New("x")
 
 LABEL:
 	if err != nil {
 		panic(err)
 	}
+
+	goto LABEL
 }
 
 func aFunctionThatCanFail() error {
 	return nil
 }
 
-func fn10() error {
+func noReportsForNonErrorAndErrWithInit() error {
 	withContext := func(err error) error {
 		return fmt.Errorf("some error, %w", err)
 	}
@@ -147,17 +118,17 @@ func fn10() error {
 	return nil
 }
 
-func fn11() error {
-	err := fmt.Errorf("some error, %w", err)
+func noReportsForErrWithInit(maybeErr error) error {
+	err := fmt.Errorf("some error, %w", maybeErr)
 
 	if err := aFunctionThatCanFail(); err != nil {
 		return err
 	}
 
-	return nil
+	return err
 }
 
-func fn12(err error) error {
+func noReportsForNoNError(err error) error {
 	withContext := func(err error) error {
 		return fmt.Errorf("some error, %w", err)
 	}
@@ -169,43 +140,31 @@ func fn12(err error) error {
 	return nil
 }
 
-func fn13() error {
+func noReportsForNonErrorWithErrName() error {
 	err := func(err error) error {
 		return fmt.Errorf("some error, %w", err)
 	}
 
 	if err != nil {
-		return err
+		return err(nil)
 	}
 
 	return nil
 }
 
-func fn14(err error) error {
-	var withContext = func(err error) error {
-		return fmt.Errorf("some error, %w", err)
-	}
-
-	if err != nil {
-		return withContext(err)
-	}
-
-	return nil
-}
-
-func fn15(err error) error {
+func complexErrAssignWithChecking(err error) error {
 	withContext := func(err error) error {
 		return fmt.Errorf("some error, %w", err)
 	}(nil) // want +1 `unnecessary whitespace \(err\)`
 
 	if withContext != nil {
-		return withContext(err)
+		return withContext
 	}
 
 	return nil
 }
 
-func fn16(err error) error {
+func notTheAssignedErrorChecked(err error) error {
 	var notErr = fmt.Errorf("some error, %w", err)
 
 	if err != nil {

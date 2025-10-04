@@ -2,96 +2,97 @@ package testpkg
 
 import "fmt"
 
-func fn1() {
-	for range []int{} {
-		if true {
-			fmt.Println("")
+func validCases() {
+START:
+	fmt.Println("start")
 
-			continue
+	switch 1 {
+	case 1:
+		for range []int{} {
+			if true {
+				fmt.Println("")
+
+				continue
+			}
+
+			if true {
+				fmt.Println("")
+				break
+			}
+
+			if true {
+				fmt.Println("")
+				continue
+			}
+
+			if true {
+				fmt.Println("")
+				goto START
+			}
+
+			if false {
+				fmt.Println("")
+				fmt.Println("")
+				fmt.Println("")
+
+				break
+			}
+
+			if false {
+				fmt.Println("")
+				fmt.Println("")
+				fmt.Println("")
+
+				continue
+			}
+
+			if false {
+				fmt.Println("")
+				fmt.Println("")
+				fmt.Println("")
+
+				goto START
+			}
 		}
 
-		if true {
-			fmt.Println("")
-			break
-		}
-
-		if true {
-			fmt.Println("")
-			continue
-		}
-
-		if true {
-			fmt.Println("")
-			fallthrough
-		}
-
-		if true {
-			fmt.Println("")
-			goto START
-		}
-
-		if false {
-			fmt.Println("")
-			fmt.Println("")
-			fmt.Println("")
-
-			break
-		}
-
-		if false {
-			fmt.Println("")
-			fmt.Println("")
-			fmt.Println("")
-
-			continue
-		}
-
-		if false {
-			fmt.Println("")
-			fmt.Println("")
-			fmt.Println("")
-
-			fallthrough
-		}
-
-		if false {
-			fmt.Println("")
-			fmt.Println("")
-			fmt.Println("")
-
-			goto START
-		}
+		fallthrough
+	case 2:
 	}
 }
 
-func fn2() {
-	for range []int{} {
-		if true {
-			fmt.Println("")
-			fmt.Println("")
-			fmt.Println("")
-			break // want `missing whitespace above this line \(too many lines above branch\)`
+func invalidCases() {
+START:
+	fmt.Println("start")
+
+	switch 1 {
+	case 1:
+		for range []int{} {
+			if true {
+				fmt.Println("")
+				fmt.Println("")
+				fmt.Println("")
+				break // want `missing whitespace above this line \(too many lines above branch\)`
+			}
+
+			if true {
+				fmt.Println("")
+				fmt.Println("")
+				fmt.Println("")
+				continue // want `missing whitespace above this line \(too many lines above branch\)`
+			}
+
+			if true {
+				fmt.Println("")
+				fmt.Println("")
+				fmt.Println("")
+				goto START // want `missing whitespace above this line \(too many lines above branch\)`
+			}
 		}
 
-		if true {
-			fmt.Println("")
-			fmt.Println("")
-			fmt.Println("")
-			continue // want `missing whitespace above this line \(too many lines above branch\)`
-		}
-
-		if true {
-			fmt.Println("")
-			fmt.Println("")
-			fmt.Println("")
-			fallthrough // want `missing whitespace above this line \(too many lines above branch\)`
-		}
-
-		if true {
-			fmt.Println("")
-			fmt.Println("")
-			fmt.Println("")
-			goto START // want `missing whitespace above this line \(too many lines above branch\)`
-		}
+		fmt.Println("")
+		fmt.Println("")
+		fmt.Println("")
+		fallthrough // want `missing whitespace above this line \(too many lines above branch\)`
+	case 2:
 	}
 }

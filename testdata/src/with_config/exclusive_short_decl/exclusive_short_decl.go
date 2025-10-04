@@ -12,4 +12,6 @@ func fn() {
 	d := 1
 	a = 3  // want `missing whitespace above this line \(invalid statement above assign\)`
 	e := 4 // want `missing whitespace above this line \(invalid statement above assign\)`
+
+	_, _, _, _, _ = a, b, c, d, e
 }

@@ -6,37 +6,37 @@ func Call(fn func()) func() {
 	return fn
 }
 
-func fn1() {
+func trailingWhitespace() {
 	fmt.Println("Hello, World") // want +1 `unnecessary whitespace \(trailing-whitespace\)`
 
 }
 
-func fn2() {
-	fmt.Println("Hello, World")  // want +2 `unnecessary whitespace \(trailing-whitespace\)`
+func trailingCommentThenWhitespace() {
+	fmt.Println("Hello, World") // want +2 `unnecessary whitespace \(trailing-whitespace\)`
 	// Comment with wihtespace
 
 }
 
-func fn3() {
+func trailingCommentNoWhitespace() {
 	fmt.Println("Hello, World")
 	// Comment without space before or after.
 }
 
-func fn4() {
+func multipleTrailingComments() {
 	_ = 1
 	// Comment with
 
 	// a newline between
 }
 
-func fn5() {
+func trailingIf() {
 	if true {
 		_ = 1 // want +1 `unnecessary whitespace \(trailing-whitespace\)`
 
 	}
 }
 
-func fn6() {
+func trailingIfElseChain() {
 	if true {
 		_ = 1 // want +1 `unnecessary whitespace \(trailing-whitespace\)`
 
@@ -49,7 +49,7 @@ func fn6() {
 	}
 }
 
-func fn8(a string, b any, s []string) {
+func variousTrailingBlocks(a string, b any, s []string) {
 	if true {
 		_ = 1 // want +1 `unnecessary whitespace \(trailing-whitespace\)`
 

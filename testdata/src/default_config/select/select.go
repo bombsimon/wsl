@@ -2,9 +2,13 @@ package testpkg
 
 import "context"
 
-func fn1(ctx context.Context, ch1 chan struct{}) {
+func getCtx() context.Context {
+	return context.Background()
+}
+
+func noCuddledVar(ctx context.Context, ch1 chan struct{}) {
 	select {
-	case ctx.Done():
+	case <-ctx.Done():
 		_ = 1
 	case <-ch1:
 		_ = 1
@@ -13,10 +17,10 @@ func fn1(ctx context.Context, ch1 chan struct{}) {
 	}
 }
 
-func fn1(ctx context.Context, ch1 chan struct{}) {
+func cuddledNotUsed(ctx context.Context, ch1 chan struct{}) {
 	x := 1
 	select { // want `missing whitespace above this line \(no shared variables above select\)`
-	case ctx.Done():
+	case <-ctx.Done():
 		_ = 1
 	case <-ch1:
 		_ = 1
@@ -27,7 +31,7 @@ func fn1(ctx context.Context, ch1 chan struct{}) {
 	_ = x
 }
 
-func fn2(ch1 chan struct{}) {
+func cuddledUsed(ch1 chan struct{}) {
 	ch := make(chan struct{})
 	select {
 	case <-ch1:
