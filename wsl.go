@@ -655,6 +655,7 @@ func (w *WSL) checkError(
 	}
 
 	previousIdents := []*ast.Ident{}
+
 	if assign, ok := previousNode.(*ast.AssignStmt); ok {
 		for _, lhs := range assign.Lhs {
 			previousIdents = append(previousIdents, w.identsFromNode(lhs, true)...)
