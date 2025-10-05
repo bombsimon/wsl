@@ -1,0 +1,27 @@
+package testpkg
+
+import "fmt"
+
+func dontMatchTypeNames() {
+	var z string
+	defer func(x string) { // want `missing whitespace above this line \(no shared variables above defer\)`
+		fmt.Printf("%v", x)
+	}("")
+
+	var a any = nil
+	defer func(x any) { // want `missing whitespace above this line \(no shared variables above defer\)`
+		fmt.Printf("%v", x)
+	}(nil)
+
+	b := true
+	defer func(x any) { // want `missing whitespace above this line \(no shared variables above defer\)`
+		fmt.Printf("%v", x)
+	}(true)
+
+	c := false
+	defer func(x any) { // want `missing whitespace above this line \(no shared variables above defer\)`
+		fmt.Printf("%v", x)
+	}(false)
+
+	_, _, _, _ = a, b, c, z
+}
