@@ -70,6 +70,7 @@ const (
 	CheckErr
 	CheckLeadingWhitespace
 	CheckTrailingWhitespace
+	CheckNewlineAfterBlock
 
 	//nolint:godoclint // No need to document
 	// CheckTypes only used for reporting.
@@ -102,6 +103,7 @@ func (c CheckType) String() string {
 		"err",
 		"leading-whitespace",
 		"trailing-whitespace",
+		"newline-after-block",
 		//
 		"case-trailing-newline",
 	}[c]
@@ -211,6 +213,7 @@ func AllChecks() CheckSet {
 	c := DefaultChecks()
 	c.Add(CheckAssignExclusive)
 	c.Add(CheckAssignExpr)
+	c.Add(CheckNewlineAfterBlock)
 
 	return c
 }
@@ -274,6 +277,8 @@ func CheckFromString(s string) (CheckType, error) {
 		return CheckLeadingWhitespace, nil
 	case "trailing-whitespace":
 		return CheckTrailingWhitespace, nil
+	case "newline-after-block":
+		return CheckNewlineAfterBlock, nil
 	default:
 		return CheckInvalid, fmt.Errorf("invalid check '%s'", s)
 	}

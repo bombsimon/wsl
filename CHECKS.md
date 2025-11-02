@@ -18,6 +18,7 @@
   - [`inc-dec`](#inc-dec)
   - [`label`](#label)
   - [`leading-whitespace`](#leading-whitespace)
+  - [`newline-after-block`](#newline-after-block)
   - [`range`](#range)
   - [`return`](#return)
   - [`select`](#select)
@@ -28,6 +29,7 @@
 - [Configuration](#configuration)
   - [`allow-first-in-block`](#allow-first-in-block)
   - [`allow-whole-block`](#allow-whole-block)
+  - [`case-max-lines`](#case-max-lines)
 
 ## Checks
 
@@ -1282,6 +1284,68 @@ if true {
 
 </tbody></table>
 
+### `newline-after-block`
+
+Block statements (`if`, `for`, `switch`, etc.) should be followed by a blank
+line to visually separate them from subsequent code.
+
+> **NOTE** An exception is made for `defer` statements that follow an
+> `if err != nil` block when the defer references a variable assigned on the
+> line above the if statement. This is a common pattern for resource cleanup.
+
+<table>
+<thead><tr><th>Bad</th><th>Good</th></tr></thead>
+<tbody>
+<tr><td valign="top">
+
+```go
+if true {
+    fmt.Println("hello")
+}
+fmt.Println("world") // 1
+
+for i := 0; i < 3; i++ {
+    fmt.Println(i)
+}
+x := 1 // 2
+```
+
+</td><td valign="top">
+
+```go
+if true {
+    fmt.Println("hello")
+}
+
+fmt.Println("world")
+
+for i := 0; i < 3; i++ {
+    fmt.Println(i)
+}
+
+x := 1
+
+// Exception: defer after error check
+f, err := os.Open("file.txt")
+if err != nil {
+    return err
+}
+defer f.Close()
+```
+
+</td></tr>
+
+<tr><td valign="top">
+
+<sup>1</sup> Missing whitespace after block
+
+<sup>2</sup> Missing whitespace after block
+
+</td><td valign="top">
+
+</td></tr>
+</tbody></table>
+
 ### `trailing-whitespace`
 
 <table>
@@ -1357,3 +1421,20 @@ if anotherVariable {
     }
 }
 ```
+
+### `case-max-lines`
+
+When set to a value greater than 0, case clauses in `switch` and `select`
+statements that exceed this number of lines will require a blank line before the
+next case. Setting this to 1 will make it always enabled.
+
+When a single comment group exists between case clauses, the blank line
+placement depends on the comment's start indentation:
+
+- Comments indented like statements (deeper than `case`) are treated as trailing
+  comments. The blank line goes after them.
+- Comments indented at the same level as `case` are treated as leading comments.
+  The blank line goes before them.
+
+If there are multiple comment groups between cases, the check is skipped to
+avoid ambiguous situations.
