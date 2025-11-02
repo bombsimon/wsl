@@ -100,6 +100,16 @@ func TestWithConfig(t *testing.T) {
 				config.Checks.Add(CheckAppend)
 			},
 		},
+		{
+			subdir: "newline_after_block",
+			configFn: func(config *Configuration) {
+				config.Checks = NoChecks()
+				config.Checks.Add(CheckIf)
+				config.Checks.Add(CheckNewlineAfterBlock)
+
+				config.CaseMaxLines = 1
+			},
+		},
 	} {
 		t.Run(tc.subdir, func(t *testing.T) {
 			config := NewConfig()

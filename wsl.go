@@ -111,7 +111,7 @@ func (w *WSL) checkStmt(stmt ast.Stmt, cursor *Cursor) {
 		w.checkCommClause(s, cursor)
 	// { }
 	case *ast.BlockStmt:
-		w.checkBlock(s)
+		w.checkBlock(s, cursor)
 	// select { }
 	case *ast.SelectStmt:
 		w.checkSelect(s, cursor)
@@ -133,7 +133,7 @@ func (w *WSL) checkExpr(expr ast.Expr, cursor *Cursor) {
 	// semantically impossible it is.
 	switch s := expr.(type) {
 	case *ast.FuncLit:
-		w.checkBlock(s.Body)
+		w.checkBlock(s.Body, cursor)
 	case *ast.CallExpr:
 		w.checkExpr(s.Fun, cursor)
 
@@ -424,11 +424,55 @@ func (w *WSL) checkCuddlingWithoutIntersection(stmt ast.Node, cursor *Cursor) {
 	w.addErrorInvalidTypeCuddle(stmt.Pos(), cursor.checkType)
 }
 
-func (w *WSL) checkBlock(block *ast.BlockStmt) {
+func (w *WSL) checkBlock(block *ast.BlockStmt, cursor *Cursor) {
 	w.checkBlockLeadingNewline(block)
 	w.checkTrailingNewline(block)
+	w.checkEmptyLineAfter(block, cursor)
 
 	w.checkBody(block.List)
+}
+
+func (w *WSL) checkEmptyLineAfter(block *ast.BlockStmt, cursor *Cursor) {
+	if _, ok := w.config.Checks[CheckNewlineAfterBlock]; !ok {
+		return
+	}
+
+	defer cursor.Save()()
+
+	if !cursor.Next() {
+		return
+	}
+
+	rBraceLine := block.Rbrace
+	nextNodeStart := cursor.Stmt().Pos()
+
+	comments := ast.NewCommentMap(w.fset, cursor.Stmt(), w.file.Comments)
+	for _, cg := range comments {
+		for _, c := range cg {
+			// If the comment is on the same line as the rbrace, extend it.
+			if w.lineFor(c.End()) == w.lineFor(rBraceLine) {
+				rBraceLine = c.End()
+				continue
+			}
+
+			// If the comment is on a different line than the RBrace or a
+			// comment on that line but before the next node, move the next node
+			// starting pos.
+			if w.lineFor(c.Pos()) > w.lineFor(rBraceLine) && c.End() < nextNodeStart {
+				nextNodeStart = c.Pos()
+			}
+		}
+	}
+
+	if w.lineFor(nextNodeStart) <= w.lineFor(rBraceLine)+1 {
+		w.addError(
+			rBraceLine,
+			nextNodeStart,
+			nextNodeStart,
+			messageMissingWhitespaceBelow,
+			CheckNewlineAfterBlock,
+		)
+	}
 }
 
 func (w *WSL) checkCaseClause(stmt *ast.CaseClause, cursor *Cursor) {
@@ -456,7 +500,7 @@ func (w *WSL) checkFunc(funcDecl *ast.FuncDecl) {
 		return
 	}
 
-	w.checkBlock(funcDecl.Body)
+	w.checkBlock(funcDecl.Body, NewCursor([]ast.Stmt{}))
 }
 
 func (w *WSL) checkAssign(stmt *ast.AssignStmt, cursor *Cursor) {
@@ -773,7 +817,7 @@ func (w *WSL) checkGo(stmt *ast.GoStmt, cursor *Cursor) {
 
 func (w *WSL) checkIf(stmt *ast.IfStmt, cursor *Cursor, isElse bool) {
 	// if
-	w.checkBlock(stmt.Body)
+	w.checkBlock(stmt.Body, cursor)
 
 	switch v := stmt.Else.(type) {
 	// else-if
@@ -782,7 +826,7 @@ func (w *WSL) checkIf(stmt *ast.IfStmt, cursor *Cursor, isElse bool) {
 
 	// else
 	case *ast.BlockStmt:
-		w.checkBlock(v)
+		w.checkBlock(v, cursor)
 	}
 
 	if _, ok := w.config.Checks[CheckIf]; !isElse && ok {
@@ -1142,7 +1186,7 @@ func (w *WSL) maybeCheckBlock(
 	cursor *Cursor,
 	check CheckType,
 ) {
-	w.checkBlock(blockStmt)
+	w.checkBlock(blockStmt, cursor)
 
 	if _, ok := w.config.Checks[check]; ok {
 		cursor.SetChecker(check)
