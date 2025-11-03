@@ -8,6 +8,8 @@ import (
 )
 
 func TestCheckSet(t *testing.T) {
+	t.Parallel()
+
 	for _, tc := range []struct {
 		defaultName         string
 		enable              []string
@@ -64,6 +66,8 @@ func TestCheckSet(t *testing.T) {
 		},
 	} {
 		t.Run(tc.defaultName, func(t *testing.T) {
+			t.Parallel()
+
 			checks, err := NewCheckSet(tc.defaultName, tc.enable, tc.disable)
 			if tc.expectedErrContains != "" {
 				assert.Contains(t, err.Error(), tc.expectedErrContains)
@@ -77,6 +81,8 @@ func TestCheckSet(t *testing.T) {
 }
 
 func TestToAndFromString(t *testing.T) {
+	t.Parallel()
+
 	maxCheckNumber := 23
 
 	for n := range maxCheckNumber {

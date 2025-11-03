@@ -8,6 +8,8 @@ import (
 )
 
 func TestSavestate(t *testing.T) {
+	t.Parallel()
+
 	cursor := NewCursor([]ast.Stmt{
 		&ast.AssignStmt{},
 		&ast.AssignStmt{},
