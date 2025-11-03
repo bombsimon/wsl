@@ -9,6 +9,8 @@ import (
 )
 
 func TestDefaultConfig(t *testing.T) {
+	t.Parallel()
+
 	dirs, err := os.ReadDir("./testdata/src/default_config")
 	if err != nil {
 		t.Fatal(err)
@@ -16,6 +18,8 @@ func TestDefaultConfig(t *testing.T) {
 
 	for _, tc := range dirs {
 		t.Run(tc.Name(), func(t *testing.T) {
+			t.Parallel()
+
 			testdata := analysistest.TestData()
 			analyzer := NewAnalyzer(NewConfig())
 
@@ -25,6 +29,8 @@ func TestDefaultConfig(t *testing.T) {
 }
 
 func TestDefaultConfigFromAnalyzer(t *testing.T) {
+	t.Parallel()
+
 	testdata := analysistest.TestData()
 	analyzer := NewAnalyzer(nil)
 
@@ -32,6 +38,8 @@ func TestDefaultConfigFromAnalyzer(t *testing.T) {
 }
 
 func TestWithConfig(t *testing.T) {
+	t.Parallel()
+
 	testdata := analysistest.TestData()
 
 	for _, tc := range []struct {
@@ -102,6 +110,8 @@ func TestWithConfig(t *testing.T) {
 		},
 	} {
 		t.Run(tc.subdir, func(t *testing.T) {
+			t.Parallel()
+
 			config := NewConfig()
 			tc.configFn(config)
 
