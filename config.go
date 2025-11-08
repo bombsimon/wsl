@@ -59,6 +59,8 @@ const (
 	// t1.Fn3()
 	// .
 	CheckAssignExpr
+	// Don't treat comments as empty lines, require space between them.
+	CheckComments
 	// Force error checking to follow immediately after an error variable is
 	// assigned, e.g.
 	//
@@ -98,6 +100,7 @@ func (c CheckType) String() string {
 		"append",
 		"assign-exclusive",
 		"assign-expr",
+		"comments",
 		"err",
 		"leading-whitespace",
 		"trailing-whitespace",
@@ -210,6 +213,7 @@ func AllChecks() CheckSet {
 	c := DefaultChecks()
 	c.Add(CheckAssignExclusive)
 	c.Add(CheckAssignExpr)
+	c.Add(CheckComments)
 
 	return c
 }
@@ -267,6 +271,8 @@ func CheckFromString(s string) (CheckType, error) {
 		return CheckAssignExclusive, nil
 	case "assign-expr":
 		return CheckAssignExpr, nil
+	case "comments":
+		return CheckComments, nil
 	case "err":
 		return CheckErr, nil
 	case "leading-whitespace":

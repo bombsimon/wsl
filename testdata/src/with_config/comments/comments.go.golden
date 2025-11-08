@@ -1,0 +1,11 @@
+package testpkg
+
+func fn() {
+	if true {
+		_ = 1
+	} // want +1 `missing whitespace above this line \(invalid statement above assign\)`
+
+	// Comment
+	_ = 1
+}
+

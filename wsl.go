@@ -421,7 +421,7 @@ func (w *WSL) checkCuddlingWithoutIntersection(stmt ast.Node, cursor *Cursor) {
 		return
 	}
 
-	w.addErrorInvalidTypeCuddle(stmt.Pos(), cursor.checkType)
+	w.addErrorInvalidTypeCuddle(w.stmtOrCommentStart(stmt, previousNode), cursor.checkType)
 }
 
 func (w *WSL) checkBlock(block *ast.BlockStmt) {
@@ -1187,19 +1187,45 @@ func (w *WSL) numberOfStatementsAbove(cursor *Cursor) int {
 	defer cursor.Save()()
 
 	statementsWithoutNewlines := 0
-	currentStmtStartLine := w.lineFor(cursor.Stmt().Pos())
+	currentStmtStartLine := w.lineFor(w.stmtOrCommentStart(cursor.Stmt(), nil))
 
 	for cursor.Previous() {
 		previousStmtEndLine := w.lineFor(cursor.Stmt().End())
-		if previousStmtEndLine != currentStmtStartLine-1 {
+		if previousStmtEndLine <= currentStmtStartLine-1 {
 			break
 		}
 
-		currentStmtStartLine = w.lineFor(cursor.Stmt().Pos())
+		currentStmtStartLine = w.lineFor(w.stmtOrCommentStart(cursor.Stmt(), nil))
 		statementsWithoutNewlines++
 	}
 
 	return statementsWithoutNewlines
+}
+
+func (w *WSL) stmtOrCommentStart(stmt ast.Node, maybePrevious ast.Node) token.Pos {
+	if _, ok := w.config.Checks[CheckComments]; !ok {
+		return stmt.Pos()
+	}
+
+	comments := ast.NewCommentMap(w.fset, stmt, w.file.Comments)
+	if len(comments) == 0 {
+		return stmt.Pos()
+	}
+
+	cg, ok := comments[stmt]
+	if !ok {
+		return stmt.Pos()
+	}
+
+	if maybePrevious != nil {
+		for _, c := range cg {
+			if w.lineFor(c.Pos()) > w.lineFor(maybePrevious.End()) {
+				return c.Pos()
+			}
+		}
+	}
+
+	return cg[0].Pos()
 }
 
 func (w *WSL) lineFor(pos token.Pos) int {

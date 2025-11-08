@@ -100,6 +100,13 @@ func TestWithConfig(t *testing.T) {
 				config.Checks.Add(CheckAppend)
 			},
 		},
+		{
+			subdir: "comments",
+			configFn: func(config *Configuration) {
+				config.Checks = DefaultChecks()
+				// config.Checks.Add(CheckComments)
+			},
+		},
 	} {
 		t.Run(tc.subdir, func(t *testing.T) {
 			config := NewConfig()
