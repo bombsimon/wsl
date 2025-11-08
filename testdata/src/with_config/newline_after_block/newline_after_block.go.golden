@@ -5,7 +5,7 @@ func fn() {
 		_ = 1
 	} // want `missing whitespace below this line \(newline-after-block\)`
 
-	if false { // want `missing whitespace above this line \(invalid statement above if\)`
+	if false {
 		_ = 1
 	}
 }

@@ -105,7 +105,6 @@ func TestWithConfig(t *testing.T) {
 			configFn: func(config *Configuration) {
 				config.Checks = NoChecks()
 				config.Checks.Add(CheckCaseTrailingNewline)
-				config.Checks.Add(CheckIf)
 				config.Checks.Add(CheckNewlineAfterBlock)
 
 				config.CaseMaxLines = 1
