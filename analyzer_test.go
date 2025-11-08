@@ -104,6 +104,7 @@ func TestWithConfig(t *testing.T) {
 			subdir: "newline_after_block",
 			configFn: func(config *Configuration) {
 				config.Checks = NoChecks()
+				config.Checks.Add(CheckCaseTrailingNewline)
 				config.Checks.Add(CheckIf)
 				config.Checks.Add(CheckNewlineAfterBlock)
 
