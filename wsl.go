@@ -440,6 +440,18 @@ func (w *WSL) checkEmptyLineAfter(block *ast.BlockStmt, cursor *Cursor) {
 	defer cursor.Save()()
 
 	if !cursor.Next() {
+		// No more statements after this one so check for if there are comments
+		// after this one.
+		if cPos := w.commentOnLineAfterNodePos(block); cPos != 0 {
+			w.addError(
+				block.Rbrace,
+				cPos,
+				cPos,
+				messageMissingWhitespaceBelow,
+				CheckNewlineAfterBlock,
+			)
+		}
+
 		return
 	}
 
@@ -979,13 +991,30 @@ func (w *WSL) checkCaseTrailingNewline(body []ast.Stmt, cursor *Cursor) {
 		return
 	}
 
+	nextCaseComment := ast.NewCommentMap(w.fset, nextCase, w.file.Comments)
+	for _, cg := range nextCaseComment {
+		for _, c := range cg {
+			commentStartLine := w.lineFor(c.Pos())
+			if commentStartLine > w.lineFor(lastStmt.End()) && commentStartLine < w.lineFor(nextCase.Pos()) {
+				nextCase = c
+			}
+		}
+	}
+
 	// Next case is not immediately after the last statement so must be newline
 	// already.
 	if w.lineFor(nextCase.Pos()) > w.lineFor(lastStmt.End())+1 {
 		return
 	}
 
-	w.addError(lastStmt.End(), nextCase.Pos(), nextCase.Pos(), messageMissingWhitespaceBelow, CheckCaseTrailingNewline)
+	// To properly adjust comments at the end of a case, we can't add the
+	// newline at the start of the comment, that would indent it. Instead we
+	// find the start of the line where the next case (or comment) after the
+	// last statement is and insert the newline there. This will not affect
+	// indentation.
+	insertPos := w.fset.File(nextCase.Pos()).LineStart(w.lineFor(nextCase.Pos()))
+
+	w.addError(lastStmt.End(), insertPos, insertPos, messageMissingWhitespaceBelow, CheckCaseTrailingNewline)
 }
 
 func (w *WSL) checkBlockLeadingNewline(body *ast.BlockStmt) {
@@ -1262,6 +1291,19 @@ func (w *WSL) implementsErr(node *ast.Ident) bool {
 	}
 
 	return types.Implements(typeInfo, errorType)
+}
+
+func (w *WSL) commentOnLineAfterNodePos(node ast.Node) token.Pos {
+	currentComments := ast.NewCommentMap(w.fset, node, w.file.Comments)
+	for _, cg := range currentComments {
+		for _, c := range cg {
+			if w.lineFor(c.Pos()) == w.lineFor(node.End())+1 {
+				return c.Pos()
+			}
+		}
+	}
+
+	return 0
 }
 
 func (w *WSL) addErrorInvalidTypeCuddle(pos token.Pos, ct CheckType) {
