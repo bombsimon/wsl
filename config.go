@@ -33,14 +33,14 @@ const (
 	CheckSwitch
 	CheckTypeSwitch
 
-	// Check append only allows assignments of `append` to be cuddled with other
+	// CheckAppend only allows assignments of `append` to be cuddled with other
 	// assignments if it's a variable used in the append statement, e.g.
 	//
 	// a := 1
 	// x = append(x, a)
 	// .
 	CheckAppend
-	// Assign exclusive only allows assignments of either new variables or
+	// CheckAssignExclusive only allows assignments of either new variables or
 	// re-assignment of existing ones, e.g.
 	//
 	// a := 1
@@ -59,8 +59,8 @@ const (
 	// t1.Fn3()
 	// .
 	CheckAssignExpr
-	// Force error checking to follow immediately after an error variable is
-	// assigned, e.g.
+	// CheckErr force error checking to follow immediately after an error
+	// variable is assigned, e.g.
 	//
 	// _, err := someFn()
 	// if err != nil {
@@ -71,6 +71,7 @@ const (
 	CheckLeadingWhitespace
 	CheckTrailingWhitespace
 
+	//nolint:godoclint // No need to document
 	// CheckTypes only used for reporting.
 	CheckCaseTrailingNewline
 )
