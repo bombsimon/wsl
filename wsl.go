@@ -7,6 +7,7 @@ import (
 	"go/format"
 	"go/token"
 	"go/types"
+	"slices"
 
 	"golang.org/x/tools/go/analysis"
 )
@@ -283,7 +284,6 @@ func (w *WSL) checkCuddlingMaxAllowed(
 	}
 
 	previousNode := cursor.PreviousNode()
-
 	if previousNode != nil {
 		if _, ok := w.groupedDecls[previousNode.End()]; ok {
 			w.addErrorTooManyStatements(cursor.Stmt().Pos(), cursor.checkType)
@@ -298,6 +298,10 @@ func (w *WSL) checkCuddlingMaxAllowed(
 	// cuddling (for if statements) so check that.
 	if numStmtsAbove == 0 {
 		w.checkError(numStmtsAbove, stmt, previousNode, cursor)
+		return
+	}
+
+	if w.isLockOrUnlock(stmt, previousNode) {
 		return
 	}
 
@@ -378,6 +382,10 @@ func (w *WSL) checkCuddlingWithoutIntersection(stmt ast.Node, cursor *Cursor) {
 	}
 
 	previousNode := cursor.PreviousNode()
+
+	if w.isLockOrUnlock(stmt, previousNode) {
+		return
+	}
 
 	currAssign, currIsAssign := stmt.(*ast.AssignStmt)
 	previousAssign, prevIsAssign := previousNode.(*ast.AssignStmt)
@@ -1461,4 +1469,34 @@ func (w *WSL) identsFromCaseArms(node ast.Node) []*ast.Ident {
 	}
 
 	return idents
+}
+
+func (w *WSL) isLockOrUnlock(current ast.Node, previous ast.Node) bool {
+	var isLockOrUnlock bool
+
+	findNode := func(node ast.Node, selectorNames []string) {
+		ast.Inspect(node, func(n ast.Node) bool {
+			if sel, ok := n.(*ast.SelectorExpr); ok {
+				isLockOrUnlock = slices.Contains(selectorNames, sel.Sel.Name)
+				return false
+			}
+
+			return true
+		})
+	}
+
+	// If we're an ExprStmt (e.g. X()), we check if we're calling `Unlock` or
+	// `RWUnlock`. No matter how deep this is or what previous statement was, we
+	// allow this.
+	//
+	// mu.Lock()
+	// [ANY BLOCK]
+	// mu.Unlock()
+	if _, ok := current.(*ast.ExprStmt); ok {
+		findNode(current, []string{"Unlock", "RWUnlock"})
+	} else if previous != nil {
+		findNode(previous, []string{"Lock", "RWLock", "TryLock"})
+	}
+
+	return isLockOrUnlock
 }
