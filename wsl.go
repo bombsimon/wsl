@@ -1471,7 +1471,7 @@ func (w *WSL) identsFromCaseArms(node ast.Node) []*ast.Ident {
 	return idents
 }
 
-func (w *WSL) isLockOrUnlock(current ast.Node, previous ast.Node) bool {
+func (w *WSL) isLockOrUnlock(current, previous ast.Node) bool {
 	var isLockOrUnlock bool
 
 	findNode := func(node ast.Node, selectorNames []string) {
