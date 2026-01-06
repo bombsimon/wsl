@@ -1,9 +1,40 @@
-# Checks
+# Checks and configuration
+
+## Table of content
+
+- [Checks](#checks)
+  - [`append`](#append)
+  - [`assign`](#assign)
+  - [`assign-exclusive`](#assign-exclusive)
+  - [`assign-expr`](#assign-expr)
+  - [`branch`](#branch)
+  - [`decl`](#decl)
+  - [`defer`](#defer)
+  - [`err`](#err)
+  - [`expr`](#expr)
+  - [`for`](#for)
+  - [`go`](#go)
+  - [`if`](#if)
+  - [`inc-dec`](#inc-dec)
+  - [`label`](#label)
+  - [`leading-whitespace`](#leading-whitespace)
+  - [`range`](#range)
+  - [`return`](#return)
+  - [`select`](#select)
+  - [`send`](#send)
+  - [`switch`](#switch)
+  - [`trailing-whitespace`](#trailing-whitespace)
+  - [`type-switch`](#type-switch)
+- [Configuration](#configuration)
+  - [`allow-first-in-block`](#allow-first-in-block)
+  - [`allow-whole-block`](#allow-whole-block)
+
+## Checks
 
 This document describes all the checks done by `wsl` with examples of what's not
 allowed and what's allowed.
 
-## `assign`
+### `assign`
 
 Assign (`foo := bar`) or re-assignments (`foo = bar`) should only be cuddled
 with other assignments or increment/decrement.
@@ -58,7 +89,7 @@ c := 3
 </td></tr>
 </tbody></table>
 
-## `branch`
+### `branch`
 
 > Configurable via `branch-max-lines`
 
@@ -114,7 +145,7 @@ for {
 </td></tr>
 </tbody></table>
 
-## `decl`
+### `decl`
 
 Declarations should never be cuddled. When grouping multiple declarations
 together they should be declared in the same group with parenthesis into a
@@ -182,7 +213,7 @@ var a string
 </td></tr>
 </tbody></table>
 
-## `defer`
+### `defer`
 
 Deferring execution should only be used directly in the context of what's being
 deferred and there should only be one statement above.
@@ -247,10 +278,16 @@ defer m.Unlock()
 </td></tr>
 </tbody></table>
 
-## `expr`
+### `expr`
 
 Expressions can be multiple things and a big part of them are not handled by
 `wsl`. However all function calls are expressions which can be verified.
+
+> **NOTE** This is one of the few rules with non-configurable exceptions. Given
+> the idiomatic way to acquire and release mutex locks and the fact that the
+> `sync` mutex from the standard library is so widely used, any call to `Lock`,
+> `RWLock`, or `TryLock` can be cuddled above any other statement(s) and
+> similarly `Unlock` and `RWUnlock` can be cuddled below any other statement(s).
 
 <table>
 <thead><tr><th>Bad</th><th>Good</th></tr></thead>
@@ -261,6 +298,12 @@ Expressions can be multiple things and a big part of them are not handled by
 a := 1
 b := 2
 fmt.Println("not b") // 1
+
+mu.Lock()
+for _, item := range items {
+    // Safely work with item
+}
+mu.Unlock()
 ```
 
 </td><td valign="top">
@@ -286,7 +329,7 @@ fmt.Println(a)
 </td></tr>
 </tbody></table>
 
-## `for`
+### `for`
 
 > Configurable via `allow-first-in-block` to allow cuddling if the variable is
 > used _first_ in the block (enabled by default).
@@ -368,7 +411,7 @@ for {
 </td></tr>
 </tbody></table>
 
-## `go`
+### `go`
 
 <table>
 <thead><tr><th>Bad</th><th>Good</th></tr></thead>
@@ -418,7 +461,7 @@ go Fn(someArg)
 </td></tr>
 </tbody></table>
 
-## `if`
+### `if`
 
 > Configurable via `allow-first-in-block` to allow cuddling if the variable is
 > used _first_ in the block (enabled by default).
@@ -542,7 +585,7 @@ if xUsedLaterInBlock() {
 </td></tr>
 </tbody></table>
 
-## `inc-dec`
+### `inc-dec`
 
 <table>
 <thead><tr><th>Bad</th><th>Good</th></tr></thead>
@@ -587,7 +630,7 @@ j++
 </td></tr>
 </tbody></table>
 
-## `label`
+### `label`
 
 Labels should never be cuddled. Labels in itself is often a symptom of big scope
 and split context and because of that should always have an empty line above.
@@ -633,7 +676,7 @@ L2:
 </td></tr>
 </tbody></table>
 
-## `range`
+### `range`
 
 > Configurable via `allow-first-in-block` to allow cuddling if the variable is
 > used _first_ in the block (enabled by default).
@@ -709,7 +752,7 @@ for _, v := range s2 {
 </td></tr>
 </tbody></table>
 
-## `return`
+### `return`
 
 > Configurable via `branch-max-lines`
 
@@ -761,7 +804,7 @@ func Fn() int {
 </td></tr>
 </tbody></table>
 
-## `select`
+### `select`
 
 Identifiers used in case arms of select statements are allowed to be cuddled.
 
@@ -829,7 +872,7 @@ case <-stop:
 </td></tr>
 </tbody></table>
 
-## `send`
+### `send`
 
 Send statements should only be cuddled with a single variable that is used on
 the line above.
@@ -871,7 +914,7 @@ b := 1
 </td></tr>
 </tbody></table>
 
-## `switch`
+### `switch`
 
 In addition to checking the switch condition, switch statements also checks
 identifiers in all case arms. If a variable is used in one or more of the case
@@ -972,7 +1015,7 @@ case 2:
 </td></tr>
 </tbody></table>
 
-## `type-switch`
+### `type-switch`
 
 > Configurable via `allow-first-in-block` to allow cuddling if the variable is
 > used _first_ in the block (enabled by default).
@@ -1051,7 +1094,7 @@ case int64:
 </td></tr>
 </tbody></table>
 
-## `append`
+### `append`
 
 Append enables strict `append` checking where assignments that are
 re-assignments with `append` (e.g. `x = append(x, y)`) is only allowed to be
@@ -1098,7 +1141,7 @@ s = append(s, 2)
 </td></tr>
 </tbody></table>
 
-## `assign-exclusive`
+### `assign-exclusive`
 
 Assign exclusive does not allow mixing new assignments (`:=`) with
 re-assignments (`=`).
@@ -1140,7 +1183,7 @@ d = 4
 </td></tr>
 </tbody></table>
 
-## `assign-expr`
+### `assign-expr`
 
 Assignments are allowed to be cuddled with expressions, primarily to support
 mixing assignments and function calls which can often make sense in shorter
@@ -1178,7 +1221,7 @@ t1.Fn3()
 </td></tr>
 </tbody></table>
 
-## `err`
+### `err`
 
 <table>
 <thead><tr><th>Bad</th><th>Good</th></tr></thead>
@@ -1213,7 +1256,7 @@ if err != nil {
 </td></tr>
 </tbody></table>
 
-## `leading-whitespace`
+### `leading-whitespace`
 
 <table>
 <thead><tr><th>Bad</th><th>Good</th></tr></thead>
@@ -1239,7 +1282,7 @@ if true {
 
 </tbody></table>
 
-## `trailing-whitespace`
+### `trailing-whitespace`
 
 <table>
 <thead><tr><th>Bad</th><th>Good</th></tr></thead>
