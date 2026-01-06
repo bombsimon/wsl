@@ -383,10 +383,6 @@ func (w *WSL) checkCuddlingWithoutIntersection(stmt ast.Node, cursor *Cursor) {
 
 	previousNode := cursor.PreviousNode()
 
-	if w.isLockOrUnlock(stmt, previousNode) {
-		return
-	}
-
 	currAssign, currIsAssign := stmt.(*ast.AssignStmt)
 	previousAssign, prevIsAssign := previousNode.(*ast.AssignStmt)
 	_, prevIsDecl := previousNode.(*ast.DeclStmt)
@@ -426,6 +422,10 @@ func (w *WSL) checkCuddlingWithoutIntersection(stmt ast.Node, cursor *Cursor) {
 	}
 
 	if prevIsValidType {
+		return
+	}
+
+	if w.isLockOrUnlock(stmt, previousNode) {
 		return
 	}
 
@@ -1472,11 +1472,14 @@ func (w *WSL) identsFromCaseArms(node ast.Node) []*ast.Ident {
 }
 
 func (w *WSL) isLockOrUnlock(current, previous ast.Node) bool {
-	var isLockOrUnlock bool
+	findNode := func(node ast.Node, selectorNames []string) bool {
+		var isLockOrUnlock bool
 
-	findNode := func(node ast.Node, selectorNames []string) {
 		ast.Inspect(node, func(n ast.Node) bool {
-			// Don't decent into blocks.
+			if isLockOrUnlock {
+				return false // Already found a call somewhere in the statement
+			}
+
 			if _, ok := n.(*ast.BlockStmt); ok {
 				return false
 			}
@@ -1488,6 +1491,8 @@ func (w *WSL) isLockOrUnlock(current, previous ast.Node) bool {
 
 			return true
 		})
+
+		return isLockOrUnlock
 	}
 
 	// If we're an ExprStmt (e.g. X()), we check if we're calling `Unlock` or
@@ -1498,10 +1503,12 @@ func (w *WSL) isLockOrUnlock(current, previous ast.Node) bool {
 	// [ANY BLOCK]
 	// mu.Unlock()
 	if _, ok := current.(*ast.ExprStmt); ok {
-		findNode(current, []string{"Unlock", "RWUnlock"})
-	} else if previous != nil {
-		findNode(previous, []string{"Lock", "RWLock", "TryLock"})
+		return findNode(current, []string{"Unlock", "RWUnlock"})
 	}
 
-	return isLockOrUnlock
+	if previous != nil {
+		return findNode(previous, []string{"Lock", "RWLock", "TryLock"})
+	}
+
+	return false
 }
