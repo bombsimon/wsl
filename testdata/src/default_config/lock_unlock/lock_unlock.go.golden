@@ -58,4 +58,26 @@ func otherAssignments(mu sync.Mutex, items []int) {
 	_, _ = foo, bar
 }
 
+func lockInBlock(mu sync.Mutex, items []int) {
+	func() {
+		mu.Lock()
+	}()
+
+	for _, i := range items { // want `missing whitespace above this line \(invalid statement above range\)`
+		_ = i
+	}
+
+	func() { // want `missing whitespace above this line \(invalid statement above expr\)`
+		mu.Unlock()
+	}()
+}
+
+func withDefer(mu sync.Mutex, items []int) {
+	mu.Lock()
+	defer mu.Unlock()
+
+	for _, i := range items { // want `missing whitespace above this line \(invalid statement above range\)`
+		_ = i
+	}
+}
 

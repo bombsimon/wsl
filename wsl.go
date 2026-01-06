@@ -1476,6 +1476,11 @@ func (w *WSL) isLockOrUnlock(current, previous ast.Node) bool {
 
 	findNode := func(node ast.Node, selectorNames []string) {
 		ast.Inspect(node, func(n ast.Node) bool {
+			// Don't decent into blocks.
+			if _, ok := n.(*ast.BlockStmt); ok {
+				return false
+			}
+
 			if sel, ok := n.(*ast.SelectorExpr); ok {
 				isLockOrUnlock = slices.Contains(selectorNames, sel.Sel.Name)
 				return false
