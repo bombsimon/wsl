@@ -1,0 +1,43 @@
+package testpkg
+
+func fn() {
+	if true {
+		_ = 1
+	} // want `missing whitespace below this line \(newline-after-block\)`
+
+	if false {
+		_ = 1
+	}
+}
+
+func fnWithComment() {
+	// want +3 `missing whitespace below this line \(newline-after-block\)`
+	if true {
+		_ = 1
+	}
+
+	// This is a comment
+	if false {
+		_ = 1
+	}
+}
+
+func caseArms(n int) {
+	switch n {
+	case 1:
+		_ = 1 // want `missing whitespace below this line \(case-trailing-newline\)`
+
+	case 2:
+		_ = 1
+
+	case 3:
+	} // want `missing whitespace below this line \(newline-after-block\)`
+
+	switch n {
+	case 1:
+		_ = 1 // want `missing whitespace below this line \(case-trailing-newline\)`
+
+	case 2:
+		_ = 1
+	}
+}

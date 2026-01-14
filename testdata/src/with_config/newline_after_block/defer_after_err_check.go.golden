@@ -1,0 +1,43 @@
+package testpkg
+
+import "errors"
+
+func fn() (string, error) {
+	return "", errors.New("")
+}
+
+func deferValidIdent() {
+	f, err := fn()
+	if err != nil {
+		panic(err)
+	}
+	defer f()
+}
+
+func deferInvalidErrChecking() {
+	f, _ := fn()
+	if _, err := fn(); err != nil {
+		panic(err)
+	} // want `missing whitespace below this line \(newline-after-block\)`
+
+	defer f()
+}
+
+func deferInvalidIdent(f func()) {
+	_, err := fn()
+	if err != nil {
+		panic(err)
+	} // want `missing whitespace below this line \(newline-after-block\)`
+
+	defer f()
+}
+
+func deferNotErrCheck(f func()) {
+	x, err := fn()
+	if x != "" {
+		panic(err)
+	} // want `missing whitespace below this line \(newline-after-block\)`
+
+	defer f()
+}
+

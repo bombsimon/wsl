@@ -18,8 +18,9 @@ func fn1(n int) {
 		n++
 		n++
 		n++
-		n++
-		// Just a comment
+		n++ // want +1 `missing whitespace below this line \(case-trailing-newline\)`
+		// Trailing comment
+
 	default:
 		n++
 		n++
@@ -39,5 +40,47 @@ func fn2(ctx context.Context, ch1 chan struct{}) {
 		_ = 1
 	default:
 		_ = 1
+	}
+}
+
+// Test comment permutations: no comments, leading only, trailing only, both (single group).
+func fnCommentPermutations(n int) {
+	switch n {
+	case 1:
+		n++
+		n++
+		n++ // want `missing whitespace below this line \(case-trailing-newline\)`
+
+	// Leading comment
+	case 2:
+		n++
+		n++
+		n++ // want +1 `missing whitespace below this line \(case-trailing-newline\)`
+		// Trailing comment
+
+	case 3:
+		n++
+		n++
+		n++ // want +2 `missing whitespace below this line \(case-trailing-newline\)`
+		// Trailing comment
+	// Leading comment (same group as above - adjacent)
+
+	default:
+		n++
+	}
+}
+
+// Test multiple comment groups - should be skipped (no report).
+func fnMultipleCommentGroups(n int) {
+	switch n {
+	case 1:
+		n++
+		n++
+		n++
+		// First group
+
+		// Second group (separated by blank line)
+	default:
+		n++
 	}
 }

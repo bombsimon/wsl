@@ -25,6 +25,26 @@ func commentThenLeadingWhitespace() { // want +2 `unnecessary whitespace \(leadi
 	fmt.Println("Hello, World")
 }
 
+// want +3 `unnecessary whitespace \(leading-whitespace\)`
+// want +4 `unnecessary whitespace \(leading-whitespace\)`
+func whitespaceBeforeAndAfterComment() {
+
+	// Whitespace before and after comment
+
+	fmt.Println("Hello, World")
+}
+
+// want +3 `unnecessary whitespace \(leading-whitespace\)`
+// want +6 `unnecessary whitespace \(leading-whitespace\)`
+func whitespaceBeforeAndAfterMultpleComment() {
+
+	// Whitespace before and after comment
+
+	// Some more comments
+
+	fmt.Println("Hello, World")
+}
+
 func noWhitespace() {
 	fmt.Println("Hello, World")
 }

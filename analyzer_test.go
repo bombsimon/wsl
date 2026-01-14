@@ -108,6 +108,23 @@ func TestWithConfig(t *testing.T) {
 				config.Checks.Add(CheckAppend)
 			},
 		},
+		{
+			subdir: "all_enabled",
+			configFn: func(config *Configuration) {
+				config.Checks = AllChecks()
+				config.CaseMaxLines = 1
+			},
+		},
+		{
+			subdir: "newline_after_block",
+			configFn: func(config *Configuration) {
+				config.Checks = NoChecks()
+				config.Checks.Add(CheckCaseTrailingNewline)
+				config.Checks.Add(CheckNewlineAfterBlock)
+
+				config.CaseMaxLines = 1
+			},
+		},
 	} {
 		t.Run(tc.subdir, func(t *testing.T) {
 			t.Parallel()

@@ -112,7 +112,7 @@ func (w *WSL) checkStmt(stmt ast.Stmt, cursor *Cursor) {
 		w.checkCommClause(s, cursor)
 	// { }
 	case *ast.BlockStmt:
-		w.checkBlock(s)
+		w.checkBlock(s, cursor)
 	// select { }
 	case *ast.SelectStmt:
 		w.checkSelect(s, cursor)
@@ -127,14 +127,13 @@ func (w *WSL) checkStmt(stmt ast.Stmt, cursor *Cursor) {
 	}
 }
 
-//nolint:unparam // False positive on `cursor`
 func (w *WSL) checkExpr(expr ast.Expr, cursor *Cursor) {
 	// This switch traverses all possible subexpressions in search
 	// of anonymous functions, no matter how unlikely or perhaps even
 	// semantically impossible it is.
 	switch s := expr.(type) {
 	case *ast.FuncLit:
-		w.checkBlock(s.Body)
+		w.checkBlock(s.Body, cursor)
 	case *ast.CallExpr:
 		w.checkExpr(s.Fun, cursor)
 
@@ -432,18 +431,96 @@ func (w *WSL) checkCuddlingWithoutIntersection(stmt ast.Node, cursor *Cursor) {
 	w.addErrorInvalidTypeCuddle(stmt.Pos(), cursor.checkType)
 }
 
-func (w *WSL) checkBlock(block *ast.BlockStmt) {
+func (w *WSL) checkBlock(block *ast.BlockStmt, cursor *Cursor) {
 	w.checkBlockLeadingNewline(block)
 	w.checkTrailingNewline(block)
+	w.checkEmptyLineAfter(block, cursor)
 
 	w.checkBody(block.List)
+}
+
+func (w *WSL) checkEmptyLineAfter(block *ast.BlockStmt, cursor *Cursor) {
+	if _, ok := w.config.Checks[CheckNewlineAfterBlock]; !ok {
+		return
+	}
+
+	// For function blocks we don't have any statements in our cursor.
+	if cursor.Len() == 0 {
+		return
+	}
+
+	defer cursor.Save()()
+
+	// Capture current statement and previous node before moving cursor.
+	currentStmt := cursor.Stmt()
+	previousNode := cursor.PreviousNode()
+
+	if !cursor.Next() {
+		// No more statements after this one so check for comments after.
+		if cPos := w.commentOnLineAfterNodePos(block); cPos != 0 {
+			insertPos := w.lineStartOf(cPos)
+			w.addError(
+				block.Rbrace,
+				insertPos,
+				insertPos,
+				messageMissingWhitespaceBelow,
+				CheckNewlineAfterBlock,
+			)
+		}
+
+		return
+	}
+
+	// Exception: if err != nil { } followed by defer that references
+	// a variable assigned above the if block.
+	if ifStmt, ok := currentStmt.(*ast.IfStmt); ok {
+		if w.isErrNotNilCheck(ifStmt) != nil {
+			if deferStmt, ok := cursor.Stmt().(*ast.DeferStmt); ok && previousNode != nil {
+				if w.hasIntersection(previousNode, deferStmt) {
+					return
+				}
+			}
+		}
+	}
+
+	rBraceLine := w.lineFor(block.Rbrace)
+	nextContentPos := cursor.Stmt().Pos()
+	nextContentLine := w.lineFor(nextContentPos)
+
+	// Find the earliest content (comment or statement) after the rbrace.
+	comments := ast.NewCommentMap(w.fset, cursor.Stmt(), w.file.Comments)
+	for _, cg := range comments {
+		for _, c := range cg {
+			// Skip comments that end on the rbrace line (inline comments).
+			if w.lineFor(c.End()) == rBraceLine {
+				continue
+			}
+
+			commentLine := w.lineFor(c.Pos())
+			if commentLine > rBraceLine && commentLine < nextContentLine {
+				nextContentPos = c.Pos()
+				nextContentLine = commentLine
+			}
+		}
+	}
+
+	if nextContentLine <= rBraceLine+1 {
+		insertPos := w.lineStartOf(nextContentPos)
+		w.addError(
+			block.Rbrace,
+			insertPos,
+			insertPos,
+			messageMissingWhitespaceBelow,
+			CheckNewlineAfterBlock,
+		)
+	}
 }
 
 func (w *WSL) checkCaseClause(stmt *ast.CaseClause, cursor *Cursor) {
 	w.checkCaseLeadingNewline(stmt)
 
 	if w.config.CaseMaxLines != 0 {
-		w.checkCaseTrailingNewline(stmt.Body, cursor)
+		w.checkCaseTrailingNewline(stmt, stmt.Body, cursor)
 	}
 
 	w.checkBody(stmt.Body)
@@ -453,7 +530,7 @@ func (w *WSL) checkCommClause(stmt *ast.CommClause, cursor *Cursor) {
 	w.checkCommLeadingNewline(stmt)
 
 	if w.config.CaseMaxLines != 0 {
-		w.checkCaseTrailingNewline(stmt.Body, cursor)
+		w.checkCaseTrailingNewline(stmt, stmt.Body, cursor)
 	}
 
 	w.checkBody(stmt.Body)
@@ -464,7 +541,7 @@ func (w *WSL) checkFunc(funcDecl *ast.FuncDecl) {
 		return
 	}
 
-	w.checkBlock(funcDecl.Body)
+	w.checkBlock(funcDecl.Body, NewCursor([]ast.Stmt{}))
 }
 
 func (w *WSL) checkAssign(stmt *ast.AssignStmt, cursor *Cursor) {
@@ -607,58 +684,23 @@ func (w *WSL) checkError(
 		return
 	}
 
+	if stmtsAbove > 0 {
+		return
+	}
+
 	if _, ok := cursor.Stmt().(*ast.LabeledStmt); ok {
 		return
 	}
 
 	defer cursor.Save()()
 
-	// It must be an if statement
-	stmt, ok := ifStmt.(*ast.IfStmt)
+	stmt, ok := ifStmt.(ast.Stmt)
 	if !ok {
 		return
 	}
 
-	// If we actually have statements above we can't possibly need to remove any
-	// empty lines.
-	if stmtsAbove > 0 {
-		return
-	}
-
-	// If the error checking has an init condition (e.g. if err := f();) we
-	// don't want to check cuddling since the error is now assigned on this row.
-	if stmt.Init != nil {
-		return
-	}
-
-	// The condition must be a binary expression (X OP Y)
-	binaryExpr, ok := stmt.Cond.(*ast.BinaryExpr)
-	if !ok {
-		return
-	}
-
-	// We must do not equal or equal comparison (!= or ==)
-	if binaryExpr.Op != token.NEQ && binaryExpr.Op != token.EQL {
-		return
-	}
-
-	xIdent, ok := binaryExpr.X.(*ast.Ident)
-	if !ok {
-		return
-	}
-
-	// X is not an error so it's not error checking
-	if !w.implementsErr(xIdent) {
-		return
-	}
-
-	yIdent, ok := binaryExpr.Y.(*ast.Ident)
-	if !ok {
-		return
-	}
-
-	// Y is not compared with `nil`
-	if yIdent.Name != "nil" {
+	errIdent := w.isErrNotNilCheck(stmt)
+	if errIdent == nil {
 		return
 	}
 
@@ -682,45 +724,40 @@ func (w *WSL) checkError(
 
 	// Ensure that the error checked on this line was assigned or declared in
 	// the previous statement.
-	if len(identIntersection([]*ast.Ident{xIdent}, previousIdents)) == 0 {
+	if len(identIntersection([]*ast.Ident{errIdent}, previousIdents)) == 0 {
 		return
 	}
 
 	cursor.SetChecker(CheckErr)
 
-	previousNodeEnd := previousNode.End()
+	previousEndLine := w.lineFor(previousNode.End())
 
+	// Check for comments on the same line as the previous node (extends effective end line).
 	comments := ast.NewCommentMap(w.fset, previousNode, w.file.Comments)
 	for _, cg := range comments {
 		for _, c := range cg {
-			if c.Pos() < previousNodeEnd || c.End() > ifStmt.Pos() {
+			if c.Pos() < previousNode.End() || c.End() > ifStmt.Pos() {
 				continue
 			}
 
-			if c.End() > previousNodeEnd {
-				// There's a comment between the error variable and the
-				// if-statement, we can't do much about this. Most likely, the
-				// comment has a meaning, but even if not we would end up with
-				// something like
-				//
-				// err := fn()
-				// // Some Comment
-				// if err != nil {}
-				//
-				// Which just feels marginally better than leaving the space
-				// anyway.
-				if w.lineFor(c.End()) != w.lineFor(previousNodeEnd) {
-					return
-				}
-
-				// If they are on the same line though, we can just extend where
-				// the line ends.
-				previousNodeEnd = c.End()
+			// There's a comment between the error variable and the if-statement.
+			// If it's on a different line, we can't do much about this.
+			commentEndLine := w.lineFor(c.End())
+			if commentEndLine != previousEndLine {
+				return
 			}
+
+			// Comment is on the same line - no need to update since line stays the same.
 		}
 	}
 
-	w.addError(previousNodeEnd+1, previousNodeEnd, ifStmt.Pos(), messageRemoveWhitespace, cursor.checkType)
+	ifStmtLine := w.lineFor(ifStmt.Pos())
+	file := w.fset.File(ifStmt.Pos())
+
+	// Remove blank lines between previous node and if statement.
+	removeStart := file.LineStart(previousEndLine + 1)
+	removeEnd := file.LineStart(ifStmtLine)
+	w.addErrorRemoveNewline(removeStart, removeEnd, cursor.checkType)
 
 	// If we add the error at the same position but with a different fix
 	// range, only the fix range will be updated.
@@ -738,12 +775,10 @@ func (w *WSL) checkError(
 	//   if err != nil {}
 	cursor.Previous()
 
-	// We report this fix on the same pos as the previous diagnostic, but the
-	// fix is different. The reason is to just stack more fixes for the same
-	// diagnostic, the issue isn't present until the first fix so this message
-	// will never be shown to the user.
+	// Add whitespace above the error assignment if there's a statement above.
 	if w.numberOfStatementsAbove(cursor) > 0 {
-		w.addError(previousNodeEnd+1, previousNode.Pos(), previousNode.Pos(), messageMissingWhitespaceAbove, cursor.checkType)
+		insertPos := w.lineStartOf(previousNode.Pos())
+		w.addError(removeStart, insertPos, insertPos, messageMissingWhitespaceAbove, cursor.checkType)
 	}
 }
 
@@ -781,7 +816,7 @@ func (w *WSL) checkGo(stmt *ast.GoStmt, cursor *Cursor) {
 
 func (w *WSL) checkIf(stmt *ast.IfStmt, cursor *Cursor, isElse bool) {
 	// if
-	w.checkBlock(stmt.Body)
+	w.checkBlock(stmt.Body, cursor)
 
 	switch v := stmt.Else.(type) {
 	// else-if
@@ -790,7 +825,7 @@ func (w *WSL) checkIf(stmt *ast.IfStmt, cursor *Cursor, isElse bool) {
 
 	// else
 	case *ast.BlockStmt:
-		w.checkBlock(v)
+		w.checkBlock(v, cursor)
 	}
 
 	if _, ok := w.config.Checks[CheckIf]; !isElse && ok {
@@ -913,7 +948,7 @@ func (w *WSL) checkTypeSwitch(stmt *ast.TypeSwitchStmt, cursor *Cursor) {
 	w.maybeCheckBlock(stmt, stmt.Body, cursor, CheckTypeSwitch)
 }
 
-func (w *WSL) checkCaseTrailingNewline(body []ast.Stmt, cursor *Cursor) {
+func (w *WSL) checkCaseTrailingNewline(currentCase ast.Node, body []ast.Stmt, cursor *Cursor) {
 	if len(body) == 0 {
 		return
 	}
@@ -943,13 +978,63 @@ func (w *WSL) checkCaseTrailingNewline(body []ast.Stmt, cursor *Cursor) {
 		return
 	}
 
-	// Next case is not immediately after the last statement so must be newline
-	// already.
-	if w.lineFor(nextCase.Pos()) > w.lineFor(lastStmt.End())+1 {
+	lastStmtEndLine := w.lineFor(lastStmt.End())
+	nextCaseLine := w.lineFor(nextCase.Pos())
+	nextCaseCol := w.fset.PositionFor(nextCase.Pos(), false).Column
+
+	// Find the effective end of case body content (including trailing comments)
+	// and the start of next case content (leading comment or case itself).
+	// Trailing comments are indented like statements (col > case col).
+	// Leading comments are at case indentation (col <= case col).
+	contentEndLine := lastStmtEndLine
+	contentEndPos := lastStmt.End()
+	nextContentPos := nextCase.Pos()
+	nextContentLine := nextCaseLine
+
+	// Find comments between last statement and next case.
+	// Comments attach to either currentCase (trailing) or nextCase (leading).
+	// We only handle zero or one comment group to avoid complex edge cases.
+	comments := ast.NewCommentMap(w.fset, w.file, w.file.Comments)
+
+	// Merge comments from last statement and next case.
+	var commentGroups []*ast.CommentGroup
+
+	for _, node := range []ast.Node{currentCase, nextCase} {
+		for _, cg := range comments[node] {
+			cgLine := w.lineFor(cg.Pos())
+			if cgLine > lastStmtEndLine && cgLine < nextCaseLine {
+				commentGroups = append(commentGroups, cg)
+			}
+		}
+	}
+
+	// Multiple comment groups - too complex, skip.
+	if len(commentGroups) > 1 {
 		return
 	}
 
-	w.addError(lastStmt.End(), nextCase.Pos(), nextCase.Pos(), messageMissingWhitespaceBelow, CheckCaseTrailingNewline)
+	if len(commentGroups) == 1 {
+		cg := commentGroups[0]
+		commentCol := w.fset.PositionFor(cg.Pos(), false).Column
+
+		if commentCol > nextCaseCol {
+			// Trailing comment (indented like statements) - blank line goes after it.
+			contentEndLine = w.lineFor(cg.End())
+			contentEndPos = cg.End()
+		} else {
+			// Leading comment (indented like case) - blank line goes before it.
+			nextContentPos = cg.Pos()
+			nextContentLine = w.lineFor(cg.Pos())
+		}
+	}
+
+	// Already has a blank line at the boundary.
+	if nextContentLine > contentEndLine+1 {
+		return
+	}
+
+	insertPos := w.lineStartOf(nextContentPos)
+	w.addError(contentEndPos, insertPos, insertPos, messageMissingWhitespaceBelow, CheckCaseTrailingNewline)
 }
 
 func (w *WSL) checkBlockLeadingNewline(body *ast.BlockStmt) {
@@ -972,55 +1057,49 @@ func (w *WSL) checkLeadingNewline(startPos token.Pos, body []ast.Stmt, comments 
 		return
 	}
 
-	// No statements in the block, let's leave it as is.
 	if len(body) == 0 {
 		return
 	}
 
 	openLine := w.lineFor(startPos)
-	openingPos := startPos + 1
-	firstStmt := body[0].Pos()
+	firstStmtLine := w.lineFor(body[0].Pos())
+	firstCommentStatLine := firstStmtLine
+	lastCommentEndLine := openLine
 
 	for _, commentGroup := range comments {
 		for _, comment := range commentGroup {
-			// The comment starts after the current opening position (originally
-			// the LBrace) and ends before the current first statement
-			// (originally first body.List item).
-			if comment.Pos() > openingPos && comment.End() < firstStmt {
-				openingPosLine := w.lineFor(openingPos)
-				commentStartLine := w.lineFor(comment.Pos())
+			if comment.Pos() <= startPos || comment.End() >= body[0].Pos() {
+				continue
+			}
 
-				// If comment starts at the same line as the opening position it
-				// should just extend the position for the fixer if needed.
-				// func fn() { // This comment starts at the same line as LBrace
-				switch {
-				// The comment is on the same line as current opening position.
-				// E.g. func fn() { // A comment
-				case commentStartLine == openingPosLine:
-					openingPos = comment.End()
-				// Opening position is the same as `{` and the comment is
-				// directly on the line after (no empty line)
-				case openingPosLine == openLine &&
-					commentStartLine == openLine+1:
-					openingPos = comment.End()
-				// The opening position has been updated, it's another comment.
-				case openingPosLine != openLine:
-					openingPos = comment.End()
-				// The opening position is still { and the comment is not
-				// directly above - it must be an empty line which shouldn't be
-				// there.
-				default:
-					firstStmt = comment.Pos()
-				}
+			if startLine := w.lineFor(comment.Pos()); startLine < firstCommentStatLine && startLine > openLine {
+				firstCommentStatLine = startLine
+			}
+
+			if endLine := w.lineFor(comment.End()); endLine > lastCommentEndLine {
+				lastCommentEndLine = endLine
 			}
 		}
 	}
 
-	openingPosLine := w.lineFor(openingPos)
-	firstStmtLine := w.lineFor(firstStmt)
+	file := w.fset.File(startPos)
 
-	if firstStmtLine > openingPosLine+1 {
-		w.addError(openingPos+1, openingPos, firstStmt, messageRemoveWhitespace, CheckLeadingWhitespace)
+	// Empty line after opening brace
+	if firstCommentStatLine > openLine+1 {
+		w.addErrorRemoveNewline(
+			file.LineStart(openLine+1),
+			file.LineStart(firstCommentStatLine),
+			CheckLeadingWhitespace,
+		)
+	}
+
+	// Empty line between potential comments and first statement.
+	if lastCommentEndLine > openLine && firstStmtLine > lastCommentEndLine+1 {
+		w.addErrorRemoveNewline(
+			file.LineStart(lastCommentEndLine+1),
+			file.LineStart(firstStmtLine),
+			CheckLeadingWhitespace,
+		)
 	}
 }
 
@@ -1029,7 +1108,6 @@ func (w *WSL) checkTrailingNewline(body *ast.BlockStmt) {
 		return
 	}
 
-	// No statements in the block, let's leave it as is.
 	if len(body.List) == 0 {
 		return
 	}
@@ -1037,35 +1115,37 @@ func (w *WSL) checkTrailingNewline(body *ast.BlockStmt) {
 	lastStmt := body.List[len(body.List)-1]
 
 	// We don't want to force removal of the empty line for the last case since
-	// it can be use for consistency and readability.
+	// it can be used for consistency and readability.
 	if _, ok := lastStmt.(*ast.CaseClause); ok {
 		return
 	}
 
-	closingPos := body.Rbrace
-	lastStmtOrComment := lastStmt.End()
+	closingLine := w.lineFor(body.Rbrace)
+	lastContentLine := w.lineFor(lastStmt.End())
 
-	// Empty label statements needs positional adjustment. #92
+	// Empty label statements need positional adjustment. #92
 	if l, ok := lastStmt.(*ast.LabeledStmt); ok {
 		if _, ok := l.Stmt.(*ast.EmptyStmt); ok {
-			lastStmtOrComment = lastStmt.Pos()
+			lastContentLine = w.lineFor(lastStmt.Pos())
 		}
 	}
 
+	// Find the last comment after last statement.
 	comments := ast.NewCommentMap(w.fset, body, w.file.Comments)
 	for _, commentGroup := range comments {
 		for _, comment := range commentGroup {
-			if comment.End() < closingPos && comment.Pos() > lastStmtOrComment {
-				lastStmtOrComment = comment.End()
+			commentEndLine := w.lineFor(comment.End())
+			if commentEndLine < closingLine && commentEndLine > lastContentLine {
+				lastContentLine = commentEndLine
 			}
 		}
 	}
 
-	closingPosLine := w.lineFor(closingPos)
-	lastStmtLine := w.lineFor(lastStmtOrComment)
-
-	if closingPosLine > lastStmtLine+1 {
-		w.addError(lastStmtOrComment+1, lastStmtOrComment, closingPos, messageRemoveWhitespace, CheckTrailingWhitespace)
+	if closingLine > lastContentLine+1 {
+		file := w.fset.File(body.Rbrace)
+		removeStart := file.LineStart(lastContentLine + 1)
+		removeEnd := file.LineStart(closingLine)
+		w.addErrorRemoveNewline(removeStart, removeEnd, CheckTrailingWhitespace)
 	}
 }
 
@@ -1150,7 +1230,7 @@ func (w *WSL) maybeCheckBlock(
 	cursor *Cursor,
 	check CheckType,
 ) {
-	w.checkBlock(blockStmt)
+	w.checkBlock(blockStmt, cursor)
 
 	if _, ok := w.config.Checks[check]; ok {
 		cursor.SetChecker(check)
@@ -1214,6 +1294,10 @@ func (w *WSL) lineFor(pos token.Pos) int {
 	return w.fset.PositionFor(pos, false).Line
 }
 
+func (w *WSL) lineStartOf(pos token.Pos) token.Pos {
+	return w.fset.File(pos).LineStart(w.lineFor(pos))
+}
+
 func (w *WSL) implementsErr(node *ast.Ident) bool {
 	typeInfo := w.typeInfo.TypeOf(node)
 	if typeInfo == nil {
@@ -1228,34 +1312,57 @@ func (w *WSL) implementsErr(node *ast.Ident) bool {
 	return types.Implements(typeInfo, errorType)
 }
 
+func (w *WSL) commentOnLineAfterNodePos(node ast.Node) token.Pos {
+	currentComments := ast.NewCommentMap(w.fset, node, w.file.Comments)
+	for _, cg := range currentComments {
+		for _, c := range cg {
+			if w.lineFor(c.Pos()) == w.lineFor(node.End())+1 {
+				return c.Pos()
+			}
+		}
+	}
+
+	return 0
+}
+
 func (w *WSL) addErrorInvalidTypeCuddle(pos token.Pos, ct CheckType) {
 	reportMessage := fmt.Sprintf("%s (invalid statement above %s)", messageMissingWhitespaceAbove, ct)
-	w.addErrorWithMessage(pos, pos, pos, reportMessage)
+	insertPos := w.lineStartOf(pos)
+	w.addErrorWithMessage(pos, insertPos, insertPos, reportMessage)
 }
 
 func (w *WSL) addErrorTooManyStatements(pos token.Pos, ct CheckType) {
 	reportMessage := fmt.Sprintf("%s (too many statements above %s)", messageMissingWhitespaceAbove, ct)
-	w.addErrorWithMessage(pos, pos, pos, reportMessage)
+	insertPos := w.lineStartOf(pos)
+	w.addErrorWithMessage(pos, insertPos, insertPos, reportMessage)
 }
 
 func (w *WSL) addErrorNoIntersection(pos token.Pos, ct CheckType) {
 	reportMessage := fmt.Sprintf("%s (no shared variables above %s)", messageMissingWhitespaceAbove, ct)
-	w.addErrorWithMessage(pos, pos, pos, reportMessage)
+	insertPos := w.lineStartOf(pos)
+	w.addErrorWithMessage(pos, insertPos, insertPos, reportMessage)
 }
 
 func (w *WSL) addErrorTooManyLines(pos token.Pos, ct CheckType) {
 	reportMessage := fmt.Sprintf("%s (too many lines above %s)", messageMissingWhitespaceAbove, ct)
-	w.addErrorWithMessage(pos, pos, pos, reportMessage)
+	insertPos := w.lineStartOf(pos)
+	w.addErrorWithMessage(pos, insertPos, insertPos, reportMessage)
 }
 
 func (w *WSL) addErrorNeverAllow(pos token.Pos, ct CheckType) {
 	reportMessage := fmt.Sprintf("%s (never cuddle %s)", messageMissingWhitespaceAbove, ct)
-	w.addErrorWithMessage(pos, pos, pos, reportMessage)
+	insertPos := w.lineStartOf(pos)
+	w.addErrorWithMessage(pos, insertPos, insertPos, reportMessage)
 }
 
 func (w *WSL) addError(report, start, end token.Pos, message string, ct CheckType) {
 	reportMessage := fmt.Sprintf("%s (%s)", message, ct)
 	w.addErrorWithMessage(report, start, end, reportMessage)
+}
+
+func (w *WSL) addErrorRemoveNewline(start, end token.Pos, ct CheckType) {
+	reportMessage := fmt.Sprintf("%s (%s)", messageRemoveWhitespace, ct)
+	w.addErrorWithMessageAndFix(start, start, end, reportMessage, []byte{})
 }
 
 func (w *WSL) addErrorWithMessage(report, start, end token.Pos, message string) {
@@ -1471,30 +1578,31 @@ func (w *WSL) identsFromCaseArms(node ast.Node) []*ast.Ident {
 	return idents
 }
 
+// hasSelectorCall checks if node contains a selector call with one of the given names.
+func hasSelectorCall(node ast.Node, selectorNames []string) bool {
+	var found bool
+
+	ast.Inspect(node, func(n ast.Node) bool {
+		if found {
+			return false // Already found
+		}
+
+		if _, ok := n.(*ast.BlockStmt); ok {
+			return false
+		}
+
+		if sel, ok := n.(*ast.SelectorExpr); ok {
+			found = slices.Contains(selectorNames, sel.Sel.Name)
+			return false
+		}
+
+		return true
+	})
+
+	return found
+}
+
 func (w *WSL) isLockOrUnlock(current, previous ast.Node) bool {
-	findNode := func(node ast.Node, selectorNames []string) bool {
-		var isLockOrUnlock bool
-
-		ast.Inspect(node, func(n ast.Node) bool {
-			if isLockOrUnlock {
-				return false // Already found a call somewhere in the statement
-			}
-
-			if _, ok := n.(*ast.BlockStmt); ok {
-				return false
-			}
-
-			if sel, ok := n.(*ast.SelectorExpr); ok {
-				isLockOrUnlock = slices.Contains(selectorNames, sel.Sel.Name)
-				return false
-			}
-
-			return true
-		})
-
-		return isLockOrUnlock
-	}
-
 	// If we're an ExprStmt (e.g. X()), we check if we're calling `Unlock` or
 	// `RWUnlock`. No matter how deep this is or what previous statement was, we
 	// allow this.
@@ -1503,12 +1611,60 @@ func (w *WSL) isLockOrUnlock(current, previous ast.Node) bool {
 	// [ANY BLOCK]
 	// mu.Unlock()
 	if _, ok := current.(*ast.ExprStmt); ok {
-		return findNode(current, []string{"Unlock", "RWUnlock"})
+		return hasSelectorCall(current, []string{"Unlock", "RWUnlock"})
 	}
 
 	if previous != nil {
-		return findNode(previous, []string{"Lock", "RWLock", "TryLock"})
+		return hasSelectorCall(previous, []string{"Lock", "RWLock", "TryLock"})
 	}
 
 	return false
+}
+
+// isErrNotNilCheck returns the error identifier if stmt is an `if err != nil`
+// or `if err == nil` check without an init statement, nil otherwise.
+func (w *WSL) isErrNotNilCheck(stmt ast.Stmt) *ast.Ident {
+	ifStmt, ok := stmt.(*ast.IfStmt)
+	if !ok {
+		return nil
+	}
+
+	// If the error checking has an init condition (e.g. if err := f();) we
+	// don't consider it an error check since the error is assigned on this row.
+	if ifStmt.Init != nil {
+		return nil
+	}
+
+	// The condition must be a binary expression (X OP Y)
+	binaryExpr, ok := ifStmt.Cond.(*ast.BinaryExpr)
+	if !ok {
+		return nil
+	}
+
+	// We must do not equal or equal comparison (!= or ==)
+	if binaryExpr.Op != token.NEQ && binaryExpr.Op != token.EQL {
+		return nil
+	}
+
+	xIdent, ok := binaryExpr.X.(*ast.Ident)
+	if !ok {
+		return nil
+	}
+
+	// X is not an error so it's not error checking
+	if !w.implementsErr(xIdent) {
+		return nil
+	}
+
+	yIdent, ok := binaryExpr.Y.(*ast.Ident)
+	if !ok {
+		return nil
+	}
+
+	// Y is not compared with `nil`
+	if yIdent.Name != "nil" {
+		return nil
+	}
+
+	return xIdent
 }
