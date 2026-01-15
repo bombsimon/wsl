@@ -2,7 +2,7 @@ module github.com/bombsimon/wsl/v5
 
 go 1.24.0
 
-toolchain go1.24.1
+toolchain go1.25.6
 
 require (
 	github.com/stretchr/testify v1.11.1
