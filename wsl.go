@@ -1061,39 +1061,64 @@ func (w *WSL) checkLeadingNewline(startPos token.Pos, body []ast.Stmt, comments 
 		return
 	}
 
-	openLine := w.lineFor(startPos)
-	firstStmtLine := w.lineFor(body[0].Pos())
-	firstCommentStatLine := firstStmtLine
-	lastCommentEndLine := openLine
+	var (
+		openLine        = w.lineFor(startPos)
+		firstStmtPos    = body[0].Pos()
+		firstStmtLine   = w.lineFor(firstStmtPos)
+		leadingComments []*ast.CommentGroup
+	)
 
 	for _, commentGroup := range comments {
 		for _, comment := range commentGroup {
-			if comment.Pos() <= startPos || comment.End() >= body[0].Pos() {
-				continue
+			if comment.Pos() > startPos && comment.End() < firstStmtPos {
+				leadingComments = append(leadingComments, comment)
 			}
+		}
+	}
 
-			if startLine := w.lineFor(comment.Pos()); startLine < firstCommentStatLine && startLine > openLine {
-				firstCommentStatLine = startLine
-			}
+	if len(leadingComments) == 0 {
+		if firstStmtLine := w.lineFor(firstStmtPos); firstStmtLine > openLine+1 {
+			file := w.fset.File(startPos)
+			w.addErrorRemoveNewline(
+				file.LineStart(openLine+1),
+				file.LineStart(firstStmtLine),
+				CheckLeadingWhitespace,
+			)
+		}
 
-			if endLine := w.lineFor(comment.End()); endLine > lastCommentEndLine {
-				lastCommentEndLine = endLine
-			}
+		return
+	}
+
+	var (
+		firstContentLine   = firstStmtLine
+		lastCommentEndLine = openLine
+	)
+
+	for _, comment := range leadingComments {
+		startLine := w.lineFor(comment.Pos())
+		endLine := w.lineFor(comment.End())
+
+		if startLine > openLine && startLine < firstContentLine {
+			firstContentLine = startLine
+		}
+
+		if endLine > lastCommentEndLine {
+			lastCommentEndLine = endLine
 		}
 	}
 
 	file := w.fset.File(startPos)
 
-	// Empty line after opening brace
-	if firstCommentStatLine > openLine+1 {
+	// Empty line after opening brace.
+	if firstContentLine > openLine+1 {
 		w.addErrorRemoveNewline(
 			file.LineStart(openLine+1),
-			file.LineStart(firstCommentStatLine),
+			file.LineStart(firstContentLine),
 			CheckLeadingWhitespace,
 		)
 	}
 
-	// Empty line between potential comments and first statement.
+	// Empty line between comments and first statement.
 	if lastCommentEndLine > openLine && firstStmtLine > lastCommentEndLine+1 {
 		w.addErrorRemoveNewline(
 			file.LineStart(lastCommentEndLine+1),
@@ -1120,26 +1145,27 @@ func (w *WSL) checkTrailingNewline(body *ast.BlockStmt) {
 		return
 	}
 
-	closingLine := w.lineFor(body.Rbrace)
-	lastContentLine := w.lineFor(lastStmt.End())
+	lastContentPos := lastStmt.End()
 
 	// Empty label statements need positional adjustment. #92
 	if l, ok := lastStmt.(*ast.LabeledStmt); ok {
 		if _, ok := l.Stmt.(*ast.EmptyStmt); ok {
-			lastContentLine = w.lineFor(lastStmt.Pos())
+			lastContentPos = lastStmt.Pos()
 		}
 	}
 
-	// Find the last comment after last statement.
+	// Find the last comment after last statement using position comparison.
 	comments := ast.NewCommentMap(w.fset, body, w.file.Comments)
 	for _, commentGroup := range comments {
 		for _, comment := range commentGroup {
-			commentEndLine := w.lineFor(comment.End())
-			if commentEndLine < closingLine && commentEndLine > lastContentLine {
-				lastContentLine = commentEndLine
+			if comment.End() < body.Rbrace && comment.End() > lastContentPos {
+				lastContentPos = comment.End()
 			}
 		}
 	}
+
+	closingLine := w.lineFor(body.Rbrace)
+	lastContentLine := w.lineFor(lastContentPos)
 
 	if closingLine > lastContentLine+1 {
 		file := w.fset.File(body.Rbrace)
