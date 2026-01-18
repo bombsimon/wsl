@@ -518,7 +518,7 @@ func (w *WSL) checkCaseClause(stmt *ast.CaseClause, cursor *Cursor) {
 	w.checkCaseLeadingNewline(stmt)
 
 	if w.config.CaseMaxLines != 0 {
-		w.checkCaseTrailingNewline(stmt, stmt.Body, cursor)
+		w.checkCaseTrailingNewline(stmt.Body, cursor)
 	}
 
 	w.checkBody(stmt.Body)
@@ -528,7 +528,7 @@ func (w *WSL) checkCommClause(stmt *ast.CommClause, cursor *Cursor) {
 	w.checkCommLeadingNewline(stmt)
 
 	if w.config.CaseMaxLines != 0 {
-		w.checkCaseTrailingNewline(stmt, stmt.Body, cursor)
+		w.checkCaseTrailingNewline(stmt.Body, cursor)
 	}
 
 	w.checkBody(stmt.Body)
@@ -941,7 +941,7 @@ func (w *WSL) checkTypeSwitch(stmt *ast.TypeSwitchStmt, cursor *Cursor) {
 	w.maybeCheckBlock(stmt, stmt.Body, cursor, CheckTypeSwitch)
 }
 
-func (w *WSL) checkCaseTrailingNewline(currentCase ast.Node, body []ast.Stmt, cursor *Cursor) {
+func (w *WSL) checkCaseTrailingNewline(body []ast.Stmt, cursor *Cursor) {
 	if len(body) == 0 {
 		return
 	}
@@ -984,20 +984,21 @@ func (w *WSL) checkCaseTrailingNewline(currentCase ast.Node, body []ast.Stmt, cu
 	nextContentPos := nextCase.Pos()
 	nextContentLine := nextCaseLine
 
-	// Find comments between last statement and next case.
-	// Comments attach to either currentCase (trailing) or nextCase (leading).
-	// We only handle zero or one comment group to avoid complex edge cases.
-	comments := ast.NewCommentMap(w.fset, w.file, w.file.Comments)
-
-	// Merge comments from last statement and next case.
+	// Filter comments between last statement and next case only.
 	var commentGroups []*ast.CommentGroup
 
-	for _, node := range []ast.Node{currentCase, nextCase} {
-		for _, cg := range comments[node] {
-			cgLine := w.lineFor(cg.Pos())
-			if cgLine > lastStmtEndLine && cgLine < nextCaseLine {
-				commentGroups = append(commentGroups, cg)
-			}
+	for _, cg := range w.file.Comments {
+		if cg.Pos() >= nextCase.Pos() {
+			break
+		}
+
+		if cg.Pos() <= lastStmt.End() {
+			continue
+		}
+
+		cgLine := w.lineFor(cg.Pos())
+		if cgLine > lastStmtEndLine && cgLine < nextCaseLine {
+			commentGroups = append(commentGroups, cg)
 		}
 	}
 
