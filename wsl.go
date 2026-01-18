@@ -975,53 +975,42 @@ func (w *WSL) checkCaseTrailingNewline(body []ast.Stmt, cursor *Cursor) {
 	nextCaseLine := w.lineFor(nextCase.Pos())
 	nextCaseCol := w.fset.PositionFor(nextCase.Pos(), false).Column
 
-	// Find the effective end of case body content (including trailing comments)
-	// and the start of next case content (leading comment or case itself).
-	// Trailing comments are indented like statements (col > case col).
-	// Leading comments are at case indentation (col <= case col).
+	// Find transition point between trailing content (indented) and leading
+	// content (left-aligned). Trailing comments belong to current case, leading
+	// comments belong to next case. The blank line goes at the transition.
 	contentEndLine := lastStmtEndLine
 	contentEndPos := lastStmt.End()
 	nextContentPos := nextCase.Pos()
 	nextContentLine := nextCaseLine
 
-	// Filter comments between last statement and next case only.
-	var commentGroups []*ast.CommentGroup
-
-	for _, cg := range w.file.Comments {
-		if cg.Pos() >= nextCase.Pos() {
+COMMENTS:
+	for _, commentGroup := range w.file.Comments {
+		if commentGroup.Pos() >= nextCase.Pos() {
 			break
 		}
 
-		if cg.Pos() <= lastStmt.End() {
+		if commentGroup.End() <= lastStmt.End() {
 			continue
 		}
 
-		cgLine := w.lineFor(cg.Pos())
-		if cgLine > lastStmtEndLine && cgLine < nextCaseLine {
-			commentGroups = append(commentGroups, cg)
-		}
-	}
+		for _, comment := range commentGroup.List {
+			commentLine := w.lineFor(comment.Pos())
+			if commentLine <= lastStmtEndLine || commentLine >= nextCaseLine {
+				continue
+			}
 
-	// Multiple comment groups are left as-is and does not add any report. This
-	// is because multiple groups can have different indentation and it's hard
-	// and costly to try to figure out where in such situation we should add the
-	// empty line.
-	if len(commentGroups) > 1 {
-		return
-	}
+			col := w.fset.PositionFor(comment.Pos(), false).Column
+			if col <= nextCaseCol {
+				// Left-aligned: blank line goes before this
+				nextContentPos = comment.Pos()
+				nextContentLine = commentLine
 
-	if len(commentGroups) == 1 {
-		cg := commentGroups[0]
-		commentCol := w.fset.PositionFor(cg.Pos(), false).Column
+				break COMMENTS
+			}
 
-		if commentCol > nextCaseCol {
-			// Trailing comment (indented like statements) - blank line goes after it.
-			contentEndLine = w.lineFor(cg.End())
-			contentEndPos = cg.End()
-		} else {
-			// Leading comment (indented like case) - blank line goes before it.
-			nextContentPos = cg.Pos()
-			nextContentLine = w.lineFor(cg.Pos())
+			// Indented: extend trailing content
+			contentEndPos = comment.End()
+			contentEndLine = w.lineFor(comment.End())
 		}
 	}
 

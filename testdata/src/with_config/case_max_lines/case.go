@@ -2,7 +2,7 @@ package testpkg
 
 import "context"
 
-func fn1(n int) {
+func noComments(n int) {
 	switch n {
 	case 1:
 		n++
@@ -13,12 +13,6 @@ func fn1(n int) {
 		n++
 		n++
 		n++ // want `missing whitespace below this line \(case-trailing-newline\)`
-	case 4:
-		n++
-		n++
-		n++
-		n++ // want +1 `missing whitespace below this line \(case-trailing-newline\)`
-		// Trailing comment
 	default:
 		n++
 		n++
@@ -27,7 +21,7 @@ func fn1(n int) {
 	}
 }
 
-func fn2(ctx context.Context, ch1 chan struct{}) {
+func selectStmt(ctx context.Context, ch1 chan struct{}) {
 	select {
 	case <-ctx.Done():
 		_ = 1
@@ -40,40 +34,97 @@ func fn2(ctx context.Context, ch1 chan struct{}) {
 	}
 }
 
-// Test comment permutations: no comments, leading only, trailing only, both (single group).
-func fnCommentPermutations(n int) {
+// Single comment: leading (left-aligned) or trailing (indented).
+func singleComment(n int) {
 	switch n {
 	case 1:
 		n++
 		n++
 		n++ // want `missing whitespace below this line \(case-trailing-newline\)`
-	// Leading comment
+	// Leading comment (left-aligned)
 	case 2:
 		n++
 		n++
 		n++ // want +1 `missing whitespace below this line \(case-trailing-newline\)`
-		// Trailing comment
-	case 3:
-		n++
-		n++
-		n++ // want +2 `missing whitespace below this line \(case-trailing-newline\)`
-		// Trailing comment
-	// Leading comment (same group as above - adjacent)
+		// Trailing comment (indented)
 	default:
 		n++
 	}
 }
 
-// Test multiple comment groups - should be skipped (no report).
-func fnMultipleCommentGroups(n int) {
+// All comments indented (trailing) - blank line goes before next case.
+func allIndented(n int) {
+	switch n {
+	case 1:
+		n++
+		n++
+		n++ // want +3 `missing whitespace below this line \(case-trailing-newline\)`
+		// First group
+
+		// Second group (both indented)
+	default:
+		n++
+	}
+}
+
+// All comments left-aligned (leading) - blank line goes after last statement.
+func allLeftAligned(n int) {
+	switch n {
+	case 1:
+		n++
+		n++
+		n++ // want `missing whitespace below this line \(case-trailing-newline\)`
+	// First group
+
+	// Second group (both left-aligned)
+	default:
+		n++
+	}
+}
+
+// Mixed groups - first indented, second left-aligned.
+// Already has blank line at transition - no report.
+func mixedGroupsCorrect(n int) {
 	switch n {
 	case 1:
 		n++
 		n++
 		n++
-		// First group
+		// Indented group
 
-		// Second group (separated by blank line)
+	// Left-aligned group
+	case 2:
+		n++
+		n++
+		n++
+		// Indented group
+
+	// Left-aligned group (unnecessary blank line after this - not currently checked)
+
+	default:
+		n++
+	}
+}
+
+// Mixed groups without blank line - needs fix.
+func mixedGroupsNeedsFix(n int) {
+	switch n {
+	case 1:
+		n++
+		n++
+		n++ // want +1 `missing whitespace below this line \(case-trailing-newline\)`
+		// Indented group
+	// Left-aligned group
+	case 2:
+		n++
+		n++
+		n++ // want +3 `missing whitespace below this line \(case-trailing-newline\)`
+		// Indented group 1
+
+		// Indented group 2
+	// Left-aligned group 1
+
+	// Left-aligned group 2
 	default:
 		n++
 	}
