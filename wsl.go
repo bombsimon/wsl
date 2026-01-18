@@ -473,12 +473,10 @@ func (w *WSL) checkEmptyLineAfter(block *ast.BlockStmt, cursor *Cursor) {
 
 	// Exception: if err != nil { } followed by defer that references
 	// a variable assigned above the if block.
-	if ifStmt, ok := currentStmt.(*ast.IfStmt); ok {
-		if w.isErrNotNilCheck(ifStmt) != nil {
-			if deferStmt, ok := cursor.Stmt().(*ast.DeferStmt); ok && previousNode != nil {
-				if w.hasIntersection(previousNode, deferStmt) {
-					return
-				}
+	if w.isErrNotNilCheck(currentStmt) != nil {
+		if deferStmt, ok := cursor.Stmt().(*ast.DeferStmt); ok && previousNode != nil {
+			if w.hasIntersection(previousNode, deferStmt) {
+				return
 			}
 		}
 	}
@@ -694,12 +692,7 @@ func (w *WSL) checkError(
 
 	defer cursor.Save()()
 
-	stmt, ok := ifStmt.(ast.Stmt)
-	if !ok {
-		return
-	}
-
-	errIdent := w.isErrNotNilCheck(stmt)
+	errIdent := w.isErrNotNilCheck(ifStmt)
 	if errIdent == nil {
 		return
 	}
@@ -1008,7 +1001,10 @@ func (w *WSL) checkCaseTrailingNewline(currentCase ast.Node, body []ast.Stmt, cu
 		}
 	}
 
-	// Multiple comment groups - too complex, skip.
+	// Multiple comment groups are left as-is and does not add any report. This
+	// is because multiple groups can have different indentation and it's hard
+	// and costly to try to figure out where in such situation we should add the
+	// empty line.
 	if len(commentGroups) > 1 {
 		return
 	}
@@ -1649,7 +1645,7 @@ func (w *WSL) isLockOrUnlock(current, previous ast.Node) bool {
 
 // isErrNotNilCheck returns the error identifier if stmt is an `if err != nil`
 // or `if err == nil` check without an init statement, nil otherwise.
-func (w *WSL) isErrNotNilCheck(stmt ast.Stmt) *ast.Ident {
+func (w *WSL) isErrNotNilCheck(stmt ast.Node) *ast.Ident {
 	ifStmt, ok := stmt.(*ast.IfStmt)
 	if !ok {
 		return nil
