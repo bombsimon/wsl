@@ -93,14 +93,6 @@ func mixedGroupsCorrect(n int) {
 		// Indented group
 
 	// Left-aligned group
-	case 2:
-		n++
-		n++
-		n++
-		// Indented group
-
-	// Left-aligned group (unnecessary blank line after this - not currently checked)
-
 	default:
 		n++
 	}
@@ -125,6 +117,28 @@ func mixedGroupsNeedsFix(n int) {
 	// Left-aligned group 1
 
 	// Left-aligned group 2
+	default:
+		n++
+	}
+}
+
+// Unnecessary blank line before case - needs removal.
+func unnecessaryBlankBeforeCase(n int) {
+	switch n {
+	case 1:
+		n++
+		n++ // want +1 `missing whitespace below this line \(case-trailing-newline\)`
+		n++ // want +2 `unnecessary whitespace \(case-trailing-newline\)`
+	// Left-aligned comment
+
+	case 2:
+		n++
+		n++
+		n++ // want +4 `unnecessary whitespace \(case-trailing-newline\)`
+		// Indented group
+
+	// Left-aligned group
+
 	default:
 		n++
 	}

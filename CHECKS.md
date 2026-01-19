@@ -1428,13 +1428,119 @@ When set to a value greater than 0, case clauses in `switch` and `select`
 statements that exceed this number of lines will require a blank line before the
 next case. Setting this to 1 will make it always enabled.
 
-When a single comment group exists between case clauses, the blank line
-placement depends on the comment's start indentation:
+Comments between case clauses are handled based on their indentation:
 
-- Comments indented like statements (deeper than `case`) are treated as trailing
-  comments. The blank line goes after them.
-- Comments indented at the same level as `case` are treated as leading comments.
-  The blank line goes before them.
+- **Indented comments** (deeper than `case`) are treated as trailing comments
+  that belong to the current case body.
+- **Left-aligned comments** (at the same level as `case`) are treated as leading
+  comments that belong to the next case.
 
-If there are multiple comment groups between cases, the check is skipped to
-avoid ambiguous situations.
+The blank line is placed at the transition point between trailing and leading
+content. This means:
+
+- If all comments are indented, the blank line goes before the next `case`.
+- If all comments are left-aligned, the blank line goes after the last
+  statement.
+- If comments transition from indented to left-aligned, the blank line goes at
+  the transition point.
+
+Additionally, left-aligned comments must be flush against the next `case` - no
+blank line is allowed between them. This ensures consistent formatting where
+leading comments are visually attached to the case they describe.
+
+<table>
+<thead><tr><th>Bad</th><th>Good</th></tr></thead>
+<tbody>
+<tr><td valign="top">
+
+```go
+switch n {
+case 1:
+    fmt.Println("hello")
+case 2: // 1
+    fmt.Println("world")
+}
+
+switch n {
+case 1:
+    fmt.Println("hello")
+    // Trailing comment
+case 2: // 2
+    fmt.Println("world")
+}
+
+switch n {
+case 1:
+    fmt.Println("hello")
+    // Trailing comment
+// Leading comment
+case 2: // 3
+    fmt.Println("world")
+}
+
+switch n {
+case 1:
+    fmt.Println("hello")
+// Leading comment
+
+case 2: // 4
+    fmt.Println("world")
+}
+```
+
+</td><td valign="top">
+
+```go
+switch n {
+case 1:
+    fmt.Println("hello")
+
+case 2:
+    fmt.Println("world")
+}
+
+switch n {
+case 1:
+    fmt.Println("hello")
+    // Trailing comment
+
+case 2:
+    fmt.Println("world")
+}
+
+switch n {
+case 1:
+    fmt.Println("hello")
+    // Trailing comment
+
+// Leading comment
+case 2:
+    fmt.Println("world")
+}
+
+switch n {
+case 1:
+    fmt.Println("hello")
+
+// Leading comment
+case 2:
+    fmt.Println("world")
+}
+```
+
+</td></tr>
+
+<tr><td valign="top">
+
+<sup>1</sup> Missing blank line after case body
+
+<sup>2</sup> Missing blank line after trailing comment
+
+<sup>3</sup> Missing blank line at transition (after trailing comment)
+
+<sup>4</sup> Unnecessary blank line before case (after leading comment)
+
+</td><td valign="top">
+
+</td></tr>
+</tbody></table>

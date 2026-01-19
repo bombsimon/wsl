@@ -963,27 +963,31 @@ func (w *WSL) checkCaseTrailingNewline(body []ast.Stmt, cursor *Cursor) {
 		return
 	}
 
-	firstStmt := body[0]
-	lastStmt := body[len(body)-1]
-	totalLines := w.lineFor(lastStmt.End()) - w.lineFor(firstStmt.Pos()) + 1
+	var (
+		firstStmt  = body[0]
+		lastStmt   = body[len(body)-1]
+		totalLines = w.lineFor(lastStmt.End()) - w.lineFor(firstStmt.Pos()) + 1
+	)
 
 	if totalLines < w.config.CaseMaxLines {
 		return
 	}
 
-	lastStmtEndLine := w.lineFor(lastStmt.End())
-	nextCaseLine := w.lineFor(nextCase.Pos())
-	nextCaseCol := w.fset.PositionFor(nextCase.Pos(), false).Column
+	var (
+		lastStmtEndLine = w.lineFor(lastStmt.End())
+		nextCaseLine    = w.lineFor(nextCase.Pos())
+		nextCaseCol     = w.fset.PositionFor(nextCase.Pos(), false).Column
+	)
 
 	// Find transition point between trailing content (indented) and leading
 	// content (left-aligned). Trailing comments belong to current case, leading
 	// comments belong to next case. The blank line goes at the transition.
-	contentEndLine := lastStmtEndLine
-	contentEndPos := lastStmt.End()
-	nextContentPos := nextCase.Pos()
-	nextContentLine := nextCaseLine
+	var (
+		lastStmtOrCommentEnd         = lastStmt.End()
+		nextCaseOrLeftAlignedComment = nextCase.Pos()
+		lastLeftAlignedCommentEnd    = token.NoPos
+	)
 
-COMMENTS:
 	for _, commentGroup := range w.file.Comments {
 		if commentGroup.Pos() >= nextCase.Pos() {
 			break
@@ -1001,26 +1005,39 @@ COMMENTS:
 
 			col := w.fset.PositionFor(comment.Pos(), false).Column
 			if col <= nextCaseCol {
-				// Left-aligned: blank line goes before this
-				nextContentPos = comment.Pos()
-				nextContentLine = commentLine
+				// Left-aligned: first one marks transition point
+				if lastLeftAlignedCommentEnd == token.NoPos {
+					nextCaseOrLeftAlignedComment = comment.Pos()
+				}
 
-				break COMMENTS
+				lastLeftAlignedCommentEnd = comment.End()
+			} else {
+				// Indented: extend trailing content
+				lastStmtOrCommentEnd = comment.End()
 			}
+		}
+	}
 
-			// Indented: extend trailing content
-			contentEndPos = comment.End()
-			contentEndLine = w.lineFor(comment.End())
+	lastStmtOrCommentLine := w.lineFor(lastStmtOrCommentEnd)
+	nextCaseOrLeadingCommentLine := w.lineFor(nextCaseOrLeftAlignedComment)
+
+	// Check for unnecessary blank line before case (leading comments should be flush).
+	if lastLeftAlignedCommentEnd != token.NoPos {
+		lastLeadingEndLine := w.lineFor(lastLeftAlignedCommentEnd)
+
+		if lastLeadingEndLine < nextCaseLine-1 {
+			file := w.fset.File(nextCase.Pos())
+			w.addErrorRemoveNewline(file.LineStart(lastLeadingEndLine+1), file.LineStart(nextCaseLine), CheckCaseTrailingNewline)
 		}
 	}
 
 	// Already has a blank line at the boundary.
-	if nextContentLine > contentEndLine+1 {
+	if nextCaseOrLeadingCommentLine > lastStmtOrCommentLine+1 {
 		return
 	}
 
-	insertPos := w.lineStartOf(nextContentPos)
-	w.addError(contentEndPos, insertPos, insertPos, messageMissingWhitespaceBelow, CheckCaseTrailingNewline)
+	insertPos := w.lineStartOf(nextCaseOrLeftAlignedComment)
+	w.addError(lastStmtOrCommentEnd, insertPos, insertPos, messageMissingWhitespaceBelow, CheckCaseTrailingNewline)
 }
 
 func (w *WSL) checkBlockLeadingNewline(body *ast.BlockStmt) {
