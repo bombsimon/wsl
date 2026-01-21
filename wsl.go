@@ -1344,13 +1344,23 @@ func (w *WSL) implementsErr(node *ast.Ident) bool {
 }
 
 func (w *WSL) commentOnLineAfterNodePos(node ast.Node) token.Pos {
-	currentComments := ast.NewCommentMap(w.fset, node, w.file.Comments)
-	for _, cg := range currentComments {
-		for _, c := range cg {
-			if w.lineFor(c.Pos()) == w.lineFor(node.End())+1 {
-				return c.Pos()
-			}
+	nodeEndLine := w.lineFor(node.End())
+
+	for _, cg := range w.file.Comments {
+		if cg.End() <= node.End() {
+			continue
 		}
+
+		commentLine := w.lineFor(cg.Pos())
+		if commentLine == nodeEndLine {
+			continue
+		}
+
+		if commentLine == nodeEndLine+1 {
+			return cg.Pos()
+		}
+
+		break
 	}
 
 	return token.NoPos
