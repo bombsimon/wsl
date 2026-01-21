@@ -968,7 +968,7 @@ func (w *WSL) checkCaseTrailingNewline(body []ast.Stmt, cursor *Cursor) {
 	var (
 		firstStmt  = body[0]
 		lastStmt   = body[len(body)-1]
-		totalLines = w.lineFor(lastStmt.End()) - w.lineFor(firstStmt.Pos()) + 1
+		totalLines = w.lineFor(nextCase.Pos()) - w.lineFor(firstStmt.Pos())
 	)
 
 	if totalLines < w.config.CaseMaxLines {

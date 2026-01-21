@@ -37,7 +37,7 @@ func selectStmt(ctx context.Context, ch1 chan struct{}) {
 }
 
 // Single comment: leading (left-aligned) or trailing (indented).
-func singleComment(n int) {
+func singleCommentGroup(n int) {
 	switch n {
 	case 1:
 		n++
@@ -50,6 +50,24 @@ func singleComment(n int) {
 		n++
 		n++ // want +1 `missing whitespace below this line \(case-trailing-newline\)`
 		// Trailing comment (indented)
+
+	case 3:
+		n++ // want +3 `missing whitespace below this line \(case-trailing-newline\)`
+		// Comment 1
+		// Comment 2
+		// Comment 3
+
+	case 4:
+		n++ // want `missing whitespace below this line \(case-trailing-newline\)`
+
+	// Comment 1
+	// Comment 2
+	// Comment 3
+	case 5:
+		n++
+		// Comment 1
+		// Comment 2
+		// Comment 3
 
 	default:
 		n++
