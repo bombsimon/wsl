@@ -434,12 +434,12 @@ func (w *WSL) checkCuddlingWithoutIntersection(stmt ast.Node, cursor *Cursor) {
 func (w *WSL) checkBlock(block *ast.BlockStmt, cursor *Cursor) {
 	w.checkBlockLeadingNewline(block)
 	w.checkTrailingNewline(block)
-	w.checkEmptyLineAfter(block, cursor)
+	w.checkNewlineAfterBlock(block, cursor)
 
 	w.checkBody(block.List)
 }
 
-func (w *WSL) checkEmptyLineAfter(block *ast.BlockStmt, cursor *Cursor) {
+func (w *WSL) checkNewlineAfterBlock(block *ast.BlockStmt, cursor *Cursor) {
 	if _, ok := w.config.Checks[CheckNewlineAfterBlock]; !ok {
 		return
 	}
