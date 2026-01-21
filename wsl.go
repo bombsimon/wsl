@@ -729,22 +729,22 @@ func (w *WSL) checkError(
 	previousEndLine := w.lineFor(previousNode.End())
 
 	// Check for comments on the same line as the previous node (extends effective end line).
-	comments := ast.NewCommentMap(w.fset, previousNode, w.file.Comments)
-	for _, cg := range comments {
-		for _, c := range cg {
-			if c.Pos() < previousNode.End() || c.End() > ifStmt.Pos() {
-				continue
-			}
-
-			// There's a comment between the error variable and the if-statement.
-			// If it's on a different line, we can't do much about this.
-			commentEndLine := w.lineFor(c.End())
-			if commentEndLine != previousEndLine {
-				return
-			}
-
-			// Comment is on the same line - no need to update since line stays the same.
+	for _, cg := range w.file.Comments {
+		if cg.Pos() >= ifStmt.Pos() {
+			break
 		}
+
+		if cg.Pos() < previousNode.End() || cg.End() > ifStmt.Pos() {
+			continue
+		}
+
+		// There's a comment between the error variable and the if-statement.
+		// If it's on a different line, we can't do much about this.
+		if w.lineFor(cg.End()) != previousEndLine {
+			return
+		}
+
+		// Comment is on the same line - no need to update since line stays the same.
 	}
 
 	ifStmtLine := w.lineFor(ifStmt.Pos())
@@ -1044,21 +1044,18 @@ func (w *WSL) checkCaseTrailingNewline(body []ast.Stmt, cursor *Cursor) {
 }
 
 func (w *WSL) checkBlockLeadingNewline(body *ast.BlockStmt) {
-	comments := ast.NewCommentMap(w.fset, body, w.file.Comments)
-	w.checkLeadingNewline(body.Lbrace, body.List, comments)
+	w.checkLeadingNewline(body.Lbrace, body.List)
 }
 
 func (w *WSL) checkCaseLeadingNewline(caseClause *ast.CaseClause) {
-	comments := ast.NewCommentMap(w.fset, caseClause, w.file.Comments)
-	w.checkLeadingNewline(caseClause.Colon, caseClause.Body, comments)
+	w.checkLeadingNewline(caseClause.Colon, caseClause.Body)
 }
 
 func (w *WSL) checkCommLeadingNewline(commClause *ast.CommClause) {
-	comments := ast.NewCommentMap(w.fset, commClause, w.file.Comments)
-	w.checkLeadingNewline(commClause.Colon, commClause.Body, comments)
+	w.checkLeadingNewline(commClause.Colon, commClause.Body)
 }
 
-func (w *WSL) checkLeadingNewline(startPos token.Pos, body []ast.Stmt, comments ast.CommentMap) {
+func (w *WSL) checkLeadingNewline(startPos token.Pos, body []ast.Stmt) {
 	if _, ok := w.config.Checks[CheckLeadingWhitespace]; !ok {
 		return
 	}
@@ -1074,11 +1071,13 @@ func (w *WSL) checkLeadingNewline(startPos token.Pos, body []ast.Stmt, comments 
 		leadingComments []*ast.CommentGroup
 	)
 
-	for _, commentGroup := range comments {
-		for _, comment := range commentGroup {
-			if comment.Pos() > startPos && comment.End() < firstStmtPos {
-				leadingComments = append(leadingComments, comment)
-			}
+	for _, cg := range w.file.Comments {
+		if cg.Pos() >= firstStmtPos {
+			break
+		}
+
+		if cg.Pos() > startPos {
+			leadingComments = append(leadingComments, cg)
 		}
 	}
 
@@ -1161,12 +1160,17 @@ func (w *WSL) checkTrailingNewline(body *ast.BlockStmt) {
 	}
 
 	// Find the last comment after last statement using position comparison.
-	comments := ast.NewCommentMap(w.fset, body, w.file.Comments)
-	for _, commentGroup := range comments {
-		for _, comment := range commentGroup {
-			if comment.End() < body.Rbrace && comment.End() > lastContentPos {
-				lastContentPos = comment.End()
-			}
+	for _, cg := range w.file.Comments {
+		if cg.End() <= lastContentPos {
+			continue
+		}
+
+		if cg.Pos() >= body.Rbrace {
+			break
+		}
+
+		if cg.End() < body.Rbrace {
+			lastContentPos = cg.End()
 		}
 	}
 
