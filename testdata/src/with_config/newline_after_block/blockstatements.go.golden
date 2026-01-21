@@ -340,3 +340,22 @@ func typeSwitchWithNewline() {
 
 	fmt.Println("after type switch")
 }
+
+func funcLiteralInvoked() {
+	err := func() error {
+		return nil
+	}()
+	if err != nil {
+		panic(err)
+	}
+}
+
+func funcLiteralAssigned() {
+	someFn := func() {
+		_ = 1
+	}
+	anotherVar := 1
+
+	_ = someFn
+	_ = anotherVar
+}

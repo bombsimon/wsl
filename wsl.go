@@ -127,13 +127,14 @@ func (w *WSL) checkStmt(stmt ast.Stmt, cursor *Cursor) {
 	}
 }
 
+//nolint:unparam // False positive on `cursor`
 func (w *WSL) checkExpr(expr ast.Expr, cursor *Cursor) {
 	// This switch traverses all possible subexpressions in search
 	// of anonymous functions, no matter how unlikely or perhaps even
 	// semantically impossible it is.
 	switch s := expr.(type) {
 	case *ast.FuncLit:
-		w.checkBlock(s.Body, cursor)
+		w.checkBlock(s.Body, NewCursor([]ast.Stmt{}))
 	case *ast.CallExpr:
 		w.checkExpr(s.Fun, cursor)
 
