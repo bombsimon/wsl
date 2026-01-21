@@ -485,21 +485,23 @@ func (w *WSL) checkNewlineAfterBlock(block *ast.BlockStmt, cursor *Cursor) {
 	nextContentPos := cursor.Stmt().Pos()
 	nextContentLine := w.lineFor(nextContentPos)
 
-	// Find the earliest content (comment or statement) after the rbrace.
-	comments := ast.NewCommentMap(w.fset, cursor.Stmt(), w.file.Comments)
-	for _, cg := range comments {
-		for _, c := range cg {
-			// Skip comments that end on the rbrace line (inline comments).
-			if w.lineFor(c.End()) == rBraceLine {
-				continue
-			}
-
-			commentLine := w.lineFor(c.Pos())
-			if commentLine > rBraceLine && commentLine < nextContentLine {
-				nextContentPos = c.Pos()
-				nextContentLine = commentLine
-			}
+	// Find the first comment between rbrace and the next statement.
+	for _, cg := range w.file.Comments {
+		if cg.End() <= block.Rbrace {
+			continue
 		}
+
+		if w.lineFor(cg.End()) == rBraceLine {
+			continue
+		}
+
+		commentLine := w.lineFor(cg.Pos())
+		if commentLine > rBraceLine && commentLine < nextContentLine {
+			nextContentPos = cg.Pos()
+			nextContentLine = commentLine
+		}
+
+		break
 	}
 
 	if nextContentLine <= rBraceLine+1 {
