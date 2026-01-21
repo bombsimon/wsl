@@ -55,11 +55,16 @@ func New(file *ast.File, pass *analysis.Pass, cfg *Configuration) *WSL {
 // Run will run analysis on the file and pass passed to the constructor. It's
 // typically only supposed to be used by [analysis.Analyzer].
 func (w *WSL) Run() {
-	for _, decl := range w.file.Decls {
-		if funcDecl, ok := decl.(*ast.FuncDecl); ok {
-			w.checkFunc(funcDecl)
+	ast.Inspect(w.file, func(n ast.Node) bool {
+		switch node := n.(type) {
+		case *ast.FuncDecl:
+			w.checkBlock(node.Body, NewCursor([]ast.Stmt{}))
+		case *ast.FuncLit:
+			w.checkBlock(node.Body, NewCursor([]ast.Stmt{}))
 		}
-	}
+
+		return true
+	})
 }
 
 func (w *WSL) checkStmt(stmt ast.Stmt, cursor *Cursor) {
@@ -123,124 +128,6 @@ func (w *WSL) checkStmt(stmt ast.Stmt, cursor *Cursor) {
 	case *ast.LabeledStmt:
 		w.checkLabel(s, cursor)
 	case *ast.EmptyStmt:
-	default:
-	}
-}
-
-//nolint:unparam // False positive on `cursor`
-func (w *WSL) checkExpr(expr ast.Expr, cursor *Cursor) {
-	// This switch traverses all possible subexpressions in search
-	// of anonymous functions, no matter how unlikely or perhaps even
-	// semantically impossible it is.
-	switch s := expr.(type) {
-	case *ast.FuncLit:
-		w.checkBlock(s.Body, NewCursor([]ast.Stmt{}))
-	case *ast.CallExpr:
-		w.checkExpr(s.Fun, cursor)
-
-		for _, e := range s.Args {
-			w.checkExpr(e, cursor)
-		}
-	case *ast.StarExpr:
-		w.checkExpr(s.X, cursor)
-	case *ast.CompositeLit:
-		w.checkExpr(s.Type, cursor)
-
-		for _, e := range s.Elts {
-			w.checkExpr(e, cursor)
-		}
-	case *ast.KeyValueExpr:
-		w.checkExpr(s.Key, cursor)
-		w.checkExpr(s.Value, cursor)
-	case *ast.ArrayType:
-		w.checkExpr(s.Elt, cursor)
-		w.checkExpr(s.Len, cursor)
-	case *ast.BasicLit:
-	case *ast.BinaryExpr:
-		w.checkExpr(s.X, cursor)
-		w.checkExpr(s.Y, cursor)
-	case *ast.ChanType:
-		w.checkExpr(s.Value, cursor)
-	case *ast.Ellipsis:
-		w.checkExpr(s.Elt, cursor)
-	case *ast.FuncType:
-		if params := s.TypeParams; params != nil {
-			for _, f := range params.List {
-				w.checkExpr(f.Type, cursor)
-			}
-		}
-
-		if params := s.Params; params != nil {
-			for _, f := range params.List {
-				w.checkExpr(f.Type, cursor)
-			}
-		}
-
-		if results := s.Results; results != nil {
-			for _, f := range results.List {
-				w.checkExpr(f.Type, cursor)
-			}
-		}
-	case *ast.Ident:
-	case *ast.IndexExpr:
-		w.checkExpr(s.Index, cursor)
-		w.checkExpr(s.X, cursor)
-	case *ast.IndexListExpr:
-		w.checkExpr(s.X, cursor)
-
-		for _, e := range s.Indices {
-			w.checkExpr(e, cursor)
-		}
-	case *ast.InterfaceType:
-		for _, f := range s.Methods.List {
-			w.checkExpr(f.Type, cursor)
-		}
-	case *ast.MapType:
-		w.checkExpr(s.Key, cursor)
-		w.checkExpr(s.Value, cursor)
-	case *ast.ParenExpr:
-		w.checkExpr(s.X, cursor)
-	case *ast.SelectorExpr:
-		w.checkExpr(s.X, cursor)
-	case *ast.SliceExpr:
-		w.checkExpr(s.X, cursor)
-		w.checkExpr(s.Low, cursor)
-		w.checkExpr(s.High, cursor)
-		w.checkExpr(s.Max, cursor)
-	case *ast.StructType:
-		for _, f := range s.Fields.List {
-			w.checkExpr(f.Type, cursor)
-		}
-	case *ast.TypeAssertExpr:
-		w.checkExpr(s.X, cursor)
-		w.checkExpr(s.Type, cursor)
-	case *ast.UnaryExpr:
-		w.checkExpr(s.X, cursor)
-	case nil:
-	default:
-	}
-}
-
-func (w *WSL) checkDecl(decl ast.Decl, cursor *Cursor) {
-	switch d := decl.(type) {
-	case *ast.GenDecl:
-		for _, spec := range d.Specs {
-			w.checkSpec(spec, cursor)
-		}
-	case *ast.FuncDecl:
-		w.checkStmt(d.Body, cursor)
-	case *ast.BadDecl:
-	default:
-	}
-}
-
-func (w *WSL) checkSpec(spec ast.Spec, cursor *Cursor) {
-	switch s := spec.(type) {
-	case *ast.ValueSpec:
-		for _, expr := range s.Values {
-			w.checkExpr(expr, cursor)
-		}
-	case *ast.ImportSpec, *ast.TypeSpec:
 	default:
 	}
 }
@@ -433,6 +320,11 @@ func (w *WSL) checkCuddlingWithoutIntersection(stmt ast.Node, cursor *Cursor) {
 }
 
 func (w *WSL) checkBlock(block *ast.BlockStmt, cursor *Cursor) {
+	// Block can be nil for function declarations without a body.
+	if block == nil {
+		return
+	}
+
 	w.checkBlockLeadingNewline(block)
 	w.checkTrailingNewline(block)
 	w.checkNewlineAfterBlock(block, cursor)
@@ -537,22 +429,8 @@ func (w *WSL) checkCommClause(stmt *ast.CommClause, cursor *Cursor) {
 	w.checkBody(stmt.Body)
 }
 
-func (w *WSL) checkFunc(funcDecl *ast.FuncDecl) {
-	if funcDecl.Body == nil {
-		return
-	}
-
-	w.checkBlock(funcDecl.Body, NewCursor([]ast.Stmt{}))
-}
-
 func (w *WSL) checkAssign(stmt *ast.AssignStmt, cursor *Cursor) {
-	defer func() {
-		for _, expr := range stmt.Rhs {
-			w.checkExpr(expr, cursor)
-		}
-
-		w.checkAppend(stmt, cursor)
-	}()
+	defer w.checkAppend(stmt, cursor)
 
 	if _, ok := w.config.Checks[CheckAssign]; !ok {
 		return
@@ -619,8 +497,6 @@ func (w *WSL) checkBranch(stmt *ast.BranchStmt, cursor *Cursor) {
 }
 
 func (w *WSL) checkDeclStmt(stmt *ast.DeclStmt, cursor *Cursor) {
-	w.checkDecl(stmt.Decl, cursor)
-
 	if _, ok := w.config.Checks[CheckDecl]; !ok {
 		return
 	}
@@ -643,7 +519,6 @@ func (w *WSL) checkDeclStmt(stmt *ast.DeclStmt, cursor *Cursor) {
 func (w *WSL) checkDefer(stmt *ast.DeferStmt, cursor *Cursor) {
 	w.maybeCheckExpr(
 		stmt,
-		stmt.Call,
 		cursor,
 		func(n ast.Node) (int, bool) {
 			_, previousIsDefer := n.(*ast.DeferStmt)
@@ -781,7 +656,6 @@ func (w *WSL) checkError(
 func (w *WSL) checkExprStmt(stmt *ast.ExprStmt, cursor *Cursor) {
 	w.maybeCheckExpr(
 		stmt,
-		stmt.X,
 		cursor,
 		func(n ast.Node) (int, bool) {
 			_, ok := n.(*ast.ExprStmt)
@@ -798,7 +672,6 @@ func (w *WSL) checkFor(stmt *ast.ForStmt, cursor *Cursor) {
 func (w *WSL) checkGo(stmt *ast.GoStmt, cursor *Cursor) {
 	w.maybeCheckExpr(
 		stmt,
-		stmt.Call,
 		cursor,
 		// We can cuddle any amount `go` statements so only check cuddling if
 		// the previous one isn't a `go` call.
@@ -840,8 +713,6 @@ func (w *WSL) checkIf(stmt *ast.IfStmt, cursor *Cursor, isElse bool) {
 }
 
 func (w *WSL) checkIncDec(stmt *ast.IncDecStmt, cursor *Cursor) {
-	defer w.checkExpr(stmt.X, cursor)
-
 	if _, ok := w.config.Checks[CheckIncDec]; !ok {
 		return
 	}
@@ -880,10 +751,6 @@ func (w *WSL) checkRange(stmt *ast.RangeStmt, cursor *Cursor) {
 }
 
 func (w *WSL) checkReturn(stmt *ast.ReturnStmt, cursor *Cursor) {
-	for _, expr := range stmt.Results {
-		w.checkExpr(expr, cursor)
-	}
-
 	if _, ok := w.config.Checks[CheckReturn]; !ok {
 		return
 	}
@@ -914,8 +781,6 @@ func (w *WSL) checkSelect(stmt *ast.SelectStmt, cursor *Cursor) {
 }
 
 func (w *WSL) checkSend(stmt *ast.SendStmt, cursor *Cursor) {
-	defer w.checkExpr(stmt.Value, cursor)
-
 	if _, ok := w.config.Checks[CheckSend]; !ok {
 		return
 	}
@@ -1288,13 +1153,10 @@ func (w *WSL) maybeCheckBlock(
 
 func (w *WSL) maybeCheckExpr(
 	node ast.Node,
-	expr ast.Expr,
 	cursor *Cursor,
 	predicate func(ast.Node) (int, bool),
 	check CheckType,
 ) {
-	w.checkExpr(expr, cursor)
-
 	if _, ok := w.config.Checks[check]; ok {
 		cursor.SetChecker(check)
 		previousNode := cursor.PreviousNode()
