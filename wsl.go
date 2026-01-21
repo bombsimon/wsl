@@ -457,7 +457,7 @@ func (w *WSL) checkNewlineAfterBlock(block *ast.BlockStmt, cursor *Cursor) {
 
 	if !cursor.Next() {
 		// No more statements after this one so check for comments after.
-		if cPos := w.commentOnLineAfterNodePos(block); cPos != 0 {
+		if cPos := w.commentOnLineAfterNodePos(block); cPos != token.NoPos {
 			insertPos := w.lineStartOf(cPos)
 			w.addError(
 				block.Rbrace,
@@ -1351,7 +1351,7 @@ func (w *WSL) commentOnLineAfterNodePos(node ast.Node) token.Pos {
 		}
 	}
 
-	return 0
+	return token.NoPos
 }
 
 func (w *WSL) addErrorInvalidTypeCuddle(pos token.Pos, ct CheckType) {
