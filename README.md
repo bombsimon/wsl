@@ -73,6 +73,7 @@ For more details and examples, see [CHECKS](CHECKS.md).
 - ✅ **err** - Error checking must follow immediately after the error variable
   is assigned
 - ✅ **leading-whitespace** - Disallow leading empty lines in blocks
+- ❌ **newline-after-block** - Require empty line after block statements
 - ✅ **trailing-whitespace** - Disallow trailing empty lines in blocks
 
 ### Configuration
@@ -167,6 +168,7 @@ linters:
       disable:
         - assign-exclusive
         - assign-expr
+        - newline-after-block
 ```
 
 ## See also
