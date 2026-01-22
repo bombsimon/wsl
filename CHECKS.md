@@ -3,6 +3,7 @@
 ## Table of content
 
 - [Checks](#checks)
+  - [`after-block`](#after-block)
   - [`append`](#append)
   - [`assign`](#assign)
   - [`assign-exclusive`](#assign-exclusive)
@@ -18,7 +19,6 @@
   - [`inc-dec`](#inc-dec)
   - [`label`](#label)
   - [`leading-whitespace`](#leading-whitespace)
-  - [`newline-after-block`](#newline-after-block)
   - [`range`](#range)
   - [`return`](#return)
   - [`select`](#select)
@@ -35,6 +35,68 @@
 
 This document describes all the checks done by `wsl` with examples of what's not
 allowed and what's allowed.
+
+### `after-block`
+
+Block statements (`if`, `for`, `switch`, etc.) should be followed by a blank
+line to visually separate them from subsequent code.
+
+> **NOTE** An exception is made for `defer` statements that follow an
+> `if err != nil` block when the defer references a variable assigned on the
+> line above the if statement. This is a common pattern for resource cleanup.
+
+<table>
+<thead><tr><th>Bad</th><th>Good</th></tr></thead>
+<tbody>
+<tr><td valign="top">
+
+```go
+if true {
+    fmt.Println("hello")
+} // 1
+fmt.Println("world")
+
+for i := 0; i < 3; i++ {
+    fmt.Println(i)
+} // 2
+x := 1
+```
+
+</td><td valign="top">
+
+```go
+if true {
+    fmt.Println("hello")
+}
+
+fmt.Println("world")
+
+for i := 0; i < 3; i++ {
+    fmt.Println(i)
+}
+
+x := 1
+
+// Exception: defer after error check
+f, err := os.Open("file.txt")
+if err != nil {
+    return err
+}
+defer f.Close()
+```
+
+</td></tr>
+
+<tr><td valign="top">
+
+<sup>1</sup> Missing whitespace after block
+
+<sup>2</sup> Missing whitespace after block
+
+</td><td valign="top">
+
+</td></tr>
+</tbody></table>
 
 ### `assign`
 
@@ -1282,68 +1344,6 @@ if true {
 
 </td></tr>
 
-</tbody></table>
-
-### `newline-after-block`
-
-Block statements (`if`, `for`, `switch`, etc.) should be followed by a blank
-line to visually separate them from subsequent code.
-
-> **NOTE** An exception is made for `defer` statements that follow an
-> `if err != nil` block when the defer references a variable assigned on the
-> line above the if statement. This is a common pattern for resource cleanup.
-
-<table>
-<thead><tr><th>Bad</th><th>Good</th></tr></thead>
-<tbody>
-<tr><td valign="top">
-
-```go
-if true {
-    fmt.Println("hello")
-}
-fmt.Println("world") // 1
-
-for i := 0; i < 3; i++ {
-    fmt.Println(i)
-}
-x := 1 // 2
-```
-
-</td><td valign="top">
-
-```go
-if true {
-    fmt.Println("hello")
-}
-
-fmt.Println("world")
-
-for i := 0; i < 3; i++ {
-    fmt.Println(i)
-}
-
-x := 1
-
-// Exception: defer after error check
-f, err := os.Open("file.txt")
-if err != nil {
-    return err
-}
-defer f.Close()
-```
-
-</td></tr>
-
-<tr><td valign="top">
-
-<sup>1</sup> Missing whitespace after block
-
-<sup>2</sup> Missing whitespace after block
-
-</td><td valign="top">
-
-</td></tr>
 </tbody></table>
 
 ### `trailing-whitespace`

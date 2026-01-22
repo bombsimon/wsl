@@ -8,7 +8,7 @@ func ifStatementWithCommentNoNewline() {
 	x := 5
 	if x > 0 {
 		fmt.Println("positive")
-	} // want `missing whitespace below this line \(newline-after-block\)`
+	} // want `missing whitespace below this line \(after-block\)`
 	// This comment should have a blank line above
 	fmt.Println("next statement")
 }
@@ -29,7 +29,7 @@ func ifElseWithCommentNoNewline() {
 		fmt.Println("positive")
 	} else {
 		fmt.Println("not positive")
-	} // want `missing whitespace below this line \(newline-after-block\)`
+	} // want `missing whitespace below this line \(after-block\)`
 	// This comment should have a blank line above
 	fmt.Println("next statement")
 }
@@ -49,7 +49,7 @@ func ifElseWithCommentAndNewline() {
 func forLoopWithCommentNoNewline() {
 	for i := 0; i < 5; i++ {
 		fmt.Println(i)
-	} // want `missing whitespace below this line \(newline-after-block\)`
+	} // want `missing whitespace below this line \(after-block\)`
 	// This comment should have a blank line above
 	fmt.Println("after loop")
 }
@@ -67,7 +67,7 @@ func rangeLoopWithCommentNoNewline() {
 	items := []int{1, 2, 3}
 	for _, item := range items {
 		fmt.Println(item)
-	} // want `missing whitespace below this line \(newline-after-block\)`
+	} // want `missing whitespace below this line \(after-block\)`
 	// This comment should have a blank line above
 	fmt.Println("after loop")
 }
@@ -91,7 +91,7 @@ func switchWithCommentNoNewline() {
 		fmt.Println("two") // want `missing whitespace below this line \(case-trailing-newline\)`
 	default:
 		fmt.Println("other")
-	} // want `missing whitespace below this line \(newline-after-block\)`
+	} // want `missing whitespace below this line \(after-block\)`
 	// This comment should have a blank line above
 	fmt.Println("after switch")
 }
@@ -122,7 +122,7 @@ func typeSwitchWithCommentNoNewline() {
 		fmt.Println("int:", v) // want `missing whitespace below this line \(case-trailing-newline\)`
 	default:
 		fmt.Println("unknown type")
-	} // want `missing whitespace below this line \(newline-after-block\)`
+	} // want `missing whitespace below this line \(after-block\)`
 	// This comment should have a blank line above
 	fmt.Println("after type switch")
 }
@@ -151,7 +151,7 @@ func selectWithCommentNoNewline() {
 		fmt.Println(v) // want `missing whitespace below this line \(case-trailing-newline\)`
 	default:
 		fmt.Println("default")
-	} // want `missing whitespace below this line \(newline-after-block\)`
+	} // want `missing whitespace below this line \(after-block\)`
 	// This comment should have a blank line above
 	fmt.Println("after select")
 }
@@ -174,7 +174,7 @@ func multiLineCommentNoNewline() {
 	x := 5
 	if x > 0 {
 		fmt.Println("positive")
-	} // want `missing whitespace below this line \(newline-after-block\)`
+	} // want `missing whitespace below this line \(after-block\)`
 	/*
 		This is a multi-line comment
 		that should have a blank line above
@@ -199,7 +199,7 @@ func blockWithCommentOnly() {
 	x := 5
 	if x > 0 {
 		fmt.Println("positive")
-	} // want `missing whitespace below this line \(newline-after-block\)`
+	} // want `missing whitespace below this line \(after-block\)`
 	// Comment without following statement is still a violation
 }
 
@@ -257,10 +257,10 @@ func nestedBlocksWithComments() {
 	if x > 0 {
 		if x > 3 {
 			fmt.Println("greater than 3")
-		} // want `missing whitespace below this line \(newline-after-block\)`
+		} // want `missing whitespace below this line \(after-block\)`
 		// Inner comment needs spacing
 		fmt.Println("positive")
-	} // want `missing whitespace below this line \(newline-after-block\)`
+	} // want `missing whitespace below this line \(after-block\)`
 	// Outer comment needs spacing
 	fmt.Println("done")
 }
@@ -284,7 +284,7 @@ func blockFollowedByStatementThenComment() {
 	x := 5
 	if x > 0 {
 		fmt.Println("positive")
-	} // want `missing whitespace below this line \(newline-after-block\)`
+	} // want `missing whitespace below this line \(after-block\)`
 	fmt.Println("next statement")
 	// This comment is after a statement, not directly after a block - OK
 }
@@ -293,7 +293,7 @@ func blockWithInlineCommentThenBlockComment() {
 	x := 5
 	if x > 0 {
 		fmt.Println("positive")
-	} // want `missing whitespace below this line \(newline-after-block\)`
+	} // want `missing whitespace below this line \(after-block\)`
 	// Block comment - should have newline above
 	fmt.Println("next")
 }

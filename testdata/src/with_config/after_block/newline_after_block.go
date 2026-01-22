@@ -3,14 +3,14 @@ package testpkg
 func fn() {
 	if true {
 		_ = 1
-	} // want `missing whitespace below this line \(newline-after-block\)`
+	} // want `missing whitespace below this line \(after-block\)`
 	if false {
 		_ = 1
 	}
 }
 
 func fnWithComment() {
-	// want +3 `missing whitespace below this line \(newline-after-block\)`
+	// want +3 `missing whitespace below this line \(after-block\)`
 	if true {
 		_ = 1
 	}
@@ -28,7 +28,7 @@ func caseArms(n int) {
 		_ = 1
 
 	case 3:
-	} // want `missing whitespace below this line \(newline-after-block\)`
+	} // want `missing whitespace below this line \(after-block\)`
 	switch n {
 	case 1:
 		_ = 1 // want `missing whitespace below this line \(case-trailing-newline\)`

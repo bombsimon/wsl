@@ -6,8 +6,7 @@ func ifStatementWithoutNewline() {
 	x := 5
 	if x > 0 {
 		fmt.Println("positive")
-	} // want `missing whitespace below this line \(newline-after-block\)`
-
+	} // want `missing whitespace below this line \(after-block\)`
 	fmt.Println("next statement")
 }
 
@@ -44,8 +43,7 @@ func ifElseStatementWithoutNewline() {
 		fmt.Println("positive")
 	} else {
 		fmt.Println("not positive")
-	} // want `missing whitespace below this line \(newline-after-block\)`
-
+	} // want `missing whitespace below this line \(after-block\)`
 	fmt.Println("next statement")
 }
 
@@ -79,16 +77,14 @@ func ifElseIfStatementWithoutNewline() {
 		fmt.Println("negative")
 	} else {
 		fmt.Println("zero")
-	} // want `missing whitespace below this line \(newline-after-block\)`
-
+	} // want `missing whitespace below this line \(after-block\)`
 	fmt.Println("next statement")
 }
 
 func forLoopWithoutNewline() {
 	for i := 0; i < 5; i++ {
 		fmt.Println(i)
-	} // want `missing whitespace below this line \(newline-after-block\)`
-
+	} // want `missing whitespace below this line \(after-block\)`
 	fmt.Println("after loop")
 }
 
@@ -110,8 +106,7 @@ func rangeLoopWithoutNewline() {
 	items := []int{1, 2, 3}
 	for _, item := range items {
 		fmt.Println(item)
-	} // want `missing whitespace below this line \(newline-after-block\)`
-
+	} // want `missing whitespace below this line \(after-block\)`
 	fmt.Println("after loop")
 }
 
@@ -129,14 +124,11 @@ func switchStatementWithoutNewline() {
 	switch x {
 	case 1:
 		fmt.Println("one") // want `missing whitespace below this line \(case-trailing-newline\)`
-
 	case 2:
 		fmt.Println("two") // want `missing whitespace below this line \(case-trailing-newline\)`
-
 	default:
 		fmt.Println("other")
-	} // want `missing whitespace below this line \(newline-after-block\)`
-
+	} // want `missing whitespace below this line \(after-block\)`
 	fmt.Println("after switch")
 }
 
@@ -161,11 +153,9 @@ func selectStatementWithoutNewline() {
 	select {
 	case v := <-ch:
 		fmt.Println(v) // want `missing whitespace below this line \(case-trailing-newline\)`
-
 	default:
 		fmt.Println("default")
-	} // want `missing whitespace below this line \(newline-after-block\)`
-
+	} // want `missing whitespace below this line \(after-block\)`
 	fmt.Println("after select")
 }
 
@@ -187,8 +177,7 @@ func multipleStatementsWithMixedViolations() {
 
 	if x > 0 {
 		fmt.Println("positive")
-	} // want `missing whitespace below this line \(newline-after-block\)`
-
+	} // want `missing whitespace below this line \(after-block\)`
 	for i := 0; i < x; i++ {
 		fmt.Println(i)
 	}
@@ -205,11 +194,9 @@ func nestedIfWithoutNewline() {
 	if x > 0 {
 		if y > 0 {
 			fmt.Println("both positive")
-		} // want `missing whitespace below this line \(newline-after-block\)`
-
+		} // want `missing whitespace below this line \(after-block\)`
 		fmt.Println("x positive")
-	} // want `missing whitespace below this line \(newline-after-block\)`
-
+	} // want `missing whitespace below this line \(after-block\)`
 	fmt.Println("after outer if")
 }
 
@@ -231,11 +218,9 @@ func nestedForWithoutNewline() {
 	for i := 0; i < 3; i++ {
 		for j := 0; j < 3; j++ {
 			fmt.Println(i, j)
-		} // want `missing whitespace below this line \(newline-after-block\)`
-
+		} // want `missing whitespace below this line \(after-block\)`
 		fmt.Println("inner loop done")
-	} // want `missing whitespace below this line \(newline-after-block\)`
-
+	} // want `missing whitespace below this line \(after-block\)`
 	fmt.Println("after outer loop")
 }
 
@@ -259,14 +244,11 @@ func nestedSwitchWithoutNewline() {
 		switch y {
 		case 2:
 			fmt.Println("x=1, y=2")
-		} // want `missing whitespace below this line \(newline-after-block\)`
-
+		} // want `missing whitespace below this line \(after-block\)`
 		fmt.Println("x=1") // want `missing whitespace below this line \(case-trailing-newline\)`
-
 	case 2:
 		fmt.Println("x=2")
-	} // want `missing whitespace below this line \(newline-after-block\)`
-
+	} // want `missing whitespace below this line \(after-block\)`
 	fmt.Println("after outer switch")
 }
 
@@ -295,11 +277,9 @@ func complexNested() {
 			switch i {
 			case 0:
 				fmt.Println("zero") // want `missing whitespace below this line \(case-trailing-newline\)`
-
 			case 2:
 				fmt.Println("two")
-			} // want `missing whitespace below this line \(newline-after-block\)`
-
+			} // want `missing whitespace below this line \(after-block\)`
 			fmt.Println("even")
 		}
 
@@ -314,14 +294,11 @@ func typeSwitchWithoutNewline() {
 	switch v := a.(type) {
 	case string:
 		fmt.Println("string:", v) // want `missing whitespace below this line \(case-trailing-newline\)`
-
 	case int:
 		fmt.Println("int:", v) // want `missing whitespace below this line \(case-trailing-newline\)`
-
 	default:
 		fmt.Println("unknown type")
-	} // want `missing whitespace below this line \(newline-after-block\)`
-
+	} // want `missing whitespace below this line \(after-block\)`
 	fmt.Println("after type switch")
 }
 
