@@ -350,7 +350,8 @@ func (w *WSL) checkNewlineAfterBlock(block *ast.BlockStmt, cursor *Cursor) {
 
 	if !cursor.Next() {
 		// No more statements after this one so check for comments after.
-		if cPos := w.commentOnLineAfterNodePos(block); cPos != token.NoPos {
+		// Skip comments that are inside the current statement (e.g., inside an else block).
+		if cPos := w.commentOnLineAfterNodePos(block); cPos != token.NoPos && cPos >= currentStmt.End() {
 			insertPos := w.lineStartOf(cPos)
 			w.addError(
 				block.Rbrace,
@@ -381,6 +382,12 @@ func (w *WSL) checkNewlineAfterBlock(block *ast.BlockStmt, cursor *Cursor) {
 	// Find the first comment between rbrace and the next statement.
 	for _, cg := range w.file.Comments {
 		if cg.End() <= block.Rbrace {
+			continue
+		}
+
+		// Skip comments that are inside the current statement but after this block.
+		// This handles cases like comments inside an else block when checking the if-body.
+		if cg.Pos() < currentStmt.End() {
 			continue
 		}
 
