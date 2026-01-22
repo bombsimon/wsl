@@ -18,8 +18,7 @@ func deferInvalidErrChecking() {
 	f, _ := fn()
 	if _, err := fn(); err != nil {
 		panic(err)
-	} // want `missing whitespace below this line \(newline-after-block\)`
-
+	} // want `missing whitespace below this line \(after-block\)`
 	defer f()
 }
 
@@ -27,8 +26,7 @@ func deferInvalidIdent(f func()) {
 	_, err := fn()
 	if err != nil {
 		panic(err)
-	} // want `missing whitespace below this line \(newline-after-block\)`
-
+	} // want `missing whitespace below this line \(after-block\)`
 	defer f()
 }
 
@@ -36,8 +34,6 @@ func deferNotErrCheck(f func()) {
 	x, err := fn()
 	if x != "" {
 		panic(err)
-	} // want `missing whitespace below this line \(newline-after-block\)`
-
+	} // want `missing whitespace below this line \(after-block\)`
 	defer f()
 }
-

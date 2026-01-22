@@ -33,6 +33,8 @@ const (
 	CheckSwitch
 	CheckTypeSwitch
 
+	// CheckAfterBlock ensures there's a newline after each block.
+	CheckAfterBlock
 	// CheckAppend only allows assignments of `append` to be cuddled with other
 	// assignments if it's a variable used in the append statement, e.g.
 	//
@@ -70,7 +72,6 @@ const (
 	CheckErr
 	CheckLeadingWhitespace
 	CheckTrailingWhitespace
-	CheckNewlineAfterBlock
 
 	//nolint:godoclint // No need to document
 	// CheckTypes only used for reporting.
@@ -97,13 +98,13 @@ func (c CheckType) String() string {
 		"switch",
 		"type-switch",
 		//
+		"after-block",
 		"append",
 		"assign-exclusive",
 		"assign-expr",
 		"err",
 		"leading-whitespace",
 		"trailing-whitespace",
-		"newline-after-block",
 		//
 		"case-trailing-newline",
 	}[c]
@@ -213,7 +214,7 @@ func AllChecks() CheckSet {
 	c := DefaultChecks()
 	c.Add(CheckAssignExclusive)
 	c.Add(CheckAssignExpr)
-	c.Add(CheckNewlineAfterBlock)
+	c.Add(CheckAfterBlock)
 
 	return c
 }
@@ -265,6 +266,8 @@ func CheckFromString(s string) (CheckType, error) {
 	case "type-switch":
 		return CheckTypeSwitch, nil
 
+	case "after-block":
+		return CheckAfterBlock, nil
 	case "append":
 		return CheckAppend, nil
 	case "assign-exclusive":
@@ -277,8 +280,6 @@ func CheckFromString(s string) (CheckType, error) {
 		return CheckLeadingWhitespace, nil
 	case "trailing-whitespace":
 		return CheckTrailingWhitespace, nil
-	case "newline-after-block":
-		return CheckNewlineAfterBlock, nil
 	default:
 		return CheckInvalid, fmt.Errorf("invalid check '%s'", s)
 	}

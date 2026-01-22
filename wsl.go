@@ -333,7 +333,7 @@ func (w *WSL) checkBlock(block *ast.BlockStmt, cursor *Cursor) {
 }
 
 func (w *WSL) checkNewlineAfterBlock(block *ast.BlockStmt, cursor *Cursor) {
-	if _, ok := w.config.Checks[CheckNewlineAfterBlock]; !ok {
+	if _, ok := w.config.Checks[CheckAfterBlock]; !ok {
 		return
 	}
 
@@ -357,7 +357,7 @@ func (w *WSL) checkNewlineAfterBlock(block *ast.BlockStmt, cursor *Cursor) {
 				insertPos,
 				insertPos,
 				messageMissingWhitespaceBelow,
-				CheckNewlineAfterBlock,
+				CheckAfterBlock,
 			)
 		}
 
@@ -404,7 +404,7 @@ func (w *WSL) checkNewlineAfterBlock(block *ast.BlockStmt, cursor *Cursor) {
 			insertPos,
 			insertPos,
 			messageMissingWhitespaceBelow,
-			CheckNewlineAfterBlock,
+			CheckAfterBlock,
 		)
 	}
 }

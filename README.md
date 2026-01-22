@@ -64,6 +64,7 @@ For more details and examples, see [CHECKS](CHECKS.md).
 
 #### Specific `wsl` cases
 
+- ❌ **after-block** - Require empty line after block statements
 - ✅ **append** - Only allow re-assigning with `append` if the value being
   appended exist on the line above
 - ❌ **assign-exclusive** - Only allow cuddling either new variables or
@@ -73,7 +74,6 @@ For more details and examples, see [CHECKS](CHECKS.md).
 - ✅ **err** - Error checking must follow immediately after the error variable
   is assigned
 - ✅ **leading-whitespace** - Disallow leading empty lines in blocks
-- ❌ **newline-after-block** - Require empty line after block statements
 - ✅ **trailing-whitespace** - Disallow trailing empty lines in blocks
 
 ### Configuration
@@ -166,13 +166,14 @@ linters:
         - leading-whitespace
         - trailing-whitespace
       disable:
+        - after-block
         - assign-exclusive
         - assign-expr
-        - newline-after-block
 ```
 
 ## See also
 
+- [`newline-after-block`][newline-after-block] - Require newline after blocks
 - [`nlreturn`][nlreturn] - Use empty lines before `return`
 - [`whitespace`][whitespace] - Don't use a blank newline at the start or end of
   a block.
@@ -181,5 +182,6 @@ linters:
   [analysis]: https://pkg.go.dev/golang.org/x/tools/go/analysis
   [gofumpt]: https://github.com/mvdan/gofumpt
   [golangci-lint]: https://golangci-lint.run
+  [newline-after-block]: https://github.com/breml/newline-after-block
   [nlreturn]: https://github.com/ssgreg/nlreturn
   [whitespace]: https://github.com/ultraware/whitespace

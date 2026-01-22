@@ -80,8 +80,7 @@ func mixedBlockAndLiteral() {
 	x := 5
 	if x > 0 {
 		fmt.Println("positive")
-	} // want `missing whitespace below this line \(newline-after-block\)`
-
+	} // want `missing whitespace below this line \(after-block\)`
 	p := Person{
 		Name: "John",
 		Age:  30,
@@ -96,8 +95,7 @@ func structLiteralBeforeIf() {
 	}
 	if p.Age > 18 {
 		fmt.Println("adult")
-	} // want `missing whitespace below this line \(newline-after-block\)`
-
+	} // want `missing whitespace below this line \(after-block\)`
 	fmt.Println(p.Name)
 }
 
@@ -109,8 +107,7 @@ func arrayLiteralBeforeIf() {
 	}
 	if len(arr) > 0 {
 		fmt.Println("not empty")
-	} // want `missing whitespace below this line \(newline-after-block\)`
-
+	} // want `missing whitespace below this line \(after-block\)`
 	fmt.Println(arr)
 }
 
@@ -121,8 +118,7 @@ func mapLiteralBeforeIf() {
 	}
 	if len(m) > 0 {
 		fmt.Println("not empty")
-	} // want `missing whitespace below this line \(newline-after-block\)`
-
+	} // want `missing whitespace below this line \(after-block\)`
 	fmt.Println(m)
 }
 
@@ -133,7 +129,6 @@ func sliceLiteralBeforeIf() {
 	}
 	if len(s) > 0 {
 		fmt.Println("not empty")
-	} // want `missing whitespace below this line \(newline-after-block\)`
-
+	} // want `missing whitespace below this line \(after-block\)`
 	fmt.Println(s)
 }
