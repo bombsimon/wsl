@@ -62,7 +62,7 @@ func (wa *wslAnalyzer) flags() flag.FlagSet {
 	flags.BoolVar(&wa.config.IncludeGenerated, "include-generated", false, "Include generated files")
 	flags.BoolVar(&wa.config.AllowFirstInBlock, "allow-first-in-block", true, "Allow cuddling if variable is used in the first statement in the block")
 	flags.BoolVar(&wa.config.AllowWholeBlock, "allow-whole-block", false, "Allow cuddling if variable is used anywhere in the block")
-	flags.IntVar(&wa.config.BranchMaxLines, "branch-max-lines", 2, "Max lines before requiring newline before branching, e.g. `return`, `break`, `continue` (0 = never)")
+	flags.IntVar(&wa.config.BranchMaxLines, "branch-max-lines", 2, "Max lines before requiring newline before branching, e.g. `return`, `break`, `continue`")
 	flags.IntVar(&wa.config.CaseMaxLines, "case-max-lines", 0, "Max lines before requiring a newline at the end of case (0 = never)")
 
 	flags.StringVar(&wa.defaultChecks, "default", "", "Can be 'all' for all checks or 'none' for no checks or empty for default checks")
