@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"slices"
 
 	"github.com/bombsimon/wsl/v5"
@@ -158,7 +159,7 @@ func main() {
 }
 
 func getWslConfig(filename string) *WSL {
-	yamlFile, err := os.ReadFile(filename)
+	yamlFile, err := os.ReadFile(filepath.Clean(filename))
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
