@@ -22,8 +22,9 @@ their default value. The names are the same as the Go
 [AST](https://pkg.go.dev/go/ast) type name for built-ins.
 
 The base rule is that statements that has a block (e.g. `for`, `range`,
-`switch`, `if` etc) should always only be directly adjacent with a single
-variable and only if it's used in the expression in the block itself.
+`switch`, `if` etc) should only be cuddled with variables that are used in the
+block. By default only a single cuddled statement is allowed, but this can be
+changed with [`cuddle-max-statements`](#configuration).
 
 For more details and examples, see [CHECKS](CHECKS.md).
 
@@ -94,6 +95,10 @@ in more details.
 - **case-max-lines** - If set to a non negative number, `case` blocks needs to
   end with a whitespace if exceeding this number (default 0, 0 = off, 1 =
   always)
+- **cuddle-max-statements** - Max number of cuddled statements allowed above
+  block statements, `go`, `defer` and `send`. Every cuddled statement must have
+  at least one variable used in the block. Respects `allow-first-in-block` and
+  `allow-whole-block` (default 1, 0 = unlimited)
 - ❌ **include-generated** - Include generated files when checking
 
 ## Installation
@@ -143,6 +148,7 @@ linters:
       allow-whole-block: false
       branch-max-lines: 2
       case-max-lines: 0
+      cuddle-max-statements: 1
       default: ~ # Can be `all`, `none`, `default` or empty
       enable:
         - append
