@@ -1,0 +1,76 @@
+package testpkg
+
+import "fmt"
+
+func ifManyAllUsed() {
+	a := 1
+	b := 2
+	c := 3
+	d := 4
+	if a+b+c+d > 0 {
+		fmt.Println("ok")
+	}
+}
+
+func ifEarlyNotUsed() {
+	notUsed := 1
+
+	b := 2 // want `missing whitespace above this line \(too many statements above if\)`
+	c := 3
+	d := 4
+	if b+c+d > 0 {
+		fmt.Println("ok")
+	}
+
+	_ = notUsed
+}
+
+func ifMiddleNotUsed() {
+	a := 1
+	notUsed := 2
+
+	c := 3 // want `missing whitespace above this line \(too many statements above if\)`
+	if a+c > 0 {
+		fmt.Println("ok")
+	}
+
+	_ = notUsed
+}
+
+func forManyAllUsed() {
+	a := 1
+	b := 2
+	c := 3
+	for i := a; i < b+c; i++ {
+		fmt.Println(i)
+	}
+}
+
+func switchManyAllUsed() {
+	a := 1
+	b := 2
+	c := 3
+	switch {
+	case a > b:
+		fmt.Println("a")
+	case c > a:
+		fmt.Println("c")
+	}
+}
+
+func singleStillWorks() {
+	a := 1
+	if a > 0 {
+		fmt.Println("ok")
+	}
+}
+
+func noIntersectionStillErrors() {
+	a := 1
+
+	if true { // want `missing whitespace above this line \(no shared variables above if\)`
+		fmt.Println("ok")
+	}
+
+	_ = a
+}

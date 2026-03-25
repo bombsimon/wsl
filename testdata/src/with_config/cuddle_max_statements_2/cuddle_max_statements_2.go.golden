@@ -1,0 +1,107 @@
+package testpkg
+
+import "fmt"
+
+func ifBothUsed() {
+	a := 1
+	b := 2
+	if a < b {
+		fmt.Println("ok")
+	}
+}
+
+func ifThreeExceedsLimit() {
+	a := 1
+
+	b := 2 // want `missing whitespace above this line \(too many statements above if\)`
+	c := 3
+	if a+b+c > 0 {
+		fmt.Println("ok")
+	}
+}
+
+func ifPrevNotUsed() {
+	notUsed := 1
+
+	b := 2 // want `missing whitespace above this line \(too many statements above if\)`
+	if b > 0 {
+		fmt.Println("ok")
+	}
+
+	_ = notUsed
+}
+
+func ifSingleStillWorks() {
+	a := 1
+	if a > 0 {
+		fmt.Println("ok")
+	}
+}
+
+func ifSingleNoIntersection() {
+	a := 1
+
+	if true { // want `missing whitespace above this line \(no shared variables above if\)`
+		fmt.Println("ok")
+	}
+
+	_ = a
+}
+
+func forBothUsed() {
+	a := 1
+	b := 2
+	for i := a; i < b; i++ {
+		fmt.Println(i)
+	}
+}
+
+func forPrevNotUsed() {
+	notUsed := 1
+
+	b := 2 // want `missing whitespace above this line \(too many statements above for\)`
+	for i := 0; i < b; i++ {
+		fmt.Println(i)
+	}
+
+	_ = notUsed
+}
+
+func rangeBothUsed() {
+	items := []int{1}
+	sum := 0
+	for _, v := range items {
+		sum += v
+	}
+
+	_ = sum
+}
+
+func switchBothUsed() {
+	a := 1
+	b := 2
+	switch {
+	case a > b:
+		fmt.Println("a")
+	case b > a:
+		fmt.Println("b")
+	}
+}
+
+func switchPrevNotUsed() {
+	notUsed := 1
+
+	a := 2 // want `missing whitespace above this line \(too many statements above switch\)`
+	switch {
+	case a > 0:
+		fmt.Println("a")
+	}
+
+	_ = notUsed
+}
+
+func goDirectCall() {
+	a := 1
+	b := 2
+	go fmt.Println(a, b)
+}

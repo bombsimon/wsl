@@ -111,22 +111,24 @@ func (c CheckType) String() string {
 }
 
 type Configuration struct {
-	IncludeGenerated  bool
-	AllowFirstInBlock bool
-	AllowWholeBlock   bool
-	BranchMaxLines    int
-	CaseMaxLines      int
-	Checks            CheckSet
+	IncludeGenerated    bool
+	AllowFirstInBlock   bool
+	AllowWholeBlock     bool
+	BranchMaxLines      int
+	CaseMaxLines        int
+	CuddleMaxStatements int
+	Checks              CheckSet
 }
 
 func NewConfig() *Configuration {
 	return &Configuration{
-		IncludeGenerated:  false,
-		AllowFirstInBlock: true,
-		AllowWholeBlock:   false,
-		CaseMaxLines:      0,
-		BranchMaxLines:    2,
-		Checks:            DefaultChecks(),
+		IncludeGenerated:    false,
+		AllowFirstInBlock:   true,
+		AllowWholeBlock:     false,
+		CaseMaxLines:        0,
+		BranchMaxLines:      2,
+		CuddleMaxStatements: 1,
+		Checks:              DefaultChecks(),
 	}
 }
 
