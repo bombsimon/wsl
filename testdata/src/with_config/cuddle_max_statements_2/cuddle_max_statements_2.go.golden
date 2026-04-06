@@ -1,6 +1,10 @@
 package testpkg
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+	"strings"
+)
 
 func ifBothUsed() {
 	a := 1
@@ -104,4 +108,63 @@ func goDirectCall() {
 	a := 1
 	b := 2
 	go fmt.Println(a, b)
+}
+
+func assignVarAssign(intervalStr string) {
+	// want +3 `missing whitespace above this line \(never cuddle decl\)`
+	// want +3 `missing whitespace above this line \(never cuddle decl\)`
+	limitsStr := strings.Split(intervalStr, "-")
+
+	var (
+		inter int
+		err   error
+	)
+
+	inter, err = strconv.Atoi(limitsStr[0]) // want `missing whitespace above this line \(invalid statement above assign\)`
+	if err != nil {
+		return
+	}
+}
+
+func twoVars() {
+	// want +2 `missing whitespace above this line \(never cuddle decl\)`
+	var (
+	    a = 1
+	    b = 2
+	)
+	if a > b {
+		fmt.Println("a")
+	}
+}
+
+func threeVars() {
+	// want +3 `missing whitespace above this line \(never cuddle decl\)`
+	// want +3 `missing whitespace above this line \(never cuddle decl\)`
+	var (
+	    a = 1
+	    b = 2
+	    c = 3
+	)
+	if a > b+c {
+		fmt.Println("a")
+	}
+
+	x := 1
+
+	y := 2 // want `missing whitespace above this line \(too many statements above if\)`
+	z := 3
+	if x > y+z {
+		fmt.Println("x")
+	}
+}
+
+func threeVarsGrouped() {
+	var (
+	    a = 1
+	    b = 2
+	    c = 3
+	)
+	if a > b+c {
+		fmt.Println("a")
+	}
 }

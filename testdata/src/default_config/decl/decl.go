@@ -142,7 +142,7 @@ func fn11() {
 	// want +2 `missing whitespace above this line \(never cuddle decl\)`
 	var a int
 	var b int
-	if b > 0 { // want `missing whitespace above this line \(too many statements above if\)`
+	if b > 0 {
 		_ = 1
 	}
 
@@ -158,4 +158,22 @@ func fn12() {
 	}
 
 	_ = a
+}
+
+func fn13() {
+	var a int
+	if a > 0 {
+		_ = 1
+	}
+}
+
+func fn14() {
+	var (
+		a = 1
+		b = 2
+		c = 3
+	)
+	if a+b > c {
+		_ = 1
+	}
 }

@@ -71,3 +71,16 @@ func noIntersectionStillErrors() {
 
 	_ = a
 }
+
+func vars() {
+	// want +4 `missing whitespace above this line \(never cuddle decl\)`
+	// want +4 `missing whitespace above this line \(never cuddle decl\)`
+	// want +4 `missing whitespace above this line \(never cuddle decl\)`
+	var a = 1
+	var b = 2
+	var c = 3
+	var d = 4
+	if a+b+c > d {
+		fmt.Println("ok")
+	}
+}

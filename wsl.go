@@ -33,22 +33,20 @@ type issue struct {
 }
 
 type WSL struct {
-	file         *ast.File
-	fset         *token.FileSet
-	typeInfo     *types.Info
-	issues       map[token.Pos]issue
-	config       *Configuration
-	groupedDecls map[token.Pos]struct{}
+	file     *ast.File
+	fset     *token.FileSet
+	typeInfo *types.Info
+	issues   map[token.Pos]issue
+	config   *Configuration
 }
 
 func New(file *ast.File, pass *analysis.Pass, cfg *Configuration) *WSL {
 	return &WSL{
-		fset:         pass.Fset,
-		file:         file,
-		typeInfo:     pass.TypesInfo,
-		issues:       make(map[token.Pos]issue),
-		config:       cfg,
-		groupedDecls: make(map[token.Pos]struct{}),
+		fset:     pass.Fset,
+		file:     file,
+		typeInfo: pass.TypesInfo,
+		issues:   make(map[token.Pos]issue),
+		config:   cfg,
 	}
 }
 
@@ -170,13 +168,6 @@ func (w *WSL) checkCuddlingMaxAllowed(
 	}
 
 	previousNode := cursor.PreviousNode()
-	if previousNode != nil {
-		if _, ok := w.groupedDecls[previousNode.End()]; ok {
-			w.addErrorTooManyStatements(cursor.Stmt().Pos(), cursor.checkType)
-			return
-		}
-	}
-
 	numStmtsAbove := w.numberOfStatementsAbove(cursor)
 	previousIdents := w.identsFromNode(previousNode, true)
 
@@ -214,7 +205,9 @@ func (w *WSL) checkCuddlingMaxAllowed(
 	allowedCount := w.countValidCuddledStatements(targetIdents, cursor, w.config.CuddleMaxStatements)
 	if numStmtsAbove > allowedCount {
 		errorNode := cursor.NthPrevious(allowedCount)
-		w.addErrorTooManyStatements(errorNode.Pos(), cursor.checkType)
+		if errorNode != nil {
+			w.addErrorTooManyStatements(errorNode.Pos(), cursor.checkType)
+		}
 	}
 }
 
@@ -1143,8 +1136,6 @@ func (w *WSL) maybeGroupDecl(stmt *ast.DeclStmt, cursor *Cursor) bool {
 	// We add a diagnostic to every subsequent statement to properly represent
 	// the violations. Duplicate fixes for the same range is fine.
 	for _, n := range reportNodes {
-		w.groupedDecls[n.End()] = struct{}{}
-
 		w.addErrorWithMessageAndFix(
 			n.Pos(),
 			firstNode.Pos(),
@@ -1315,6 +1306,15 @@ func (w *WSL) addErrorWithMessageAndFix(report, start, end token.Pos, message st
 		iss = issue{
 			message:   message,
 			fixRanges: []fixRange{},
+		}
+	}
+
+	// Don't add a fix range that overlaps with an existing one — that would
+	// produce conflicting TextEdits. The existing fix already covers this range,
+	// so the diagnostic is surfaced via the first reporter.
+	for _, existing := range iss.fixRanges {
+		if start < existing.fixRangeEnd && end > existing.fixRangeStart {
+			return
 		}
 	}
 
