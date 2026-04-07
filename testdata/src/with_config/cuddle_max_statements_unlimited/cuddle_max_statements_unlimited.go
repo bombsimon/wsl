@@ -99,6 +99,26 @@ func deferEarlyNotUsed() {
 	_ = notUsed
 }
 
+func ifManyAllUsedInFirstBlock() {
+	a := 1
+	b := 2
+	c := 3
+	if true {
+		fmt.Println(a, b, c)
+	}
+}
+
+func ifEarlyNotUsedInFirstBlock() {
+	notUsed := 1
+	b := 2 // want `missing whitespace above this line \(variable not shared with if\)`
+	c := 3
+	if true {
+		fmt.Println(b, c)
+	}
+
+	_ = notUsed
+}
+
 func singleStillWorks() {
 	a := 1
 	if a > 0 {
