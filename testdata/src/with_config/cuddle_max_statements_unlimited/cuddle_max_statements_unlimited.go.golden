@@ -70,6 +70,40 @@ func switchManyAllUsed() {
 	}
 }
 
+func goManyAllUsed() {
+	a := 1
+	b := 2
+	c := 3
+	go fmt.Println(a, b, c)
+}
+
+func goEarlyNotUsed() {
+	notUsed := 1
+
+	b := 2 // want `missing whitespace above this line \(variable not shared with go\)`
+	c := 3
+	go fmt.Println(b, c)
+
+	_ = notUsed
+}
+
+func deferManyAllUsed() {
+	a := 1
+	b := 2
+	c := 3
+	defer fmt.Println(a, b, c)
+}
+
+func deferEarlyNotUsed() {
+	notUsed := 1
+
+	b := 2 // want `missing whitespace above this line \(variable not shared with defer\)`
+	c := 3
+	defer fmt.Println(b, c)
+
+	_ = notUsed
+}
+
 func singleStillWorks() {
 	a := 1
 	if a > 0 {
