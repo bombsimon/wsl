@@ -202,11 +202,15 @@ func (w *WSL) checkCuddlingMaxAllowed(
 		return
 	}
 
-	allowedCount := w.countValidCuddledStatements(targetIdents, cursor, w.config.CuddleMaxStatements)
+	allowedCount, stoppedAtNonIntersection := w.countValidCuddledStatements(targetIdents, cursor, w.config.CuddleMaxStatements)
 	if numStmtsAbove > allowedCount {
 		errorNode := cursor.NthPrevious(allowedCount)
 		if errorNode != nil {
-			w.addErrorTooManyStatements(errorNode.Pos(), cursor.checkType)
+			if stoppedAtNonIntersection {
+				w.addErrorVariableNotShared(errorNode.Pos(), cursor.checkType)
+			} else {
+				w.addErrorTooManyStatements(errorNode.Pos(), cursor.checkType)
+			}
 		}
 	}
 }
@@ -238,13 +242,13 @@ func (w *WSL) cuddleTargetIdents(
 // countValidCuddledStatements walks backwards from the cursor and counts how
 // many consecutive cuddled statements have a valid intersection with
 // targetIdents. It stops at the first non-intersecting statement or when max is
-// reached (0 = unlimited). The returned count is the number of statements that
-// should be allowed to cuddle.
+// reached (0 = unlimited). Returns the count and whether the walk stopped
+// because a non-intersecting statement was found (as opposed to the limit).
 func (w *WSL) countValidCuddledStatements(
 	targetIdents []*ast.Ident,
 	cursor *Cursor,
 	limit int,
-) int {
+) (int, bool) {
 	defer cursor.Save()()
 
 	currentStmtStartLine := w.lineFor(cursor.Stmt().Pos())
@@ -267,14 +271,14 @@ func (w *WSL) countValidCuddledStatements(
 
 		prevIdents := w.identsFromNode(prevNode, true)
 		if !identsIntersect(prevIdents, targetIdents) {
-			break
+			return count, true
 		}
 
 		count++
 		currentStmtStartLine = w.lineFor(cursor.Stmt().Pos())
 	}
 
-	return count
+	return count, false
 }
 
 func (w *WSL) checkCuddlingWithoutIntersection(stmt ast.Node, cursor *Cursor) {
@@ -1270,6 +1274,12 @@ func (w *WSL) addErrorTooManyStatements(pos token.Pos, ct CheckType) {
 
 func (w *WSL) addErrorNoIntersection(pos token.Pos, ct CheckType) {
 	reportMessage := fmt.Sprintf("%s (no shared variables above %s)", messageMissingWhitespaceAbove, ct)
+	insertPos := w.lineStartOf(pos)
+	w.addErrorWithMessage(pos, insertPos, insertPos, reportMessage)
+}
+
+func (w *WSL) addErrorVariableNotShared(pos token.Pos, ct CheckType) {
+	reportMessage := fmt.Sprintf("%s (variable not shared with %s)", messageMissingWhitespaceAbove, ct)
 	insertPos := w.lineStartOf(pos)
 	w.addErrorWithMessage(pos, insertPos, insertPos, reportMessage)
 }

@@ -25,7 +25,7 @@ func ifThreeExceedsLimit() {
 
 func ifPrevNotUsed() {
 	notUsed := 1
-	b := 2 // want `missing whitespace above this line \(too many statements above if\)`
+	b := 2 // want `missing whitespace above this line \(variable not shared with if\)`
 	if b > 0 {
 		fmt.Println("ok")
 	}
@@ -59,7 +59,7 @@ func forBothUsed() {
 
 func forPrevNotUsed() {
 	notUsed := 1
-	b := 2 // want `missing whitespace above this line \(too many statements above for\)`
+	b := 2 // want `missing whitespace above this line \(variable not shared with for\)`
 	for i := 0; i < b; i++ {
 		fmt.Println(i)
 	}
@@ -90,7 +90,7 @@ func switchBothUsed() {
 
 func switchPrevNotUsed() {
 	notUsed := 1
-	a := 2 // want `missing whitespace above this line \(too many statements above switch\)`
+	a := 2 // want `missing whitespace above this line \(variable not shared with switch\)`
 	switch {
 	case a > 0:
 		fmt.Println("a")

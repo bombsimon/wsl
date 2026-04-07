@@ -14,7 +14,7 @@ func ifManyAllUsed() {
 
 func ifEarlyNotUsed() {
 	notUsed := 1
-	b := 2 // want `missing whitespace above this line \(too many statements above if\)`
+	b := 2 // want `missing whitespace above this line \(variable not shared with if\)`
 	c := 3
 	d := 4
 	if b+c+d > 0 {
@@ -27,7 +27,7 @@ func ifEarlyNotUsed() {
 func ifMiddleNotUsed() {
 	a := 1
 	notUsed := 2
-	c := 3 // want `missing whitespace above this line \(too many statements above if\)`
+	c := 3 // want `missing whitespace above this line \(variable not shared with if\)`
 	if a+c > 0 {
 		fmt.Println("ok")
 	}
@@ -42,6 +42,17 @@ func forManyAllUsed() {
 	for i := a; i < b+c; i++ {
 		fmt.Println(i)
 	}
+}
+
+func forEarlyNotUsed() {
+	notUsed := 1
+	b := 2 // want `missing whitespace above this line \(variable not shared with for\)`
+	c := 3
+	for i := b; i < c; i++ {
+		fmt.Println(i)
+	}
+
+	_ = notUsed
 }
 
 func switchManyAllUsed() {

@@ -13,7 +13,7 @@ func ifVarsUsedInBody() {
 func ifOneVarNotUsedAnywhere() {
 	notUsed := 1
 
-	b := 2 // want `missing whitespace above this line \(too many statements above if\)`
+	b := 2 // want `missing whitespace above this line \(variable not shared with if\)`
 	if true {
 		fmt.Println(b)
 	}
