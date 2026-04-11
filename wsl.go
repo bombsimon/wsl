@@ -203,15 +203,19 @@ func (w *WSL) checkCuddlingMaxAllowed(
 	}
 
 	allowedCount, stoppedAtNonIntersection := w.countValidCuddledStatements(targetIdents, cursor, w.config.CuddleMaxStatements)
-	if numStmtsAbove > allowedCount {
-		errorNode := cursor.NthPrevious(allowedCount)
-		if errorNode != nil {
-			if stoppedAtNonIntersection {
-				w.addErrorVariableNotShared(errorNode.Pos(), cursor.checkType)
-			} else {
-				w.addErrorTooManyStatements(errorNode.Pos(), cursor.checkType)
-			}
-		}
+	if numStmtsAbove <= allowedCount {
+		return
+	}
+
+	errorNode := cursor.NthPrevious(allowedCount)
+	if errorNode == nil {
+		return
+	}
+
+	if stoppedAtNonIntersection {
+		w.addErrorVariableNotShared(errorNode.Pos(), cursor.checkType)
+	} else {
+		w.addErrorTooManyStatements(errorNode.Pos(), cursor.checkType)
 	}
 }
 
