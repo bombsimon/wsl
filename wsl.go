@@ -1099,13 +1099,7 @@ func (w *WSL) maybeGroupDecl(stmt *ast.DeclStmt, cursor *Cursor) bool {
 		return false
 	}
 
-	group := &ast.GenDecl{
-		Tok:    firstNode.Tok,
-		Lparen: 1,
-		Specs:  firstNode.Specs,
-	}
-
-	group.Specs = append(group.Specs, currentNode.Specs...)
+	specs := slices.Concat(firstNode.Specs, currentNode.Specs)
 
 	reportNodes := []ast.Node{currentNode}
 	lastNode := currentNode
@@ -1131,15 +1125,25 @@ func (w *WSL) maybeGroupDecl(stmt *ast.DeclStmt, cursor *Cursor) bool {
 
 		cursor.Next()
 
-		group.Specs = append(group.Specs, nextNode.Specs...)
+		specs = append(specs, nextNode.Specs...)
 		reportNodes = append(reportNodes, nextNode)
 		lastNode = nextNode
 	}
 
 	var buf bytes.Buffer
-	if err := format.Node(&buf, token.NewFileSet(), group); err != nil {
-		return false
+	fmt.Fprintf(&buf, "%s (\n", firstNode.Tok)
+
+	for _, spec := range specs {
+		var specBuf bytes.Buffer
+		if err := format.Node(&specBuf, w.fset, spec); err != nil {
+			return false
+		}
+
+		buf.Write(specBuf.Bytes())
+		buf.WriteByte('\n')
 	}
+
+	buf.WriteByte(')')
 
 	// We add a diagnostic to every subsequent statement to properly represent
 	// the violations. Duplicate fixes for the same range is fine.
