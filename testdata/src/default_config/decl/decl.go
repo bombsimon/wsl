@@ -212,3 +212,29 @@ func fn17() {
 
 	_, _ = a, b
 }
+
+func fn18() {
+	// want +5 `missing whitespace above this line \(never cuddle decl\)`
+	var a = map[uint8]string{
+		1: "foo",
+		2: "bar",
+	}
+	var b = []struct {
+		a string
+		b int
+		c bool
+	}{
+		{
+			a: "string",
+			b: "int",
+			c: true,
+		},
+		{
+			a: "string",
+			b: "int",
+			c: true,
+		},
+	}
+
+	_, _ = a, b
+}
