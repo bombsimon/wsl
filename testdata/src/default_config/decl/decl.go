@@ -142,7 +142,7 @@ func fn11() {
 	// want +2 `missing whitespace above this line \(never cuddle decl\)`
 	var a int
 	var b int
-	if b > 0 { // want `missing whitespace above this line \(too many statements above if\)`
+	if b > 0 {
 		_ = 1
 	}
 
@@ -158,4 +158,57 @@ func fn12() {
 	}
 
 	_ = a
+}
+
+func fn13() {
+	var a int
+	if a > 0 {
+		_ = 1
+	}
+}
+
+func fn14() {
+	var (
+		a = 1
+		b = 2
+		c = 3
+	)
+	if a+b > c {
+		_ = 1
+	}
+}
+
+func fn15() {
+	// want +4 `missing whitespace above this line \(never cuddle decl\)`
+	// want +4 `missing whitespace above this line \(never cuddle decl\)`
+	var a = 1
+	b := 2 // want `missing whitespace above this line \(invalid statement above assign\)`
+	var c = 3
+	var d = 4
+	if a+b > c+d {
+		_ = 1
+	}
+}
+
+func fn16() {
+	// want +4 `missing whitespace above this line \(never cuddle decl\)`
+	// want +4 `missing whitespace above this line \(never cuddle decl\)`
+	var a = 1
+	b := 2 // want `missing whitespace above this line \(invalid statement above assign\)`
+	var c = 3
+	var d = 4 // Ungroupable
+	if a+b > c+d {
+		_ = 1
+	}
+}
+
+func fn17() {
+	// want +2 `missing whitespace above this line \(never cuddle decl\)`
+	var a = 1
+	var b = 2
+	if true { // want `missing whitespace above this line \(no shared variables above if\)`
+		_ = 1
+	}
+
+	_, _ = a, b
 }

@@ -1,0 +1,156 @@
+package testpkg
+
+import (
+	"fmt"
+	"strconv"
+	"strings"
+)
+
+func ifBothUsed() {
+	a := 1
+	b := 2
+	if a < b {
+		fmt.Println("ok")
+	}
+}
+
+func ifThreeExceedsLimit() {
+	a := 1
+	b := 2 // want `missing whitespace above this line \(too many statements above if\)`
+	c := 3
+	if a+b+c > 0 {
+		fmt.Println("ok")
+	}
+}
+
+func ifPrevNotUsed() {
+	notUsed := 1
+	b := 2 // want `missing whitespace above this line \(variable not shared with if\)`
+	if b > 0 {
+		fmt.Println("ok")
+	}
+
+	_ = notUsed
+}
+
+func ifSingleStillWorks() {
+	a := 1
+	if a > 0 {
+		fmt.Println("ok")
+	}
+}
+
+func ifSingleNoIntersection() {
+	a := 1
+	if true { // want `missing whitespace above this line \(no shared variables above if\)`
+		fmt.Println("ok")
+	}
+
+	_ = a
+}
+
+func forBothUsed() {
+	a := 1
+	b := 2
+	for i := a; i < b; i++ {
+		fmt.Println(i)
+	}
+}
+
+func forPrevNotUsed() {
+	notUsed := 1
+	b := 2 // want `missing whitespace above this line \(variable not shared with for\)`
+	for i := 0; i < b; i++ {
+		fmt.Println(i)
+	}
+
+	_ = notUsed
+}
+
+func rangeBothUsed() {
+	items := []int{1}
+	sum := 0
+	for _, v := range items {
+		sum += v
+	}
+
+	_ = sum
+}
+
+func switchBothUsed() {
+	a := 1
+	b := 2
+	switch {
+	case a > b:
+		fmt.Println("a")
+	case b > a:
+		fmt.Println("b")
+	}
+}
+
+func switchPrevNotUsed() {
+	notUsed := 1
+	a := 2 // want `missing whitespace above this line \(variable not shared with switch\)`
+	switch {
+	case a > 0:
+		fmt.Println("a")
+	}
+
+	_ = notUsed
+}
+
+func goDirectCall() {
+	a := 1
+	b := 2
+	go fmt.Println(a, b)
+}
+
+func assignVarAssign(intervalStr string) {
+	// want +3 `missing whitespace above this line \(never cuddle decl\)`
+	// want +3 `missing whitespace above this line \(never cuddle decl\)`
+	limitsStr := strings.Split(intervalStr, "-")
+	var inter int
+	var err error
+	inter, err = strconv.Atoi(limitsStr[0]) // want `missing whitespace above this line \(invalid statement above assign\)`
+	if err != nil {
+		return
+	}
+}
+
+func twoVars() {
+	// want +2 `missing whitespace above this line \(never cuddle decl\)`
+	var a = 1
+	var b = 2
+	if a > b {
+		fmt.Println("a")
+	}
+}
+
+func threeVars() {
+	// want +3 `missing whitespace above this line \(never cuddle decl\)`
+	// want +3 `missing whitespace above this line \(never cuddle decl\)`
+	var a = 1
+	var b = 2
+	var c = 3
+	if a > b+c {
+		fmt.Println("a")
+	}
+
+	x := 1
+	y := 2 // want `missing whitespace above this line \(too many statements above if\)`
+	z := 3
+	if x > y+z {
+		fmt.Println("x")
+	}
+}
+
+func threeVarsGrouped() {
+	var (
+	    a = 1
+	    b = 2
+	    c = 3
+	)
+	if a > b+c {
+		fmt.Println("a")
+	}
+}

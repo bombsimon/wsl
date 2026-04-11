@@ -86,3 +86,12 @@ func (c *Cursor) Len() int {
 func (c *Cursor) Nth(n int) ast.Stmt {
 	return c.statements[n]
 }
+
+func (c *Cursor) NthPrevious(n int) ast.Node {
+	idx := c.currentIdx - n
+	if idx < 0 {
+		return nil
+	}
+
+	return c.statements[idx]
+}

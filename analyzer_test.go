@@ -125,6 +125,25 @@ func TestWithConfig(t *testing.T) {
 				config.CaseMaxLines = 1
 			},
 		},
+		{
+			subdir: "cuddle_max_statements_2",
+			configFn: func(config *Configuration) {
+				config.CuddleMaxStatements = 2
+			},
+		},
+		{
+			subdir: "cuddle_max_statements_unlimited",
+			configFn: func(config *Configuration) {
+				config.CuddleMaxStatements = 0
+			},
+		},
+		{
+			subdir: "cuddle_max_statements_whole_block",
+			configFn: func(config *Configuration) {
+				config.CuddleMaxStatements = 0
+				config.AllowWholeBlock = true
+			},
+		},
 	} {
 		t.Run(tc.subdir, func(t *testing.T) {
 			t.Parallel()
