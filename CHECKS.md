@@ -18,6 +18,7 @@
   - [`defer`](#defer)
   - [`err`](#err)
   - [`expr`](#expr)
+  - [`expr-cuddle`](#expr-cuddle)
   - [`for`](#for)
   - [`go`](#go)
   - [`if`](#if)
@@ -615,6 +616,76 @@ fmt.Println(a)
 </tbody></table>
 
 [🔝](#table-of-content)
+
+### `expr-cuddle`
+
+By default, expression statements (e.g. function calls with side effects) are
+not allowed to be cuddled immediately above block statements (`if`, `for`,
+`switch`, `range`, `select`, `type-switch`, `go`, `defer`). Disabling this
+check permits such cuddling when the expression shares at least one variable
+with the following statement.
+
+> [!NOTE]
+> The linter can only check for shared variable *names*, not whether the
+> expression actually modifies the variable. A call like `fmt.Println(x)`
+> would be permitted above `if x > 0` even though it has no side effect on
+> `x`. This is an accepted trade-off when opting in by disabling the check.
+
+> [!NOTE]
+> This check is the counterpart to [`assign-expr`](#assign-expr), which
+> controls whether expressions may be cuddled above *assignments*. The two
+> can be combined.
+
+<table>
+<thead><tr><th>Bad (default, check enabled)</th><th>Good (check disabled)</th></tr></thead>
+<tbody>
+<tr><td valign="top">
+
+```go
+// item.setKey modifies srcItem, which is used in the
+// if condition — but the check still rejects this.
+item.setKey(&srcItem, dstKey) // 1
+if err := src.Update(ctx, srcItem); err != nil {
+    return err
+}
+
+someArg := "hello"
+log.Printf("initialized: %s", someArg) // 2
+if a < b {
+    someArg = "world"
+}
+```
+
+</td><td valign="top">
+
+```go
+// With expr-cuddle disabled, shared variables are
+// enough to permit the cuddle.
+item.setKey(&srcItem, dstKey)
+if err := src.Update(ctx, srcItem); err != nil {
+    return err
+}
+
+someArg := "hello"
+log.Printf("initialized: %s", someArg)
+if a < b {
+    someArg = "world"
+}
+```
+
+</td></tr>
+
+<tr><td valign="top">
+
+<sup>1</sup> Expression statement above `if` (no shared variable check needed,
+type itself is disallowed)
+
+<sup>2</sup> Expression statement above `if`
+
+</td><td valign="top">
+
+</td></tr>
+</tbody></table>
 
 ### `for`
 
@@ -1987,6 +2058,13 @@ Setting it to `0` disallows any cuddling, the trigger always requires a blank
 line above it, even when the variable on the line above is used by the block.
 The recommended way to allow any number of statements is to set a really high
 number such as `9999`.
+
+> [!NOTE]
+> By default, only assignments, declarations, and increment/decrement
+> statements are valid predecessors. Disabling [`expr-cuddle`](#expr-cuddle)
+> also permits expression statements (e.g. function calls) to count as valid
+> cuddled predecessors, subject to the same limit and intersection
+> requirements.
 
 <table>
 <thead><tr><th>Bad</th><th>Good</th></tr></thead>

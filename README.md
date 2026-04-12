@@ -79,6 +79,10 @@ For more details and examples, see [CHECKS](CHECKS.md).
   e.g. function calls
 - ❌ **cuddle-group** - Treat the cuddled chain as a unit; separate the whole
   group from the block instead of splitting between cuddled variables
+- ✅ **expr-cuddle** - Don't allow expression statements (e.g. function calls)
+  to be cuddled above block statements (`if`, `for`, `switch`, `go`, `defer`,
+  etc.). Disable to permit cuddling when the expression shares a variable with
+  the following statement
 - ✅ **err** - Error checking must follow immediately after the error variable
   is assigned
 - ✅ **leading-whitespace** - Disallow leading empty lines in blocks
@@ -165,6 +169,7 @@ linters:
         - defer
         - err
         - expr
+        - expr-cuddle
         - for
         - go
         - if
