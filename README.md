@@ -80,15 +80,14 @@ For more details and examples, see [CHECKS](CHECKS.md).
 ### Configuration
 
 Other than enabling or disabling specific checks some checks can be configured
-in more details.
+in more details. See [CHECKS.md](CHECKS.md#configuration) for details and
+examples.
 
 - ✅ **allow-first-in-block** - Allow cuddling a variable if it's used first in
   the immediate following block, even if the statement with the block doesn't
-  use the variable (see [Configuration](CHECKS.md#allow-first-in-block) for
-  details)
+  use the variable
 - ❌ **allow-whole-block** - Same as above, but allows cuddling if the variable
-  is used _anywhere_ in the following (or nested) block (see
-  [Configuration](CHECKS.md#allow-whole-block) for details)
+  is used _anywhere_ in the following (or nested) block
 - **branch-max-lines** - If a block contains more than this number of lines the
   branch statement (e.g. `return`, `break`, `continue`) need to be separated by
   a whitespace (default 2)

@@ -29,7 +29,9 @@
 - [Configuration](#configuration)
   - [`allow-first-in-block`](#allow-first-in-block)
   - [`allow-whole-block`](#allow-whole-block)
+  - [`branch-max-lines`](#branch-max-lines)
   - [`case-max-lines`](#case-max-lines)
+  - [`cuddle-max-statements`](#cuddle-max-statements)
 
 ## Checks
 
@@ -41,9 +43,10 @@ allowed and what's allowed.
 Block statements (`if`, `for`, `switch`, etc.) should be followed by a blank
 line to visually separate them from subsequent code.
 
-> **NOTE** An exception is made for `defer` statements that follow an
-> `if err != nil` block when the defer references a variable assigned on the
-> line above the if statement. This is a common pattern for resource cleanup.
+> [!IMPORTANT]
+> An exception is made for `defer` statements that follow an `if err != nil`
+> block when the defer references a variable assigned on the line above the if
+> statement. This is a common pattern for resource cleanup.
 
 <table>
 <thead><tr><th>Bad</th><th>Good</th></tr></thead>
@@ -155,7 +158,9 @@ c := 3
 
 ### `branch`
 
-> Configurable via `branch-max-lines`
+> [!NOTE]
+> Configurable via `branch-max-lines`. See [Configuration](#configuration) for
+> details.
 
 Branch statement (`break`, `continue`, `fallthrough`, `goto`) should only be
 cuddled if the block is less than `n` lines where `n` is the value of
@@ -216,8 +221,9 @@ together they should be declared in the same group with parenthesis into a
 single statement. The benefit of this is that it also aligns the declaration or
 assignment increasing readability.
 
-> **NOTE** The fixer can't do smart adjustments if there are comments on the
-> same line as the declaration.
+> [!IMPORTANT]
+> The fixer can't do smart adjustments if there are comments on the same line
+> as the declaration.
 
 <table>
 <thead><tr><th>Bad</th><th>Good</th></tr></thead>
@@ -347,11 +353,13 @@ defer m.Unlock()
 Expressions can be multiple things and a big part of them are not handled by
 `wsl`. However all function calls are expressions which can be verified.
 
-> **NOTE** This is one of the few rules with non-configurable exceptions. Given
-> the idiomatic way to acquire and release mutex locks and the fact that the
-> `sync` mutex from the standard library is so widely used, any call to `Lock`,
+> [!IMPORTANT]
+> This is one of the few rules with non-configurable exceptions. Given the
+> idiomatic way to acquire and release mutex locks and the fact that the `sync`
+> mutex from the standard library is so widely used, any call to `Lock`,
 > `RWLock`, or `TryLock` can be cuddled above any other statement(s) and
-> similarly `Unlock` and `RWUnlock` can be cuddled below any other statement(s).
+> similarly `Unlock` and `RWUnlock` can be cuddled below any other
+> statement(s).
 
 <table>
 <thead><tr><th>Bad</th><th>Good</th></tr></thead>
@@ -395,11 +403,15 @@ fmt.Println(a)
 
 ### `for`
 
+> [!NOTE]
 > Configurable via `allow-first-in-block` to allow cuddling if the variable is
 > used _first_ in the block (enabled by default).
 >
 > Configurable via `allow-whole-block` to allow cuddling if the variable is used
 > _anywhere_ in the following block (disabled by default).
+>
+> Configurable via `cuddle-max-statements` to change the maximum number of
+> cuddled statements allowed (default 1).
 >
 > See [Configuration](#configuration) for details.
 
@@ -527,11 +539,15 @@ go Fn(someArg)
 
 ### `if`
 
+> [!NOTE]
 > Configurable via `allow-first-in-block` to allow cuddling if the variable is
 > used _first_ in the block (enabled by default).
 >
 > Configurable via `allow-whole-block` to allow cuddling if the variable is used
 > _anywhere_ in the following block (disabled by default).
+>
+> Configurable via `cuddle-max-statements` to change the maximum number of
+> cuddled statements allowed (default 1).
 >
 > See [Configuration](#configuration) for details.
 
@@ -742,11 +758,15 @@ L2:
 
 ### `range`
 
+> [!NOTE]
 > Configurable via `allow-first-in-block` to allow cuddling if the variable is
 > used _first_ in the block (enabled by default).
 >
 > Configurable via `allow-whole-block` to allow cuddling if the variable is used
 > _anywhere_ in the following block (disabled by default).
+>
+> Configurable via `cuddle-max-statements` to change the maximum number of
+> cuddled statements allowed (default 1).
 >
 > See [Configuration](#configuration) for details.
 
@@ -818,7 +838,9 @@ for _, v := range s2 {
 
 ### `return`
 
-> Configurable via `branch-max-lines`
+> [!NOTE]
+> Configurable via `branch-max-lines`. See [Configuration](#configuration) for
+> details.
 
 Return statements is an important statement that is easiy to miss in larger code
 blocks. To better visualize the `return` statement and that the method is
@@ -872,11 +894,15 @@ func Fn() int {
 
 Identifiers used in case arms of select statements are allowed to be cuddled.
 
+> [!NOTE]
 > Configurable via `allow-first-in-block` to allow cuddling if the variable is
 > used _first_ in the block (enabled by default).
 >
 > Configurable via `allow-whole-block` to allow cuddling if the variable is used
 > _anywhere_ in the following block (disabled by default).
+>
+> Configurable via `cuddle-max-statements` to change the maximum number of
+> cuddled statements allowed (default 1).
 >
 > See [Configuration](#configuration) for details.
 
@@ -984,11 +1010,15 @@ In addition to checking the switch condition, switch statements also checks
 identifiers in all case arms. If a variable is used in one or more of the case
 arms it's allowed to be cuddled.
 
+> [!NOTE]
 > Configurable via `allow-first-in-block` to allow cuddling if the variable is
 > used _first_ in the block (enabled by default).
 >
 > Configurable via `allow-whole-block` to allow cuddling if the variable is used
 > _anywhere_ in the following block (disabled by default).
+>
+> Configurable via `cuddle-max-statements` to change the maximum number of
+> cuddled statements allowed (default 1).
 >
 > See [Configuration](#configuration) for details.
 
@@ -1081,11 +1111,15 @@ case 2:
 
 ### `type-switch`
 
+> [!NOTE]
 > Configurable via `allow-first-in-block` to allow cuddling if the variable is
 > used _first_ in the block (enabled by default).
 >
 > Configurable via `allow-whole-block` to allow cuddling if the variable is used
 > _anywhere_ in the following block (disabled by default).
+>
+> Configurable via `cuddle-max-statements` to change the maximum number of
+> cuddled statements allowed (default 1).
 >
 > See [Configuration](#configuration) for details.
 
@@ -1422,6 +1456,64 @@ if anotherVariable {
 }
 ```
 
+### `branch-max-lines`
+
+When set to a value greater than 0, `return`, `break`, `continue`, `fallthrough`
+and `goto` statements that appear in a block with more than this many lines will
+require a blank line above them. The default is 2, meaning blocks of 3 or more
+lines require a blank line above the branch statement.
+
+<table>
+<thead><tr><th>Bad</th><th>Good</th></tr></thead>
+<tbody>
+<tr><td valign="top">
+
+```go
+// With branch-max-lines: 2 (default)
+func Fn() {
+    a, err := someFn()
+    if err != nil {
+        panic(err)
+    }
+
+    fmt.Println(a)
+    return // 1
+}
+```
+
+</td><td valign="top">
+
+```go
+// With branch-max-lines: 2 (default)
+func Fn() {
+    a, err := someFn()
+    if err != nil {
+        panic(err)
+    }
+
+    fmt.Println(a)
+
+    return
+}
+
+// Short block: no blank line required
+func ShortFn() int {
+    x := compute()
+    return x
+}
+```
+
+</td></tr>
+
+<tr><td valign="top">
+
+<sup>1</sup> Block has more than 2 lines, blank line required above
+
+</td><td valign="top">
+
+</td></tr>
+</tbody></table>
+
 ### `case-max-lines`
 
 When set to a value greater than 0, case clauses in `switch` and `select`
@@ -1539,6 +1631,75 @@ case 2:
 <sup>3</sup> Missing blank line at transition (after trailing comment)
 
 <sup>4</sup> Unnecessary blank line before case (after leading comment)
+
+</td><td valign="top">
+
+</td></tr>
+</tbody></table>
+
+### `cuddle-max-statements`
+
+Controls the maximum number of consecutive statements that may be cuddled
+(appear without a blank line) immediately above block statements (`if`, `for`,
+`switch`, etc.), `go`, `defer`, and `send`. The default is 1. Set to 0 for
+unlimited. Every cuddled statement must share at least one variable with the
+following block (respects `allow-first-in-block` and `allow-whole-block`).
+
+<table>
+<thead><tr><th>Bad</th><th>Good</th></tr></thead>
+<tbody>
+<tr><td valign="top">
+
+```go
+// With cuddle-max-statements: 1 (default)
+a := 1
+b := 2
+if a < b { // 1
+    fmt.Println("ok")
+}
+
+a := 1
+b := 2
+c := 3
+if a+b+c > 0 { // 2
+    fmt.Println("ok")
+}
+```
+
+</td><td valign="top">
+
+```go
+// With cuddle-max-statements: 1 (default)
+a := 1
+
+b := 2
+if a < b {
+    fmt.Println("ok")
+}
+
+// With cuddle-max-statements: 2
+a := 1
+b := 2
+if a < b {
+    fmt.Println("ok")
+}
+
+// With cuddle-max-statements: 0 (unlimited)
+a := 1
+b := 2
+c := 3
+if a+b+c > 0 {
+    fmt.Println("ok")
+}
+```
+
+</td></tr>
+
+<tr><td valign="top">
+
+<sup>1</sup> Two statements cuddled above `if`, exceeds default limit of 1
+
+<sup>2</sup> Three statements cuddled above `if`, exceeds limit of 2
 
 </td><td valign="top">
 
