@@ -193,9 +193,11 @@ func (w *WSL) checkCuddlingMaxAllowed(
 	_, currIsGo := stmt.(*ast.GoStmt)
 	currRelaxesPrevType := currIsDefer || currIsGo
 
-	// We're cuddled but not with an assign, declare, increment/decrement and
-	// we're not a statement with relaxed check.
-	if !isAssignDeclOrIncDec(previousNode) && !currRelaxesPrevType {
+	// We're cuddled but not with a valid predecessor and we're not a statement
+	// with relaxed check. Expression statements may pass this gate if
+	// expr-cuddle is disabled; intersection is then checked below like any
+	// other predecessor.
+	if !w.isValidCuddlePredecessor(previousNode) && !currRelaxesPrevType {
 		w.addErrorInvalidTypeCuddle(cursor.Stmt().Pos(), cursor.checkType)
 		return
 	}
@@ -320,7 +322,7 @@ func (w *WSL) countValidCuddledStatements(
 		}
 
 		prevNode := cursor.Stmt()
-		if !isAssignDeclOrIncDec(prevNode) && !allowAnyStmtType {
+		if !w.isValidCuddlePredecessor(prevNode) && !allowAnyStmtType {
 			break
 		}
 
@@ -1549,12 +1551,19 @@ func (w *WSL) addErrorWithMessageAndFix(report, start, end token.Pos, message st
 	w.issues[report] = iss
 }
 
-func isAssignDeclOrIncDec(n ast.Node) bool {
+func (w *WSL) isValidCuddlePredecessor(n ast.Node) bool {
 	_, a := n.(*ast.AssignStmt)
 	_, d := n.(*ast.DeclStmt)
 	_, i := n.(*ast.IncDecStmt)
 
-	return a || d || i
+	if a || d || i {
+		return true
+	}
+
+	_, isExpr := n.(*ast.ExprStmt)
+	_, exprCuddleEnabled := w.config.Checks[CheckExprCuddle]
+
+	return isExpr && !exprCuddleEnabled
 }
 
 func asGenDeclWithValueSpecs(n ast.Node) *ast.GenDecl {
