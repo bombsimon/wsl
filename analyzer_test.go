@@ -126,6 +126,16 @@ func TestWithConfig(t *testing.T) {
 			},
 		},
 		{
+			subdir: "after_stmts",
+			configFn: func(config *Configuration) {
+				config.Checks = NoChecks()
+				config.Checks.Add(CheckAfterDecl)
+				config.Checks.Add(CheckAfterDefer)
+				config.Checks.Add(CheckAfterExpr)
+				config.Checks.Add(CheckAfterGo)
+			},
+		},
+		{
 			subdir: "cuddle_max_statements_2",
 			configFn: func(config *Configuration) {
 				config.CuddleMaxStatements = 2

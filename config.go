@@ -35,6 +35,19 @@ const (
 
 	// CheckAfterBlock ensures there's a newline after each block.
 	CheckAfterBlock
+	// CheckAfterDecl ensures there's a newline after a declaration statement
+	// (`var`, `const`, `type`) unless the following statement is another
+	// declaration.
+	CheckAfterDecl
+	// CheckAfterDefer ensures there's a newline after a `defer` statement
+	// unless the following statement is another `defer`.
+	CheckAfterDefer
+	// CheckAfterExpr ensures there's a newline after an expression statement
+	// unless the following statement is another expression statement.
+	CheckAfterExpr
+	// CheckAfterGo ensures there's a newline after a `go` statement unless the
+	// following statement is another `go`.
+	CheckAfterGo
 	// CheckAppend only allows assignments of `append` to be cuddled with other
 	// assignments if it's a variable used in the append statement, e.g.
 	//
@@ -99,6 +112,10 @@ func (c CheckType) String() string {
 		"type-switch",
 		//
 		"after-block",
+		"after-decl",
+		"after-defer",
+		"after-expr",
+		"after-go",
 		"append",
 		"assign-exclusive",
 		"assign-expr",
@@ -217,6 +234,10 @@ func AllChecks() CheckSet {
 	c.Add(CheckAssignExclusive)
 	c.Add(CheckAssignExpr)
 	c.Add(CheckAfterBlock)
+	c.Add(CheckAfterDecl)
+	c.Add(CheckAfterDefer)
+	c.Add(CheckAfterExpr)
+	c.Add(CheckAfterGo)
 
 	return c
 }
@@ -270,6 +291,14 @@ func CheckFromString(s string) (CheckType, error) {
 
 	case "after-block":
 		return CheckAfterBlock, nil
+	case "after-decl":
+		return CheckAfterDecl, nil
+	case "after-defer":
+		return CheckAfterDefer, nil
+	case "after-expr":
+		return CheckAfterExpr, nil
+	case "after-go":
+		return CheckAfterGo, nil
 	case "append":
 		return CheckAppend, nil
 	case "assign-exclusive":

@@ -368,61 +368,112 @@ func (w *WSL) checkNewlineAfterBlock(block *ast.BlockStmt, cursor *Cursor) {
 		return
 	}
 
+	currentStmt := cursor.Stmt()
+
+	w.checkNewlineAfter(
+		block.Rbrace,
+		block,
+		currentStmt,
+		cursor,
+		CheckAfterBlock,
+		true,
+		func(nextStmt ast.Stmt, previousNode ast.Node) bool {
+			// Exception: if err != nil { } followed by defer that references
+			// a variable assigned above the if block.
+			if w.isErrNotNilCheck(currentStmt) != nil {
+				if deferStmt, ok := nextStmt.(*ast.DeferStmt); ok && previousNode != nil {
+					if w.hasIntersection(previousNode, deferStmt) {
+						return true
+					}
+				}
+			}
+
+			return false
+		},
+	)
+}
+
+// checkNewlineAfter verifies that a blank line separates the current statement
+// (bounded by boundary) from whatever content comes next in its enclosing
+// block. `reportPos` is where the diagnostic is attached, `boundary` is the
+// node whose End() defines the line after which a newline is required, and
+// `currentStmt` is the statement owning the check (used to discriminate
+// comments that still belong to it, e.g. comments inside an else block when
+// checking the if-body). When `checkTrailingComment` is true and currentStmt
+// is the last statement in its block, a trailing comment on the following
+// line (inside the enclosing block) also triggers a diagnostic. If
+// `isException` returns true for the next statement and the previous node, no
+// diagnostic is reported.
+func (w *WSL) checkNewlineAfter(
+	reportPos token.Pos,
+	boundary ast.Node,
+	currentStmt ast.Node,
+	cursor *Cursor,
+	check CheckType,
+	checkTrailingComment bool,
+	isException func(nextStmt ast.Stmt, previousNode ast.Node) bool,
+) {
+	if _, ok := w.config.Checks[check]; !ok {
+		return
+	}
+
+	if cursor.Len() == 0 {
+		return
+	}
+
 	defer cursor.Save()()
 
-	// Capture current statement and previous node before moving cursor.
-	currentStmt := cursor.Stmt()
 	previousNode := cursor.PreviousNode()
 
 	if !cursor.Next() {
+		if !checkTrailingComment {
+			return
+		}
+
 		// No more statements after this one so check for comments after.
 		// Skip comments that are inside the current statement (e.g., inside an else block).
-		if cPos := w.commentOnLineAfterNodePos(block); cPos != token.NoPos && cPos >= currentStmt.End() {
+		if cPos := w.commentOnLineAfterNodePos(boundary); cPos != token.NoPos && cPos >= currentStmt.End() {
 			insertPos := w.lineStartOf(cPos)
 			w.addError(
-				block.Rbrace,
+				reportPos,
 				insertPos,
 				insertPos,
 				messageMissingWhitespaceBelow,
-				CheckAfterBlock,
+				check,
 			)
 		}
 
 		return
 	}
 
-	// Exception: if err != nil { } followed by defer that references
-	// a variable assigned above the if block.
-	if w.isErrNotNilCheck(currentStmt) != nil {
-		if deferStmt, ok := cursor.Stmt().(*ast.DeferStmt); ok && previousNode != nil {
-			if w.hasIntersection(previousNode, deferStmt) {
-				return
-			}
-		}
+	nextStmt := cursor.Stmt()
+	if isException != nil && isException(nextStmt, previousNode) {
+		return
 	}
 
-	rBraceLine := w.lineFor(block.Rbrace)
-	nextContentPos := cursor.Stmt().Pos()
+	boundaryLine := w.lineFor(boundary.End())
+	nextContentPos := nextStmt.Pos()
 	nextContentLine := w.lineFor(nextContentPos)
 
-	// Find the first comment between rbrace and the next statement.
+	// Find the first comment between the boundary and the next statement.
 	for _, cg := range w.file.Comments {
-		if cg.End() <= block.Rbrace {
+		if cg.End() <= boundary.End() {
 			continue
 		}
 
-		// Skip comments that are inside the current statement but after this block.
-		// This handles cases like comments inside an else block when checking the if-body.
+		// Skip comments that are inside the current statement but after the
+		// boundary. This handles cases like comments inside an else block when
+		// checking the if-body.
 		if cg.Pos() < currentStmt.End() {
 			continue
 		}
 
-		if w.lineFor(cg.End()) == rBraceLine {
+		if w.lineFor(cg.End()) == boundaryLine {
 			continue
 		}
 
 		commentLine := w.lineFor(cg.Pos())
-		if commentLine > rBraceLine && commentLine < nextContentLine {
+		if commentLine > boundaryLine && commentLine < nextContentLine {
 			nextContentPos = cg.Pos()
 			nextContentLine = commentLine
 		}
@@ -430,14 +481,14 @@ func (w *WSL) checkNewlineAfterBlock(block *ast.BlockStmt, cursor *Cursor) {
 		break
 	}
 
-	if nextContentLine <= rBraceLine+1 {
+	if nextContentLine <= boundaryLine+1 {
 		insertPos := w.lineStartOf(nextContentPos)
 		w.addError(
-			block.Rbrace,
+			reportPos,
 			insertPos,
 			insertPos,
 			messageMissingWhitespaceBelow,
-			CheckAfterBlock,
+			check,
 		)
 	}
 }
@@ -530,6 +581,8 @@ func (w *WSL) checkBranch(stmt *ast.BranchStmt, cursor *Cursor) {
 }
 
 func (w *WSL) checkDeclStmt(stmt *ast.DeclStmt, cursor *Cursor) {
+	defer w.checkAfterDecl(stmt, cursor)
+
 	if _, ok := w.config.Checks[CheckDecl]; !ok {
 		return
 	}
@@ -549,7 +602,24 @@ func (w *WSL) checkDeclStmt(stmt *ast.DeclStmt, cursor *Cursor) {
 	w.addErrorNeverAllow(stmt.Pos(), cursor.checkType)
 }
 
+func (w *WSL) checkAfterDecl(stmt *ast.DeclStmt, cursor *Cursor) {
+	w.checkNewlineAfter(
+		stmt.End(),
+		stmt,
+		stmt,
+		cursor,
+		CheckAfterDecl,
+		false,
+		func(nextStmt ast.Stmt, _ ast.Node) bool {
+			_, ok := nextStmt.(*ast.DeclStmt)
+			return ok
+		},
+	)
+}
+
 func (w *WSL) checkDefer(stmt *ast.DeferStmt, cursor *Cursor) {
+	defer w.checkAfterDefer(stmt, cursor)
+
 	w.maybeCheckExpr(
 		stmt,
 		cursor,
@@ -580,6 +650,21 @@ func (w *WSL) checkDefer(stmt *ast.DeferStmt, cursor *Cursor) {
 			return true, !previousIsDefer
 		},
 		CheckDefer,
+	)
+}
+
+func (w *WSL) checkAfterDefer(stmt *ast.DeferStmt, cursor *Cursor) {
+	w.checkNewlineAfter(
+		stmt.End(),
+		stmt,
+		stmt,
+		cursor,
+		CheckAfterDefer,
+		false,
+		func(nextStmt ast.Stmt, _ ast.Node) bool {
+			_, ok := nextStmt.(*ast.DeferStmt)
+			return ok
+		},
 	)
 }
 
@@ -687,6 +772,8 @@ func (w *WSL) checkError(
 }
 
 func (w *WSL) checkExprStmt(stmt *ast.ExprStmt, cursor *Cursor) {
+	defer w.checkAfterExpr(stmt, cursor)
+
 	w.maybeCheckExpr(
 		stmt,
 		cursor,
@@ -698,11 +785,28 @@ func (w *WSL) checkExprStmt(stmt *ast.ExprStmt, cursor *Cursor) {
 	)
 }
 
+func (w *WSL) checkAfterExpr(stmt *ast.ExprStmt, cursor *Cursor) {
+	w.checkNewlineAfter(
+		stmt.End(),
+		stmt,
+		stmt,
+		cursor,
+		CheckAfterExpr,
+		false,
+		func(nextStmt ast.Stmt, _ ast.Node) bool {
+			_, ok := nextStmt.(*ast.ExprStmt)
+			return ok
+		},
+	)
+}
+
 func (w *WSL) checkFor(stmt *ast.ForStmt, cursor *Cursor) {
 	w.maybeCheckBlock(stmt, stmt.Body, cursor, CheckFor)
 }
 
 func (w *WSL) checkGo(stmt *ast.GoStmt, cursor *Cursor) {
+	defer w.checkAfterGo(stmt, cursor)
+
 	w.maybeCheckExpr(
 		stmt,
 		cursor,
@@ -713,6 +817,21 @@ func (w *WSL) checkGo(stmt *ast.GoStmt, cursor *Cursor) {
 			return true, !ok
 		},
 		CheckGo,
+	)
+}
+
+func (w *WSL) checkAfterGo(stmt *ast.GoStmt, cursor *Cursor) {
+	w.checkNewlineAfter(
+		stmt.End(),
+		stmt,
+		stmt,
+		cursor,
+		CheckAfterGo,
+		false,
+		func(nextStmt ast.Stmt, _ ast.Node) bool {
+			_, ok := nextStmt.(*ast.GoStmt)
+			return ok
+		},
 	)
 }
 

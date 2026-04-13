@@ -66,6 +66,11 @@ For more details and examples, see [CHECKS](CHECKS.md).
 #### Specific `wsl` cases
 
 - ❌ **after-block** - Require empty line after block statements
+- ❌ **after-decl** - Require empty line after declaration (`var`, `const`,
+  `type`) statements
+- ❌ **after-defer** - Require empty line after `defer` statements
+- ❌ **after-expr** - Require empty line after expression statements
+- ❌ **after-go** - Require empty line after `go` statements
 - ✅ **append** - Only allow re-assigning with `append` if the value being
   appended exist on the line above
 - ❌ **assign-exclusive** - Only allow cuddling either new variables or
@@ -172,6 +177,10 @@ linters:
         - trailing-whitespace
       disable:
         - after-block
+        - after-decl
+        - after-defer
+        - after-expr
+        - after-go
         - assign-exclusive
         - assign-expr
 ```

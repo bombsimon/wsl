@@ -4,6 +4,10 @@
 
 - [Checks](#checks)
   - [`after-block`](#after-block)
+  - [`after-decl`](#after-decl)
+  - [`after-defer`](#after-defer)
+  - [`after-expr`](#after-expr)
+  - [`after-go`](#after-go)
   - [`append`](#append)
   - [`assign`](#assign)
   - [`assign-exclusive`](#assign-exclusive)
@@ -95,6 +99,192 @@ defer f.Close()
 <sup>1</sup> Missing whitespace after block
 
 <sup>2</sup> Missing whitespace after block
+
+</td><td valign="top">
+
+</td></tr>
+</tbody></table>
+
+### `after-decl`
+
+Declaration statements (`var`, `const`, `type`) should be followed by a blank
+line. Consecutive declarations are allowed to cuddle — only the last one in a
+run needs the blank line.
+
+<table>
+<thead><tr><th>Bad</th><th>Good</th></tr></thead>
+<tbody>
+<tr><td valign="top">
+
+```go
+var x int // 1
+x = 1
+
+var (
+    a = 1
+    b = 2
+) // 2
+fmt.Println(a, b)
+```
+
+</td><td valign="top">
+
+```go
+var x int
+
+x = 1
+
+var (
+    a = 1
+    b = 2
+)
+
+fmt.Println(a, b)
+
+var a int
+var b int
+
+fmt.Println(a, b)
+```
+
+</td></tr>
+
+<tr><td valign="top">
+
+<sup>1</sup> Missing whitespace after declaration
+
+<sup>2</sup> Missing whitespace after declaration
+
+</td><td valign="top">
+
+</td></tr>
+</tbody></table>
+
+### `after-defer`
+
+`defer` statements should be followed by a blank line. Consecutive `defer`s
+are allowed to cuddle — only the last one in a run needs the blank line.
+
+<table>
+<thead><tr><th>Bad</th><th>Good</th></tr></thead>
+<tbody>
+<tr><td valign="top">
+
+```go
+f, err := os.Open("x")
+if err != nil {
+    return err
+}
+defer f.Close() // 1
+data := read(f)
+```
+
+</td><td valign="top">
+
+```go
+f, err := os.Open("x")
+if err != nil {
+    return err
+}
+defer f.Close()
+
+data := read(f)
+
+defer a()
+defer b()
+
+doWork()
+```
+
+</td></tr>
+
+<tr><td valign="top">
+
+<sup>1</sup> Missing whitespace after defer
+
+</td><td valign="top">
+
+</td></tr>
+</tbody></table>
+
+### `after-expr`
+
+Expression statements (e.g. function calls used for their side effects) should
+be followed by a blank line. Consecutive expression statements are allowed to
+cuddle — only the last one in a run needs the blank line.
+
+<table>
+<thead><tr><th>Bad</th><th>Good</th></tr></thead>
+<tbody>
+<tr><td valign="top">
+
+```go
+fmt.Println("hello") // 1
+x := 5
+
+fmt.Println(x)
+```
+
+</td><td valign="top">
+
+```go
+fmt.Println("hello")
+
+x := 5
+
+fmt.Println(x)
+
+log.Info("a")
+log.Info("b")
+
+doWork()
+```
+
+</td></tr>
+
+<tr><td valign="top">
+
+<sup>1</sup> Missing whitespace after expression
+
+</td><td valign="top">
+
+</td></tr>
+</tbody></table>
+
+### `after-go`
+
+`go` statements should be followed by a blank line. Consecutive `go`
+statements are allowed to cuddle — only the last one in a run needs the blank
+line.
+
+<table>
+<thead><tr><th>Bad</th><th>Good</th></tr></thead>
+<tbody>
+<tr><td valign="top">
+
+```go
+go work() // 1
+fmt.Println("next")
+```
+
+</td><td valign="top">
+
+```go
+go work()
+
+fmt.Println("next")
+
+go a()
+go b()
+
+fmt.Println("next")
+```
+
+</td></tr>
+
+<tr><td valign="top">
+
+<sup>1</sup> Missing whitespace after go
 
 </td><td valign="top">
 
