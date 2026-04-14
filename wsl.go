@@ -581,7 +581,17 @@ func (w *WSL) checkBranch(stmt *ast.BranchStmt, cursor *Cursor) {
 }
 
 func (w *WSL) checkDeclStmt(stmt *ast.DeclStmt, cursor *Cursor) {
-	defer w.checkAfterDecl(stmt, cursor)
+	defer func() {
+		// maybeGroupDecl can advance the cursor past consecutive decls, so
+		// use the cursor's current position at defer-time to get the last
+		// decl in the group.
+		lastDecl, ok := cursor.Stmt().(*ast.DeclStmt)
+		if !ok {
+			lastDecl = stmt
+		}
+
+		w.checkAfterDecl(lastDecl, cursor)
+	}()
 
 	if _, ok := w.config.Checks[CheckDecl]; !ok {
 		return
