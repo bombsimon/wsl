@@ -94,3 +94,17 @@ func nestedBlocksAllNeedNewlines() {
 	} // want `missing whitespace below this line \(after-block\)`
 	_ = 1 // want `missing whitespace above this line \(invalid statement above assign\)`
 }
+
+func chainedInteractions() {
+	// want +2 `missing whitespace above this line \(never cuddle decl\)` `missing whitespace below this line \(after-decl\)`
+	var a = 1
+	var b = 2
+	if a+b > 0 {
+		_ = 1
+	} // want `missing whitespace below this line \(after-block\)`
+	var c = 3 // want `missing whitespace above this line \(never cuddle decl\)` `missing whitespace below this line \(after-decl\)`
+	switch c {
+	case 1:
+		_ = 1
+	}
+}
