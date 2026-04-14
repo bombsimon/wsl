@@ -108,8 +108,8 @@ defer f.Close()
 ### `after-decl`
 
 Declaration statements (`var`, `const`, `type`) should be followed by a blank
-line. Consecutive declarations are allowed to cuddle — only the last one in a
-run needs the blank line.
+line. Consecutive declarations of the same kind are allowed to cuddle, only the
+last one in a run needs the blank line.
 
 <table>
 <thead><tr><th>Bad</th><th>Good</th></tr></thead>
@@ -163,7 +163,7 @@ fmt.Println(a, b)
 ### `after-defer`
 
 `defer` statements should be followed by a blank line. Consecutive `defer`s
-are allowed to cuddle — only the last one in a run needs the blank line.
+are allowed to cuddle, only the last one in a run needs the blank line.
 
 <table>
 <thead><tr><th>Bad</th><th>Good</th></tr></thead>
@@ -211,7 +211,7 @@ doWork()
 
 Expression statements (e.g. function calls used for their side effects) should
 be followed by a blank line. Consecutive expression statements are allowed to
-cuddle — only the last one in a run needs the blank line.
+cuddle, only the last one in a run needs the blank line.
 
 <table>
 <thead><tr><th>Bad</th><th>Good</th></tr></thead>
@@ -254,7 +254,7 @@ doWork()
 ### `after-go`
 
 `go` statements should be followed by a blank line. Consecutive `go`
-statements are allowed to cuddle — only the last one in a run needs the blank
+statements are allowed to cuddle, only the last one in a run needs the blank
 line.
 
 <table>
