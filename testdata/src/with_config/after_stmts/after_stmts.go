@@ -209,3 +209,75 @@ func declFollowedByExpr() {
 	var x = 1 // want `missing whitespace below this line \(after-decl\)`
 	fmt.Println(x)
 }
+
+func mixedDeclKindsMissing() {
+	var a = 1 // want `missing whitespace below this line \(after-decl\)`
+	type B struct {
+		B string
+	} // want `missing whitespace below this line \(after-decl\)`
+	fmt.Println(a) // want `missing whitespace below this line \(after-expr\)`
+	_ = B{}
+}
+
+func mixedDeclKindsOK() {
+	var a = 1
+
+	type B struct {
+		B string
+	}
+
+	fmt.Println(a)
+
+	_ = B{}
+}
+
+func consecutiveTypesMissing() {
+	type A struct {
+		A string
+	}
+	type B struct {
+		B string
+	} // want `missing whitespace below this line \(after-decl\)`
+	fmt.Println(A{}, B{})
+}
+
+func consecutiveTypesOK() {
+	type A struct {
+		A string
+	}
+	type B struct {
+		B string
+	}
+
+	fmt.Println(A{}, B{})
+}
+
+func varThenConstMissing() {
+	var a = 1 // want `missing whitespace below this line \(after-decl\)`
+	const b = 2 // want `missing whitespace below this line \(after-decl\)`
+	fmt.Println(a, b)
+}
+
+func varThenConstOK() {
+	var a = 1
+
+	const b = 2
+
+	fmt.Println(a, b)
+}
+
+func constThenVarMissing() {
+	const a = 1 // want `missing whitespace below this line \(after-decl\)`
+	var b = 2 // want `missing whitespace below this line \(after-decl\)`
+	fmt.Println(a, b)
+}
+
+func sameKindCuddlesOK() {
+	var a = 1
+	var b = 2
+
+	const c = 3
+	const d = 4
+
+	fmt.Println(a, b, c, d)
+}

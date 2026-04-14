@@ -621,8 +621,15 @@ func (w *WSL) checkAfterDecl(stmt *ast.DeclStmt, cursor *Cursor) {
 		CheckAfterDecl,
 		false,
 		func(nextStmt ast.Stmt, _ ast.Node) bool {
-			_, ok := nextStmt.(*ast.DeclStmt)
-			return ok
+			nextDecl, ok := nextStmt.(*ast.DeclStmt)
+			if !ok {
+				return false
+			}
+
+			currGen, currOK := stmt.Decl.(*ast.GenDecl)
+			nextGen, nextOK := nextDecl.Decl.(*ast.GenDecl)
+
+			return currOK && nextOK && currGen.Tok == nextGen.Tok
 		},
 	)
 }
