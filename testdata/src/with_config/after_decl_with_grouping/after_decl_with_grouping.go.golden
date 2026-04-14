@@ -51,12 +51,3 @@ func groupedBlockMissing() {
 
 	fmt.Println(a, b)
 }
-
-func groupedBlockOK() {
-	var (
-		a = 1
-		b = 2
-	)
-
-	fmt.Println(a, b)
-}

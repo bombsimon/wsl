@@ -44,12 +44,3 @@ func groupedBlockMissing() {
 	) // want `missing whitespace below this line \(after-decl\)`
 	fmt.Println(a, b)
 }
-
-func groupedBlockOK() {
-	var (
-		a = 1
-		b = 2
-	)
-
-	fmt.Println(a, b)
-}
