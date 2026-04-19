@@ -69,3 +69,20 @@ func fn3() {
 	}
 	defer f.Close()
 }
+
+func fn4() {
+	// Cuddling allowed: variable is used inside the anonymous function body.
+	sharedVar := "hello"
+	defer func() {
+		fmt.Println(sharedVar)
+	}()
+
+	// Cuddling not allowed: variable is not used inside the anonymous function body.
+	notShared := "world"
+
+	defer func() { // want `missing whitespace above this line \(no shared variables above defer\)`
+		fmt.Println("not using notShared")
+	}()
+
+	_ = notShared
+}

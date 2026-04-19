@@ -645,37 +645,49 @@ func (w *WSL) checkAfterDecl(stmt *ast.DeclStmt, cursor *Cursor) {
 func (w *WSL) checkDefer(stmt *ast.DeferStmt, cursor *Cursor) {
 	defer w.checkAfterDefer(stmt, cursor)
 
-	w.maybeCheckExpr(
-		stmt,
-		cursor,
-		func(n ast.Node) (bool, bool) {
-			_, previousIsDefer := n.(*ast.DeferStmt)
-			_, previousIsIf := n.(*ast.IfStmt)
+	if _, ok := w.config.Checks[CheckDefer]; !ok {
+		return
+	}
 
-			// We allow defer as a third node only if we have an if statement
-			// between, e.g.
-			//
-			// 	f, err := os.Open(file)
-			// 	if err != nil {
-			// 	    return err
-			// 	}
-			// defer f.Close()
-			if previousIsIf && w.numberOfStatementsAbove(cursor) >= 2 {
-				defer cursor.Save()()
+	cursor.SetChecker(CheckDefer)
 
-				cursor.Previous()
-				cursor.Previous()
+	previousNode := cursor.PreviousNode()
+	_, previousIsDefer := previousNode.(*ast.DeferStmt)
+	_, previousIsIf := previousNode.(*ast.IfStmt)
 
-				if w.hasIntersection(cursor.Stmt(), stmt) {
-					return true, false
-				}
-			}
+	// We allow defer as a third node only if we have an if statement
+	// between, e.g.
+	//
+	// 	f, err := os.Open(file)
+	// 	if err != nil {
+	// 	    return err
+	// 	}
+	// defer f.Close()
+	if previousIsIf && w.numberOfStatementsAbove(cursor) >= 2 {
+		defer cursor.Save()()
 
-			// Only check cuddling if previous statement isn't also a defer.
-			return true, !previousIsDefer
-		},
-		CheckDefer,
-	)
+		cursor.Previous()
+		cursor.Previous()
+
+		if w.hasIntersection(cursor.Stmt(), stmt) {
+			return
+		}
+	}
+
+	// Only check cuddling if previous statement isn't also a defer.
+	if previousIsDefer {
+		return
+	}
+
+	// If calling a function literal, inspect the function body for shared
+	// variables, similar to how block statements inspect their body via
+	// checkCuddlingBlock.
+	if funcLit, ok := stmt.Call.Fun.(*ast.FuncLit); ok {
+		w.checkCuddlingBlock(stmt, funcLit.Body.List, []*ast.Ident{}, cursor)
+		return
+	}
+
+	w.checkCuddling(stmt, cursor, true)
 }
 
 func (w *WSL) checkAfterDefer(stmt *ast.DeferStmt, cursor *Cursor) {
@@ -798,15 +810,17 @@ func (w *WSL) checkError(
 func (w *WSL) checkExprStmt(stmt *ast.ExprStmt, cursor *Cursor) {
 	defer w.checkAfterExpr(stmt, cursor)
 
-	w.maybeCheckExpr(
-		stmt,
-		cursor,
-		func(n ast.Node) (bool, bool) {
-			_, ok := n.(*ast.ExprStmt)
-			return false, !ok
-		},
-		CheckExpr,
-	)
+	if _, ok := w.config.Checks[CheckExpr]; !ok {
+		return
+	}
+
+	cursor.SetChecker(CheckExpr)
+
+	// Consecutive expression statements don't need to be separated, so only
+	// check cuddling if the previous statement isn't also an expression.
+	if _, ok := cursor.PreviousNode().(*ast.ExprStmt); !ok {
+		w.checkCuddling(stmt, cursor, false)
+	}
 }
 
 func (w *WSL) checkAfterExpr(stmt *ast.ExprStmt, cursor *Cursor) {
@@ -840,17 +854,27 @@ func (w *WSL) checkFor(stmt *ast.ForStmt, cursor *Cursor) {
 func (w *WSL) checkGo(stmt *ast.GoStmt, cursor *Cursor) {
 	defer w.checkAfterGo(stmt, cursor)
 
-	w.maybeCheckExpr(
-		stmt,
-		cursor,
-		// We can cuddle any amount `go` statements so only check cuddling if
-		// the previous one isn't a `go` call.
-		func(n ast.Node) (bool, bool) {
-			_, ok := n.(*ast.GoStmt)
-			return true, !ok
-		},
-		CheckGo,
-	)
+	if _, ok := w.config.Checks[CheckGo]; !ok {
+		return
+	}
+
+	cursor.SetChecker(CheckGo)
+
+	// We can cuddle any amount `go` statements so only check cuddling if
+	// the previous one isn't a `go` call.
+	if _, ok := cursor.PreviousNode().(*ast.GoStmt); ok {
+		return
+	}
+
+	// If calling a function literal, inspect the function body for shared
+	// variables, similar to how block statements inspect their body via
+	// checkCuddlingBlock.
+	if funcLit, ok := stmt.Call.Fun.(*ast.FuncLit); ok {
+		w.checkCuddlingBlock(stmt, funcLit.Body.List, []*ast.Ident{}, cursor)
+		return
+	}
+
+	w.checkCuddling(stmt, cursor, true)
 }
 
 func (w *WSL) checkAfterGo(stmt *ast.GoStmt, cursor *Cursor) {
@@ -1334,22 +1358,6 @@ func (w *WSL) maybeCheckBlock(
 		}
 
 		w.checkCuddlingBlock(node, blockList, allowedIdents, cursor)
-	}
-}
-
-func (w *WSL) maybeCheckExpr(
-	node ast.Node,
-	cursor *Cursor,
-	predicate func(ast.Node) (bool, bool),
-	check CheckType,
-) {
-	if _, ok := w.config.Checks[check]; ok {
-		cursor.SetChecker(check)
-		previousNode := cursor.PreviousNode()
-
-		if enforceLimit, shouldCheck := predicate(previousNode); shouldCheck {
-			w.checkCuddling(node, cursor, enforceLimit)
-		}
 	}
 }
 
