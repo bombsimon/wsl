@@ -55,3 +55,19 @@ func Go() {
 
 	_, _, _, _, _, _, _ = t1, t2, t3, t4, t5, multiCuddle1, multiCuddle2
 }
+
+func GoFuncLit() {
+	// Cuddling allowed: variable is used inside the anonymous function body.
+	sharedVar := 1
+	go func() {
+		fmt.Println(sharedVar)
+	}()
+
+	// Cuddling not allowed: variable is not used inside the anonymous function body.
+	notShared := 1
+	go func() { // want `missing whitespace above this line \(no shared variables above go\)`
+		fmt.Println("not using notShared")
+	}()
+
+	_ = notShared
+}
