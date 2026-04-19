@@ -810,15 +810,17 @@ func (w *WSL) checkError(
 func (w *WSL) checkExprStmt(stmt *ast.ExprStmt, cursor *Cursor) {
 	defer w.checkAfterExpr(stmt, cursor)
 
-	w.maybeCheckExpr(
-		stmt,
-		cursor,
-		func(n ast.Node) (bool, bool) {
-			_, ok := n.(*ast.ExprStmt)
-			return false, !ok
-		},
-		CheckExpr,
-	)
+	if _, ok := w.config.Checks[CheckExpr]; !ok {
+		return
+	}
+
+	cursor.SetChecker(CheckExpr)
+
+	// Consecutive expression statements don't need to be separated, so only
+	// check cuddling if the previous statement isn't also an expression.
+	if _, ok := cursor.PreviousNode().(*ast.ExprStmt); !ok {
+		w.checkCuddling(stmt, cursor, false)
+	}
 }
 
 func (w *WSL) checkAfterExpr(stmt *ast.ExprStmt, cursor *Cursor) {
@@ -1356,22 +1358,6 @@ func (w *WSL) maybeCheckBlock(
 		}
 
 		w.checkCuddlingBlock(node, blockList, allowedIdents, cursor)
-	}
-}
-
-func (w *WSL) maybeCheckExpr(
-	node ast.Node,
-	cursor *Cursor,
-	predicate func(ast.Node) (bool, bool),
-	check CheckType,
-) {
-	if _, ok := w.config.Checks[check]; ok {
-		cursor.SetChecker(check)
-		previousNode := cursor.PreviousNode()
-
-		if enforceLimit, shouldCheck := predicate(previousNode); shouldCheck {
-			w.checkCuddling(node, cursor, enforceLimit)
-		}
 	}
 }
 
