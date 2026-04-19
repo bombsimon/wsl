@@ -811,8 +811,18 @@ func (w *WSL) checkAfterExpr(stmt *ast.ExprStmt, cursor *Cursor) {
 		CheckAfterExpr,
 		false,
 		func(nextStmt ast.Stmt, _ ast.Node) bool {
-			_, ok := nextStmt.(*ast.ExprStmt)
-			return ok
+			// Consecutive expressions don't need a blank line between them.
+			if _, ok := nextStmt.(*ast.ExprStmt); ok {
+				return true
+			}
+
+			// Exception: expr followed by a defer that references the same
+			// variable (e.g. mu.Lock() / defer mu.Unlock()).
+			if deferStmt, ok := nextStmt.(*ast.DeferStmt); ok {
+				return w.hasIntersection(stmt, deferStmt)
+			}
+
+			return false
 		},
 	)
 }

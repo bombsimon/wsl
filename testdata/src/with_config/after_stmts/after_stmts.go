@@ -3,6 +3,7 @@ package testpkg
 import (
 	"fmt"
 	"os"
+	"sync"
 )
 
 // --- after-defer ---
@@ -203,6 +204,24 @@ func goFollowedByDefer() {
 	defer fmt.Println("cleanup") // want `missing whitespace below this line \(after-defer\)`
 	x := 1
 	_ = x
+}
+
+func exprFollowedByDeferWithIntersection() {
+	var mu sync.Mutex
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	fmt.Println("protected")
+}
+
+func exprFollowedByDeferNoIntersection() {
+	var mu sync.Mutex
+
+	mu.Lock() // want `missing whitespace below this line \(after-expr\)`
+	defer fmt.Println("cleanup")
+
+	fmt.Println("world")
 }
 
 func declFollowedByExpr() {

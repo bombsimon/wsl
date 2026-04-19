@@ -124,5 +124,9 @@ func chainedInteractions() {
 	switch c {
 	case 1:
 		_ = 1
-	}
+	} // want `missing whitespace below this line \(after-block\)`
+
+	fmt.Println("a") // want `missing whitespace above this line \(invalid statement above expr\)` `missing whitespace below this line \(after-expr\)`
+
+	return // want `missing whitespace above this line \(too many lines above return\)`
 }
