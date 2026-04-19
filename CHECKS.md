@@ -4,6 +4,10 @@
 
 - [Checks](#checks)
   - [`after-block`](#after-block)
+  - [`after-decl`](#after-decl)
+  - [`after-defer`](#after-defer)
+  - [`after-expr`](#after-expr)
+  - [`after-go`](#after-go)
   - [`append`](#append)
   - [`assign`](#assign)
   - [`assign-exclusive`](#assign-exclusive)
@@ -101,6 +105,206 @@ defer f.Close()
 </td></tr>
 </tbody></table>
 
+[🔝](#table-of-content)
+
+### `after-decl`
+
+Declaration statements (`var`, `const`, `type`) should be followed by a blank
+line. Consecutive declarations of the same kind are allowed to cuddle, only the
+last one in a run needs the blank line.
+
+<table>
+<thead><tr><th>Bad</th><th>Good</th></tr></thead>
+<tbody>
+<tr><td valign="top">
+
+```go
+var x int // 1
+x = 1
+
+var (
+    a = 1
+    b = 2
+) // 2
+fmt.Println(a, b)
+```
+
+</td><td valign="top">
+
+```go
+var x int
+
+x = 1
+
+var (
+    a = 1
+    b = 2
+)
+
+fmt.Println(a, b)
+
+var a int
+var b int
+
+fmt.Println(a, b)
+```
+
+</td></tr>
+
+<tr><td valign="top">
+
+<sup>1</sup> Missing whitespace after declaration
+
+<sup>2</sup> Missing whitespace after declaration
+
+</td><td valign="top">
+
+</td></tr>
+</tbody></table>
+
+[🔝](#table-of-content)
+
+### `after-defer`
+
+`defer` statements should be followed by a blank line. Consecutive `defer`s
+are allowed to cuddle, only the last one in a run needs the blank line.
+
+<table>
+<thead><tr><th>Bad</th><th>Good</th></tr></thead>
+<tbody>
+<tr><td valign="top">
+
+```go
+f, err := os.Open("x")
+if err != nil {
+    return err
+}
+defer f.Close() // 1
+data := read(f)
+```
+
+</td><td valign="top">
+
+```go
+f, err := os.Open("x")
+if err != nil {
+    return err
+}
+defer f.Close()
+
+data := read(f)
+
+defer a()
+defer b()
+
+doWork()
+```
+
+</td></tr>
+
+<tr><td valign="top">
+
+<sup>1</sup> Missing whitespace after defer
+
+</td><td valign="top">
+
+</td></tr>
+</tbody></table>
+
+[🔝](#table-of-content)
+
+### `after-expr`
+
+Expression statements (e.g. function calls used for their side effects) should
+be followed by a blank line. Consecutive expression statements are allowed to
+cuddle, only the last one in a run needs the blank line.
+
+**Exception:** an expression statement that is immediately followed by a
+`defer` referencing the same variable is exempt (e.g. `mu.Lock()` /
+`defer mu.Unlock()`), since these two statements form a single logical unit.
+
+<table>
+<thead><tr><th>Bad</th><th>Good</th></tr></thead>
+<tbody>
+<tr><td valign="top">
+
+```go
+fmt.Println("hello") // 1
+x := 5
+
+fmt.Println(x)
+```
+
+</td><td valign="top">
+
+```go
+fmt.Println("hello")
+
+x := 5
+
+fmt.Println(x)
+
+log.Info("a")
+log.Info("b")
+
+doWork()
+```
+
+</td></tr>
+
+<tr><td valign="top">
+
+<sup>1</sup> Missing whitespace after expression
+
+</td><td valign="top">
+
+</td></tr>
+</tbody></table>
+
+[🔝](#table-of-content)
+
+### `after-go`
+
+`go` statements should be followed by a blank line. Consecutive `go`
+statements are allowed to cuddle, only the last one in a run needs the blank
+line.
+
+<table>
+<thead><tr><th>Bad</th><th>Good</th></tr></thead>
+<tbody>
+<tr><td valign="top">
+
+```go
+go work() // 1
+fmt.Println("next")
+```
+
+</td><td valign="top">
+
+```go
+go work()
+
+fmt.Println("next")
+
+go a()
+go b()
+
+fmt.Println("next")
+```
+
+</td></tr>
+
+<tr><td valign="top">
+
+<sup>1</sup> Missing whitespace after go
+
+</td><td valign="top">
+
+</td></tr>
+</tbody></table>
+
+[🔝](#table-of-content)
+
 ### `assign`
 
 Assign (`foo := bar`) or re-assignments (`foo = bar`) should only be cuddled
@@ -155,6 +359,8 @@ c := 3
 
 </td></tr>
 </tbody></table>
+
+[🔝](#table-of-content)
 
 ### `branch`
 
@@ -213,6 +419,8 @@ for {
 
 </td></tr>
 </tbody></table>
+
+[🔝](#table-of-content)
 
 ### `decl`
 
@@ -283,6 +491,8 @@ var a string
 </td></tr>
 </tbody></table>
 
+[🔝](#table-of-content)
+
 ### `defer`
 
 Deferring execution should only be used directly in the context of what's being
@@ -348,6 +558,8 @@ defer m.Unlock()
 </td></tr>
 </tbody></table>
 
+[🔝](#table-of-content)
+
 ### `expr`
 
 Expressions can be multiple things and a big part of them are not handled by
@@ -400,6 +612,8 @@ fmt.Println(a)
 
 </td></tr>
 </tbody></table>
+
+[🔝](#table-of-content)
 
 ### `for`
 
@@ -487,6 +701,8 @@ for {
 </td></tr>
 </tbody></table>
 
+[🔝](#table-of-content)
+
 ### `go`
 
 <table>
@@ -536,6 +752,8 @@ go Fn(someArg)
 
 </td></tr>
 </tbody></table>
+
+[🔝](#table-of-content)
 
 ### `if`
 
@@ -665,6 +883,8 @@ if xUsedLaterInBlock() {
 </td></tr>
 </tbody></table>
 
+[🔝](#table-of-content)
+
 ### `inc-dec`
 
 <table>
@@ -709,6 +929,8 @@ j++
 
 </td></tr>
 </tbody></table>
+
+[🔝](#table-of-content)
 
 ### `label`
 
@@ -755,6 +977,8 @@ L2:
 
 </td></tr>
 </tbody></table>
+
+[🔝](#table-of-content)
 
 ### `range`
 
@@ -836,6 +1060,8 @@ for _, v := range s2 {
 </td></tr>
 </tbody></table>
 
+[🔝](#table-of-content)
+
 ### `return`
 
 > [!NOTE]
@@ -889,6 +1115,8 @@ func Fn() int {
 
 </td></tr>
 </tbody></table>
+
+[🔝](#table-of-content)
 
 ### `select`
 
@@ -962,6 +1190,8 @@ case <-stop:
 </td></tr>
 </tbody></table>
 
+[🔝](#table-of-content)
+
 ### `send`
 
 Send statements should only be cuddled with a single variable that is used on
@@ -1003,6 +1233,8 @@ b := 1
 
 </td></tr>
 </tbody></table>
+
+[🔝](#table-of-content)
 
 ### `switch`
 
@@ -1109,6 +1341,8 @@ case 2:
 </td></tr>
 </tbody></table>
 
+[🔝](#table-of-content)
+
 ### `type-switch`
 
 > [!NOTE]
@@ -1192,6 +1426,8 @@ case int64:
 </td></tr>
 </tbody></table>
 
+[🔝](#table-of-content)
+
 ### `append`
 
 Append enables strict `append` checking where assignments that are
@@ -1239,6 +1475,8 @@ s = append(s, 2)
 </td></tr>
 </tbody></table>
 
+[🔝](#table-of-content)
+
 ### `assign-exclusive`
 
 Assign exclusive does not allow mixing new assignments (`:=`) with
@@ -1281,6 +1519,8 @@ d = 4
 </td></tr>
 </tbody></table>
 
+[🔝](#table-of-content)
+
 ### `assign-expr`
 
 Assignments are allowed to be cuddled with expressions, primarily to support
@@ -1319,6 +1559,8 @@ t1.Fn3()
 </td></tr>
 </tbody></table>
 
+[🔝](#table-of-content)
+
 ### `err`
 
 <table>
@@ -1354,6 +1596,8 @@ if err != nil {
 </td></tr>
 </tbody></table>
 
+[🔝](#table-of-content)
+
 ### `leading-whitespace`
 
 <table>
@@ -1380,6 +1624,8 @@ if true {
 
 </tbody></table>
 
+[🔝](#table-of-content)
+
 ### `trailing-whitespace`
 
 <table>
@@ -1405,6 +1651,8 @@ if true {
 </td></tr>
 
 </tbody></table>
+
+[🔝](#table-of-content)
 
 ## Configuration
 
@@ -1440,6 +1688,8 @@ if anotherVariable {
 }
 ```
 
+[🔝](#table-of-content)
+
 ### `allow-whole-block`
 
 This is similar to `allow-first-in-block` but now allows the lack of whitespace
@@ -1455,6 +1705,8 @@ if anotherVariable {
     }
 }
 ```
+
+[🔝](#table-of-content)
 
 ### `branch-max-lines`
 
@@ -1513,6 +1765,8 @@ func ShortFn() int {
 
 </td></tr>
 </tbody></table>
+
+[🔝](#table-of-content)
 
 ### `case-max-lines`
 
@@ -1637,6 +1891,8 @@ case 2:
 </td></tr>
 </tbody></table>
 
+[🔝](#table-of-content)
+
 ### `cuddle-max-statements`
 
 Controls the maximum number of consecutive statements that may be cuddled
@@ -1705,3 +1961,5 @@ if a+b+c > 0 {
 
 </td></tr>
 </tbody></table>
+
+[🔝](#table-of-content)

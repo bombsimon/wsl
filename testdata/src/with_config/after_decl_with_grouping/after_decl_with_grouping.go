@@ -1,0 +1,46 @@
+package testpkg
+
+import "fmt"
+
+func twoVarsMissing() {
+	// want +2 `missing whitespace above this line \(never cuddle decl\)` `missing whitespace below this line \(after-decl\)`
+	var a = 1
+	var b = 2
+	fmt.Println(a, b)
+}
+
+func twoVarsOK() {
+	var (
+		a = 1
+		b = 2
+	)
+
+	fmt.Println(a, b)
+}
+
+func threeVarsMissing() {
+	// want +3 `missing whitespace above this line \(never cuddle decl\)`
+	// want +3 `missing whitespace above this line \(never cuddle decl\)` `missing whitespace below this line \(after-decl\)`
+	var a = 1
+	var b = 2
+	var c = 3
+	fmt.Println(a, b, c)
+}
+
+func threeVarsOK() {
+	var (
+		a = 1
+		b = 2
+		c = 3
+	)
+
+	fmt.Println(a, b, c)
+}
+
+func groupedBlockMissing() {
+	var (
+		a = 1
+		b = 2
+	) // want `missing whitespace below this line \(after-decl\)`
+	fmt.Println(a, b)
+}
