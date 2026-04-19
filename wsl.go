@@ -130,9 +130,15 @@ func (w *WSL) checkStmt(stmt ast.Stmt, cursor *Cursor) {
 	}
 }
 
-func (w *WSL) checkBody(body []ast.Stmt) {
-	cursor := NewCursor(body)
+func (w *WSL) checkBodyBlock(block *ast.BlockStmt) {
+	w.walkBody(NewBlockCursor(block.List, w.lineFor(block.Rbrace)))
+}
 
+func (w *WSL) checkBodyStmts(stmts []ast.Stmt) {
+	w.walkBody(NewCursor(stmts))
+}
+
+func (w *WSL) walkBody(cursor *Cursor) {
 	for cursor.Next() {
 		w.checkStmt(cursor.Stmt(), cursor)
 	}
@@ -355,7 +361,7 @@ func (w *WSL) checkBlock(block *ast.BlockStmt, cursor *Cursor) {
 	w.checkTrailingNewline(block)
 	w.checkNewlineAfterBlock(block, cursor)
 
-	w.checkBody(block.List)
+	w.checkBodyBlock(block)
 }
 
 func (w *WSL) checkNewlineAfterBlock(block *ast.BlockStmt, cursor *Cursor) {
@@ -376,7 +382,6 @@ func (w *WSL) checkNewlineAfterBlock(block *ast.BlockStmt, cursor *Cursor) {
 		currentStmt,
 		cursor,
 		CheckAfterBlock,
-		true,
 		func(nextStmt ast.Stmt, previousNode ast.Node) bool {
 			// Exception: if err != nil { } followed by defer that references
 			// a variable assigned above the if block.
@@ -410,7 +415,6 @@ func (w *WSL) checkNewlineAfter(
 	currentStmt ast.Node,
 	cursor *Cursor,
 	check CheckType,
-	checkTrailingComment bool,
 	isException func(nextStmt ast.Stmt, previousNode ast.Node) bool,
 ) {
 	if _, ok := w.config.Checks[check]; !ok {
@@ -426,21 +430,26 @@ func (w *WSL) checkNewlineAfter(
 	previousNode := cursor.PreviousNode()
 
 	if !cursor.Next() {
-		if !checkTrailingComment {
-			return
-		}
-
 		// No more statements after this one so check for comments after.
 		// Skip comments that are inside the current statement (e.g., inside an else block).
-		if cPos := w.commentOnLineAfterNodePos(boundary); cPos != token.NoPos && cPos >= currentStmt.End() {
-			insertPos := w.lineStartOf(cPos)
-			w.addError(
-				reportPos,
-				insertPos,
-				insertPos,
-				messageMissingWhitespaceBelow,
-				check,
-			)
+		// Also skip comments that appear on the same line as the enclosing block's closing
+		// brace — those are inline comments on the brace itself, not trailing comments
+		// inside the block.
+		if commentPos := w.commentOnLineAfterNodePos(boundary); commentPos != token.NoPos {
+			isAfterStmt := commentPos >= currentStmt.End()
+			isSameLine := w.lineFor(commentPos) == cursor.rbraceLine
+			isUnknownOrNotSameLine := cursor.rbraceLine == 0 || !isSameLine
+
+			if isAfterStmt && isUnknownOrNotSameLine {
+				insertPos := w.lineStartOf(commentPos)
+				w.addError(
+					reportPos,
+					insertPos,
+					insertPos,
+					messageMissingWhitespaceBelow,
+					check,
+				)
+			}
 		}
 
 		return
@@ -500,7 +509,7 @@ func (w *WSL) checkCaseClause(stmt *ast.CaseClause, cursor *Cursor) {
 		w.checkCaseTrailingNewline(stmt.Body, cursor)
 	}
 
-	w.checkBody(stmt.Body)
+	w.checkBodyStmts(stmt.Body)
 }
 
 func (w *WSL) checkCommClause(stmt *ast.CommClause, cursor *Cursor) {
@@ -510,7 +519,7 @@ func (w *WSL) checkCommClause(stmt *ast.CommClause, cursor *Cursor) {
 		w.checkCaseTrailingNewline(stmt.Body, cursor)
 	}
 
-	w.checkBody(stmt.Body)
+	w.checkBodyStmts(stmt.Body)
 }
 
 func (w *WSL) checkAssign(stmt *ast.AssignStmt, cursor *Cursor) {
@@ -619,7 +628,6 @@ func (w *WSL) checkAfterDecl(stmt *ast.DeclStmt, cursor *Cursor) {
 		stmt,
 		cursor,
 		CheckAfterDecl,
-		false,
 		func(nextStmt ast.Stmt, _ ast.Node) bool {
 			nextDecl, ok := nextStmt.(*ast.DeclStmt)
 			if !ok {
@@ -677,7 +685,6 @@ func (w *WSL) checkAfterDefer(stmt *ast.DeferStmt, cursor *Cursor) {
 		stmt,
 		cursor,
 		CheckAfterDefer,
-		false,
 		func(nextStmt ast.Stmt, _ ast.Node) bool {
 			_, ok := nextStmt.(*ast.DeferStmt)
 			return ok
@@ -809,7 +816,6 @@ func (w *WSL) checkAfterExpr(stmt *ast.ExprStmt, cursor *Cursor) {
 		stmt,
 		cursor,
 		CheckAfterExpr,
-		false,
 		func(nextStmt ast.Stmt, _ ast.Node) bool {
 			// Consecutive expressions don't need a blank line between them.
 			if _, ok := nextStmt.(*ast.ExprStmt); ok {
@@ -854,7 +860,6 @@ func (w *WSL) checkAfterGo(stmt *ast.GoStmt, cursor *Cursor) {
 		stmt,
 		cursor,
 		CheckAfterGo,
-		false,
 		func(nextStmt ast.Stmt, _ ast.Node) bool {
 			_, ok := nextStmt.(*ast.GoStmt)
 			return ok

@@ -90,7 +90,7 @@ func nestedBlocksAllNeedNewlines() {
 		} // want `missing whitespace below this line \(after-block\)`
 		if false { // want `missing whitespace above this line \(invalid statement above if\)`
 			_ = 1
-		} // want `missing whitespace below this line \(after-block\)`
+		}
 	} // want `missing whitespace below this line \(after-block\)`
 	_ = 1 // want `missing whitespace above this line \(invalid statement above assign\)`
 }

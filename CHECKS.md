@@ -219,6 +219,10 @@ Expression statements (e.g. function calls used for their side effects) should
 be followed by a blank line. Consecutive expression statements are allowed to
 cuddle, only the last one in a run needs the blank line.
 
+**Exception:** an expression statement that is immediately followed by a
+`defer` referencing the same variable is exempt (e.g. `mu.Lock()` /
+`defer mu.Unlock()`), since these two statements form a single logical unit.
+
 <table>
 <thead><tr><th>Bad</th><th>Good</th></tr></thead>
 <tbody>

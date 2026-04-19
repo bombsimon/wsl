@@ -59,6 +59,17 @@ func deferLastInFunc() {
 	defer fmt.Println("cleanup")
 }
 
+func deferTrailingCommentMissing() {
+	defer fmt.Println("cleanup") // want `missing whitespace below this line \(after-defer\)`
+	// trailing comment
+}
+
+func deferTrailingCommentOK() {
+	defer fmt.Println("cleanup")
+
+	// trailing comment
+}
+
 // --- after-go ---
 
 func simpleGoMissing() {
@@ -98,6 +109,17 @@ func goAnonFuncMissing() {
 		fmt.Println("work")
 	}() // want `missing whitespace below this line \(after-go\)`
 	fmt.Println("next")
+}
+
+func goTrailingCommentMissing() {
+	go fmt.Println("work") // want `missing whitespace below this line \(after-go\)`
+	// trailing comment
+}
+
+func goTrailingCommentOK() {
+	go fmt.Println("work")
+
+	// trailing comment
 }
 
 // --- after-decl ---
@@ -156,6 +178,19 @@ func declAsOnlyStmt() {
 	var _ = 1
 }
 
+func declTrailingCommentMissing() {
+	var x = 1 // want `missing whitespace below this line \(after-decl\)`
+	// trailing comment
+	_ = x
+}
+
+func declTrailingCommentOK() {
+	var x = 1
+
+	// trailing comment
+	_ = x
+}
+
 // --- after-expr ---
 
 func simpleExprMissing() {
@@ -188,6 +223,17 @@ func multipleExprsOK() {
 	x := 5
 
 	fmt.Println(x)
+}
+
+func exprTrailingCommentMissing() {
+	fmt.Println("hello") // want `missing whitespace below this line \(after-expr\)`
+	// trailing comment
+}
+
+func exprTrailingCommentOK() {
+	fmt.Println("hello")
+
+	// trailing comment
 }
 
 // --- combined interactions ---
