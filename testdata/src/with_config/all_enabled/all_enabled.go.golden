@@ -82,9 +82,9 @@ func errCheckAndAfterBlock() {
 
 func multipleOnSameStatement() {
 	a := 1
+	b := 2
 
-	b := 2 // want `missing whitespace above this line \(too many statements above if\)`
-	if a > 0 {
+	if a > 0 { // want `missing whitespace above this line \(too many statements above if\)`
 		_ = b
 	} // want `missing whitespace below this line \(after-block\)`
 
@@ -114,7 +114,7 @@ func chainedInteractions() {
 		b = 2
 	)
 
-	if a+b > 0 {
+	if a+b > 0 { // want `missing whitespace above this line \(too many statements above if\)`
 		_ = 1
 	} // want `missing whitespace below this line \(after-block\)`
 

@@ -1,0 +1,115 @@
+package testpkg
+
+import "fmt"
+
+// One sharing cuddled stmt is allowed (within default max=1).
+func ifSingleSharing() {
+	x := 1
+	if x > 0 {
+		fmt.Println("ok")
+	}
+}
+
+// Two sharing stmts cuddled with the trigger: keep the group together,
+// separate it from the trigger.
+func ifBothShareSeparate() {
+	x := 1
+	y := 2
+	if x > y { // want `missing whitespace above this line \(too many statements above if\)`
+		fmt.Println("ok")
+	}
+}
+
+// Many sharing stmts: same idea — separate the entire group from the trigger.
+func ifManyShareSeparate() {
+	a := 1
+	b := 2
+	c := 3
+	d := 4
+	if a+b+c+d > 0 { // want `missing whitespace above this line \(too many statements above if\)`
+		fmt.Println("ok")
+	}
+}
+
+// Mid-chain non-sharing stmt: split at the break (existing semantics) and the
+// sharing tail keeps cuddling with the trigger.
+func ifNonSharingAbove() {
+	notUsed := 1
+	y := 2 // want `missing whitespace above this line \(variable not shared with if\)`
+	if y > 1 {
+		fmt.Println("ok")
+	}
+
+	_ = notUsed
+}
+
+// Immediately previous stmt does not share at all: existing
+// "no shared variables" rule still fires before cuddle-group is consulted.
+func ifNoSharingAtAll() {
+	x := 1
+	y := 2
+	if true { // want `missing whitespace above this line \(no shared variables above if\)`
+		fmt.Println("ok")
+	}
+
+	_, _ = x, y
+}
+
+// Other triggers behave the same.
+func forBothShareSeparate() {
+	a := 1
+	b := 2
+	for i := a; i < b; i++ { // want `missing whitespace above this line \(too many statements above for\)`
+		fmt.Println(i)
+	}
+}
+
+func switchBothShareSeparate() {
+	a := 1
+	b := 2
+	switch { // want `missing whitespace above this line \(too many statements above switch\)`
+	case a > b:
+		fmt.Println("a")
+	case b > a:
+		fmt.Println("b")
+	}
+}
+
+func goBothShareSeparate() {
+	a := 1
+	b := 2
+	go fmt.Println(a, b) // want `missing whitespace above this line \(too many statements above go\)`
+}
+
+func deferBothShareSeparate() {
+	a := 1
+	b := 2
+	defer fmt.Println(a, b) // want `missing whitespace above this line \(too many statements above defer\)`
+}
+
+// AllowFirstInBlock interaction: the variables count as sharing because they
+// are used in the first block statement.
+func ifAllUsedInFirstBlock() {
+	a := 1
+	b := 2
+	if true { // want `missing whitespace above this line \(too many statements above if\)`
+		fmt.Println(a, b)
+	}
+}
+
+// Real-world: a string of helper booleans built up before an if that uses all
+// of them. With cuddle-group the helpers stay grouped and the blank line goes
+// above the if, instead of being inserted between two related helpers.
+func isBase64url(s string) bool {
+	for _, c := range s {
+		isUpper := c >= 'A' && c <= 'Z'
+		isLower := c >= 'a' && c <= 'z'
+		isDigit := c >= '0' && c <= '9'
+		isSpecial := c == '-' || c == '_'
+		if !isUpper && !isLower && !isDigit && !isSpecial { // want `missing whitespace above this line \(too many statements above if\)`
+			return false
+		}
+	}
+
+	return true
+}

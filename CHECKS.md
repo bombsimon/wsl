@@ -13,6 +13,7 @@
   - [`assign-exclusive`](#assign-exclusive)
   - [`assign-expr`](#assign-expr)
   - [`branch`](#branch)
+  - [`cuddle-group`](#cuddle-group)
   - [`decl`](#decl)
   - [`defer`](#defer)
   - [`err`](#err)
@@ -1590,6 +1591,80 @@ if err != nil {
 <tr><td valign="top">
 
 <sup>1</sup> Whitespace between error assignment and error checking
+
+</td><td valign="top">
+
+</td></tr>
+</tbody></table>
+
+[🔝](#table-of-content)
+
+### `cuddle-group`
+
+Changes *where* the `cuddle-max-statements` violation is reported. Without
+this check, exceeding the limit places the diagnostic on the cuddled statement
+that pushes the chain past the limit, splitting the cuddled group. With this
+check enabled, the diagnostic is placed on the trigger statement (`if`, `for`,
+`switch`, etc., `go`, `defer`, `send`), so the fix inserts a blank line above
+the trigger and keeps the cuddled group together.
+
+The cuddled chain still breaks at the first non-sharing statement (existing
+behavior, unaffected by this check).
+
+In practice this is most useful with the default `cuddle-max-statements: 1`
+(two or more sharing cuddled statements move the blank line above the trigger
+instead of between the variables).
+
+<table>
+<thead><tr><th>Bad</th><th>Good</th></tr></thead>
+<tbody>
+<tr><td valign="top">
+
+```go
+// With the default cuddle-max-statements: 1
+a := 1
+b := 2
+if a > b { // 1
+    fmt.Println("ok")
+}
+```
+
+</td><td valign="top">
+
+```go
+// With the default cuddle-max-statements: 1
+a := 1
+b := 2
+
+if a > b {
+    fmt.Println("ok")
+}
+
+// Without cuddle-group, the same input is fixed by splitting between
+// the cuddled variables instead:
+a := 1
+
+b := 2
+if a > b {
+    fmt.Println("ok")
+}
+
+// Mid-chain non-sharing still splits at the break:
+notUsed := 1
+
+b := 2
+if b > 0 {
+    fmt.Println("ok")
+}
+```
+
+</td></tr>
+
+<tr><td valign="top">
+
+<sup>1</sup> Two cuddled statements share a variable with `if`; with
+`cuddle-group` enabled the group stays cuddled and the blank line goes above
+the `if` instead of between the variables
 
 </td><td valign="top">
 

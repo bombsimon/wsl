@@ -77,6 +77,10 @@ For more details and examples, see [CHECKS](CHECKS.md).
   re-assigning of existing ones
 - ❌ **assign-expr** - Don't allow assignments to be cuddled with expressions,
   e.g. function calls
+- ❌ **cuddle-group** - When `cuddle-max-statements` is exceeded, place the
+  diagnostic on the trigger statement so the cuddled group stays together and
+  is separated from the block by a blank line (instead of splitting between
+  the cuddled variables)
 - ✅ **err** - Error checking must follow immediately after the error variable
   is assigned
 - ✅ **leading-whitespace** - Disallow leading empty lines in blocks
@@ -184,6 +188,7 @@ linters:
         - after-go
         - assign-exclusive
         - assign-expr
+        - cuddle-group
 ```
 
 ## See also

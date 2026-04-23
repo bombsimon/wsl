@@ -74,8 +74,8 @@ func errCheckAndAfterBlock() {
 
 func multipleOnSameStatement() {
 	a := 1
-	b := 2 // want `missing whitespace above this line \(too many statements above if\)`
-	if a > 0 {
+	b := 2
+	if a > 0 { // want `missing whitespace above this line \(too many statements above if\)`
 		_ = b
 	} // want `missing whitespace below this line \(after-block\)`
 	c := 3 // want `missing whitespace above this line \(invalid statement above assign\)`
@@ -99,7 +99,7 @@ func chainedInteractions() {
 	// want +2 `missing whitespace above this line \(never cuddle decl\)` `missing whitespace below this line \(after-decl\)`
 	var a = 1
 	var b = 2
-	if a+b > 0 {
+	if a+b > 0 { // want `missing whitespace above this line \(too many statements above if\)`
 		_ = 1
 	} // want `missing whitespace below this line \(after-block\)`
 	var c = 3 // want `missing whitespace above this line \(never cuddle decl\)` `missing whitespace below this line \(after-decl\)`
