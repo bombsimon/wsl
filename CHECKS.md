@@ -1601,7 +1601,7 @@ if err != nil {
 
 ### `cuddle-group`
 
-Changes *where* the `cuddle-max-statements` violation is reported. Without
+Changes _where_ the `cuddle-max-statements` violation is reported. Without
 this check, exceeding the limit places the diagnostic on the cuddled statement
 that pushes the chain past the limit, splitting the cuddled group. With this
 check enabled, the diagnostic is placed on the trigger statement (`if`, `for`,
@@ -1640,8 +1640,8 @@ if a > b {
     fmt.Println("ok")
 }
 
-// Without cuddle-group, the same input is fixed by splitting between
-// the cuddled variables instead:
+// Without cuddle-group, the same input is fixed by
+// splitting between the cuddled variables instead:
 a := 1
 
 b := 2
