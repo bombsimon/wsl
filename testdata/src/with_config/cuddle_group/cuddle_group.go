@@ -10,6 +10,17 @@ func ifSingleSharing() {
 	}
 }
 
+// A pre-existing blank line breaks the cuddled chain, so only `y` is cuddled
+// with the if. That's one sharing stmt — within max=1 — so no diagnostic.
+func ifBlankLineBreaksChain() {
+	x := 1
+
+	y := 2
+	if x > y {
+		fmt.Println("ok")
+	}
+}
+
 // Two sharing stmts cuddled with the trigger: keep the group together,
 // separate it from the trigger.
 func ifBothShareSeparate() {
