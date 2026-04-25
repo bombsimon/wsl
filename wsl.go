@@ -251,9 +251,9 @@ func (w *WSL) cuddleTargetIdents(
 
 // countValidCuddledStatements walks backwards from the cursor and counts how
 // many consecutive cuddled statements have a valid intersection with
-// targetIdents. It stops at the first non-intersecting statement or when max is
-// reached (0 = unlimited). Returns the count and whether the walk stopped
-// because a non-intersecting statement was found (as opposed to the limit).
+// targetIdents. It stops at the first non-intersecting statement or when the
+// limit is reached. Returns the count and whether the walk stopped because a
+// non-intersecting statement was found (as opposed to the limit).
 func (w *WSL) countValidCuddledStatements(
 	targetIdents []*ast.Ident,
 	cursor *Cursor,
@@ -270,7 +270,7 @@ func (w *WSL) countValidCuddledStatements(
 			break
 		}
 
-		if limit > 0 && count >= limit {
+		if count >= limit {
 			break
 		}
 

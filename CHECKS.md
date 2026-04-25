@@ -1897,9 +1897,14 @@ case 2:
 
 Controls the maximum number of consecutive statements that may be cuddled
 (appear without a blank line) immediately above block statements (`if`, `for`,
-`switch`, etc.), `go`, `defer`, and `send`. The default is 1. Set to 0 for
-unlimited. Every cuddled statement must share at least one variable with the
-following block (respects `allow-first-in-block` and `allow-whole-block`).
+`switch`, etc.), `go`, `defer`, and `send`. The default is 1. Every cuddled
+statement must share at least one variable with the following block (respects
+`allow-first-in-block` and `allow-whole-block`).
+
+Setting it to `0` disallows any cuddling, the trigger always requires a blank
+line above it, even when the variable on the line above is used by the block.
+The recommended way to allow any number of statements is to set a really high
+number such as `9999`.
 
 <table>
 <thead><tr><th>Bad</th><th>Good</th></tr></thead>
@@ -1918,6 +1923,12 @@ a := 1
 b := 2
 c := 3
 if a+b+c > 0 { // 2
+    fmt.Println("ok")
+}
+
+// With cuddle-max-statements: 0
+a := 1
+if a > 0 { // 3
     fmt.Println("ok")
 }
 ```
@@ -1940,11 +1951,10 @@ if a < b {
     fmt.Println("ok")
 }
 
-// With cuddle-max-statements: 0 (unlimited)
+// With cuddle-max-statements: 0
 a := 1
-b := 2
-c := 3
-if a+b+c > 0 {
+
+if a > 0 {
     fmt.Println("ok")
 }
 ```
@@ -1956,6 +1966,9 @@ if a+b+c > 0 {
 <sup>1</sup> Two statements cuddled above `if`, exceeds default limit of 1
 
 <sup>2</sup> Three statements cuddled above `if`, exceeds limit of 2
+
+<sup>3</sup> One statement cuddled above `if`; with `0` even a single shared
+variable still requires a blank line above the trigger
 
 </td><td valign="top">
 

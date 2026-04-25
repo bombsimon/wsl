@@ -102,7 +102,8 @@ examples.
 - **cuddle-max-statements** - Max number of cuddled statements allowed above
   block statements, `go`, `defer` and `send`. Every cuddled statement must have
   at least one variable used in the block. Respects `allow-first-in-block` and
-  `allow-whole-block` (default 1, 0 = unlimited)
+  `allow-whole-block`. With `0` no cuddling is allowed at all — every
+  cuddle-checked trigger requires a blank line above it (default 1)
 - ❌ **include-generated** - Include generated files when checking
 
 ## Installation

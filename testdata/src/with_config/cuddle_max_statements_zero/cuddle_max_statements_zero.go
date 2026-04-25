@@ -1,0 +1,79 @@
+package testpkg
+
+import "fmt"
+
+// With cuddle-max-statements: 0 nothing may be cuddled above the trigger,
+// even when the variable is used by it.
+func ifSingleSharing() {
+	x := 1
+	if x > 0 { // want `missing whitespace above this line \(too many statements above if\)`
+		fmt.Println("ok")
+	}
+}
+
+func ifManySharing() {
+	a := 1
+	b := 2
+	c := 3
+	if a+b+c > 0 { // want `missing whitespace above this line \(too many statements above if\)`
+		fmt.Println("ok")
+	}
+}
+
+// Existing rules still apply: an immediately-previous stmt that doesn't
+// share at all is reported as "no shared variables".
+func ifNoSharing() {
+	a := 1
+	if true { // want `missing whitespace above this line \(no shared variables above if\)`
+		fmt.Println("ok")
+	}
+
+	_ = a
+}
+
+// Mid-chain non-sharing: same diagnostic as any other 2+ cuddled chain.
+// The chain stays cuddled together and the blank line goes above the if.
+func ifMidChainNotShared() {
+	notUsed := 1
+	b := 2
+	if b > 0 { // want `missing whitespace above this line \(too many statements above if\)`
+		fmt.Println("ok")
+	}
+
+	_ = notUsed
+}
+
+// Other triggers behave the same.
+func forSingleSharing() {
+	a := 1
+	for i := 0; i < a; i++ { // want `missing whitespace above this line \(too many statements above for\)`
+		fmt.Println(i)
+	}
+}
+
+func switchSingleSharing() {
+	a := 1
+	switch a { // want `missing whitespace above this line \(too many statements above switch\)`
+	case 1:
+		fmt.Println("a")
+	}
+}
+
+func goSingleSharing() {
+	a := 1
+	go fmt.Println(a) // want `missing whitespace above this line \(too many statements above go\)`
+}
+
+func deferSingleSharing() {
+	a := 1
+	defer fmt.Println(a) // want `missing whitespace above this line \(too many statements above defer\)`
+}
+
+// AllowFirstInBlock: the var counts as sharing because it's used in the first
+// block stmt, but cuddling is still disallowed with max=0.
+func ifAllowFirstInBlock() {
+	a := 1
+	if true { // want `missing whitespace above this line \(too many statements above if\)`
+		fmt.Println(a)
+	}
+}

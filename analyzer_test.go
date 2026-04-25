@@ -152,14 +152,20 @@ func TestWithConfig(t *testing.T) {
 		{
 			subdir: "cuddle_max_statements_unlimited",
 			configFn: func(config *Configuration) {
-				config.CuddleMaxStatements = 0
+				config.CuddleMaxStatements = 9999
 			},
 		},
 		{
 			subdir: "cuddle_max_statements_whole_block",
 			configFn: func(config *Configuration) {
-				config.CuddleMaxStatements = 0
+				config.CuddleMaxStatements = 9999
 				config.AllowWholeBlock = true
+			},
+		},
+		{
+			subdir: "cuddle_max_statements_zero",
+			configFn: func(config *Configuration) {
+				config.CuddleMaxStatements = 0
 			},
 		},
 	} {
