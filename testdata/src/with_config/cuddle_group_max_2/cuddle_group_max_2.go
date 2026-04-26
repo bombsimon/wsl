@@ -22,12 +22,13 @@ func ifThreeShareSeparate() {
 	}
 }
 
-// Mid-chain non-sharing still splits at the break.
+// A non-sharing stmt in the chain still separates the whole group from the
+// trigger, regardless of how many sharing stmts are within the limit.
 func ifNonSharingAbove() {
 	notUsed := 1
-	a := 2 // want `missing whitespace above this line \(variable not shared with if\)`
+	a := 2
 	b := 3
-	if a+b > 0 {
+	if a+b > 0 { // want `missing whitespace above this line \(too many statements above if\)`
 		fmt.Println("ok")
 	}
 

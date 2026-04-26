@@ -210,23 +210,10 @@ func (w *WSL) checkCuddlingMaxAllowed(
 	}
 
 	if _, ok := w.config.Checks[CheckCuddleGroup]; ok {
-		// Walk the entire cuddled chain so we can tell apart a chain that
-		// broke at a non-sharing statement (split at the break) from one
-		// that simply has too many sharing statements (separate the whole
-		// group from the trigger).
+		// Treat the cuddled chain as a unit: any non-sharing stmt or too
+		// many sharing stmts separates the whole group from the trigger.
 		sharedCount, stoppedAtNonIntersection := w.countValidCuddledStatements(targetIdents, cursor, math.MaxInt)
-		if stoppedAtNonIntersection {
-			errorNode := cursor.NthPrevious(sharedCount)
-			if errorNode == nil {
-				return
-			}
-
-			w.addErrorVariableNotShared(errorNode.Pos(), cursor.checkType)
-
-			return
-		}
-
-		if sharedCount > w.config.CuddleMaxStatements {
+		if stoppedAtNonIntersection || sharedCount > w.config.CuddleMaxStatements {
 			w.addErrorTooManyStatements(cursor.Stmt().Pos(), cursor.checkType)
 		}
 

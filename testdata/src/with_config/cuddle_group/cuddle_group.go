@@ -42,12 +42,12 @@ func ifManyShareSeparate() {
 	}
 }
 
-// Mid-chain non-sharing stmt: split at the break (existing semantics) and the
-// sharing tail keeps cuddling with the trigger.
+// A non-sharing stmt anywhere in the chain separates the whole group from
+// the trigger — the cuddled chain is treated as a unit.
 func ifNonSharingAbove() {
 	notUsed := 1
-	y := 2 // want `missing whitespace above this line \(variable not shared with if\)`
-	if y > 1 {
+	y := 2
+	if y > 1 { // want `missing whitespace above this line \(too many statements above if\)`
 		fmt.Println("ok")
 	}
 

@@ -1601,19 +1601,14 @@ if err != nil {
 
 ### `cuddle-group`
 
-Changes _where_ the `cuddle-max-statements` violation is reported. Without
-this check, exceeding the limit places the diagnostic on the cuddled statement
-that pushes the chain past the limit, splitting the cuddled group. With this
-check enabled, the diagnostic is placed on the trigger statement (`if`, `for`,
-`switch`, etc., `go`, `defer`, `send`), so the fix inserts a blank line above
-the trigger and keeps the cuddled group together.
+Treats the cuddled chain above a trigger statement (`if`, `for`, `switch`,
+etc., `go`, `defer`, `send`) as a single unit. The chain stays cuddled with
+the trigger only when _every_ cuddled statement shares a variable with the
+trigger _and_ the number of sharing statements is within
+`cuddle-max-statements`.
 
-The cuddled chain still breaks at the first non-sharing statement (existing
-behavior, unaffected by this check).
-
-In practice this is most useful with the default `cuddle-max-statements: 1`
-(two or more sharing cuddled statements move the blank line above the trigger
-instead of between the variables).
+Without this check, the same violations are reported on a cuddled statement
+inside the chain, splitting the group between variables.
 
 <table>
 <thead><tr><th>Bad</th><th>Good</th></tr></thead>
@@ -1625,6 +1620,13 @@ instead of between the variables).
 a := 1
 b := 2
 if a > b { // 1
+    fmt.Println("ok")
+}
+
+// Mid-chain non-sharing
+notUsed := 1
+b := 2
+if b > 0 { // 2
     fmt.Println("ok")
 }
 ```
@@ -1649,10 +1651,11 @@ if a > b {
     fmt.Println("ok")
 }
 
-// Mid-chain non-sharing still splits at the break:
+// Mid-chain non-sharing — group still separated as
+// a unit:
 notUsed := 1
-
 b := 2
+
 if b > 0 {
     fmt.Println("ok")
 }
@@ -1665,6 +1668,10 @@ if b > 0 {
 <sup>1</sup> Two cuddled statements share a variable with `if`; with
 `cuddle-group` enabled the group stays cuddled and the blank line goes above
 the `if` instead of between the variables
+
+<sup>2</sup> Only one cuddled statement shares with `if`, but a non-sharing
+stmt (`notUsed`) is in the chain so `cuddle-group` separates the entire group
+from the `if` rather than splitting between `notUsed` and `b`
 
 </td><td valign="top">
 
