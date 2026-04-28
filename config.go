@@ -74,6 +74,20 @@ const (
 	// t1.Fn3()
 	// .
 	CheckAssignExpr
+	// CheckCuddleGroup changes how cuddle-max-statements violations are
+	// reported when more than the configured number of cuddled statements
+	// share a variable with the trigger statement (e.g. `if`, `for`,
+	// `switch`). Instead of pointing at the (N+1)th cuddled statement and
+	// splitting the cuddled group, the diagnostic is placed on the trigger
+	// itself so the entire cuddled group stays together and gets separated
+	// from the trigger by a blank line, e.g.
+	//
+	// a := 1
+	// b := 2
+	//
+	// if a > b {}
+	// .
+	CheckCuddleGroup
 	// CheckErr force error checking to follow immediately after an error
 	// variable is assigned, e.g.
 	//
@@ -119,6 +133,7 @@ func (c CheckType) String() string {
 		"append",
 		"assign-exclusive",
 		"assign-expr",
+		"cuddle-group",
 		"err",
 		"leading-whitespace",
 		"trailing-whitespace",
@@ -238,6 +253,7 @@ func AllChecks() CheckSet {
 	c.Add(CheckAfterDefer)
 	c.Add(CheckAfterExpr)
 	c.Add(CheckAfterGo)
+	c.Add(CheckCuddleGroup)
 
 	return c
 }
@@ -307,6 +323,8 @@ func CheckFromString(s string) (CheckType, error) {
 		return CheckAssignExpr, nil
 	case "err":
 		return CheckErr, nil
+	case "cuddle-group":
+		return CheckCuddleGroup, nil
 	case "leading-whitespace":
 		return CheckLeadingWhitespace, nil
 	case "trailing-whitespace":

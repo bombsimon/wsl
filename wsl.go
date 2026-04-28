@@ -7,6 +7,7 @@ import (
 	"go/format"
 	"go/token"
 	"go/types"
+	"math"
 	"slices"
 
 	"golang.org/x/tools/go/analysis"
@@ -205,6 +206,17 @@ func (w *WSL) checkCuddlingMaxAllowed(
 	}
 
 	if !enforceLimit {
+		return
+	}
+
+	if _, ok := w.config.Checks[CheckCuddleGroup]; ok {
+		// Treat the cuddled chain as a unit: any non-sharing stmt or too
+		// many sharing stmts separates the whole group from the trigger.
+		sharedCount, stoppedAtNonIntersection := w.countValidCuddledStatements(targetIdents, cursor, math.MaxInt)
+		if stoppedAtNonIntersection || sharedCount > w.config.CuddleMaxStatements {
+			w.addErrorTooManyStatements(cursor.Stmt().Pos(), cursor.checkType)
+		}
+
 		return
 	}
 

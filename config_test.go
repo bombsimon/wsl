@@ -83,7 +83,7 @@ func TestCheckSet(t *testing.T) {
 func TestToAndFromString(t *testing.T) {
 	t.Parallel()
 
-	maxCheckNumber := 28
+	maxCheckNumber := 29
 
 	for n := range maxCheckNumber {
 		check := CheckType(n)

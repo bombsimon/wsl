@@ -13,6 +13,7 @@
   - [`assign-exclusive`](#assign-exclusive)
   - [`assign-expr`](#assign-expr)
   - [`branch`](#branch)
+  - [`cuddle-group`](#cuddle-group)
   - [`decl`](#decl)
   - [`defer`](#defer)
   - [`err`](#err)
@@ -1590,6 +1591,87 @@ if err != nil {
 <tr><td valign="top">
 
 <sup>1</sup> Whitespace between error assignment and error checking
+
+</td><td valign="top">
+
+</td></tr>
+</tbody></table>
+
+[🔝](#table-of-content)
+
+### `cuddle-group`
+
+Treats the cuddled chain above a trigger statement (`if`, `for`, `switch`,
+etc., `go`, `defer`, `send`) as a single unit. The chain stays cuddled with
+the trigger only when _every_ cuddled statement shares a variable with the
+trigger _and_ the number of sharing statements is within
+`cuddle-max-statements`.
+
+Without this check, the same violations are reported on a cuddled statement
+inside the chain, splitting the group between variables.
+
+<table>
+<thead><tr><th>Bad</th><th>Good</th></tr></thead>
+<tbody>
+<tr><td valign="top">
+
+```go
+// With the default cuddle-max-statements: 1
+a := 1
+b := 2
+if a > b { // 1
+    fmt.Println("ok")
+}
+
+// Mid-chain non-sharing
+notUsed := 1
+b := 2
+if b > 0 { // 2
+    fmt.Println("ok")
+}
+```
+
+</td><td valign="top">
+
+```go
+// With the default cuddle-max-statements: 1
+a := 1
+b := 2
+
+if a > b {
+    fmt.Println("ok")
+}
+
+// Without cuddle-group, the same input is fixed by
+// splitting between the cuddled variables instead:
+a := 1
+
+b := 2
+if a > b {
+    fmt.Println("ok")
+}
+
+// Mid-chain non-sharing — group still separated as
+// a unit:
+notUsed := 1
+b := 2
+
+if b > 0 {
+    fmt.Println("ok")
+}
+```
+
+</td></tr>
+
+<tr><td valign="top">
+
+<sup>1</sup> Two cuddled statements share a variable with `if`; with
+`cuddle-group` enabled the group stays cuddled and the blank line goes above
+the `if` instead of between the variables
+
+<sup>2</sup> Only one cuddled statement shares with `if`, but a non-sharing
+stmt (`notUsed`) is in the chain so `cuddle-group` separates the entire group
+from the `if` rather than splitting between `notUsed` and `b`
 
 </td><td valign="top">
 

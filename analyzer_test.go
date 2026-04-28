@@ -168,6 +168,19 @@ func TestWithConfig(t *testing.T) {
 				config.CuddleMaxStatements = 0
 			},
 		},
+		{
+			subdir: "cuddle_group",
+			configFn: func(config *Configuration) {
+				config.Checks.Add(CheckCuddleGroup)
+			},
+		},
+		{
+			subdir: "cuddle_group_max_2",
+			configFn: func(config *Configuration) {
+				config.Checks.Add(CheckCuddleGroup)
+				config.CuddleMaxStatements = 2
+			},
+		},
 	} {
 		t.Run(tc.subdir, func(t *testing.T) {
 			t.Parallel()

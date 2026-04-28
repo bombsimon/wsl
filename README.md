@@ -77,6 +77,8 @@ For more details and examples, see [CHECKS](CHECKS.md).
   re-assigning of existing ones
 - ❌ **assign-expr** - Don't allow assignments to be cuddled with expressions,
   e.g. function calls
+- ❌ **cuddle-group** - Treat the cuddled chain as a unit; separate the whole
+  group from the block instead of splitting between cuddled variables
 - ✅ **err** - Error checking must follow immediately after the error variable
   is assigned
 - ✅ **leading-whitespace** - Disallow leading empty lines in blocks
@@ -184,6 +186,7 @@ linters:
         - after-go
         - assign-exclusive
         - assign-expr
+        - cuddle-group
 ```
 
 ## See also
