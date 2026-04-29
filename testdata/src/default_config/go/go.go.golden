@@ -1,13 +1,21 @@
 
 package testpkg
 
-import "fmt"
+import (
+	"fmt"
+	"sync"
+)
 
 func NewT() func() {
 	return func() {}
 }
 
 func Fn(_ int) {}
+
+type Worker struct{}
+
+func (Worker) SetLimit(int) {}
+func (Worker) Run()         {}
 
 func Go() {
 	fooFunc := func() {}
@@ -77,4 +85,34 @@ func GoFuncLit() {
 	}()
 
 	_ = notShared
+}
+
+func GoExprStmt() {
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+	}()
+
+	wg.Wait()
+}
+
+func GoExprStmtDirectCall() {
+	t := Worker{}
+
+	t.SetLimit(1)
+	go t.Run()
+}
+
+func GoExprStmtNoShared() {
+	var wg sync.WaitGroup
+
+	fmt.Println("unrelated")
+
+	go func() { // want `missing whitespace above this line \(no shared variables above go\)`
+		defer wg.Done()
+	}()
+
+	wg.Wait()
 }
