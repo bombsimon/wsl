@@ -81,3 +81,20 @@ func fn4() {
 
 	_ = notShared
 }
+
+// Regression: an `*ast.ExprStmt` cuddled above a `defer` is allowed when the
+// two share an identifier (the trigger being `defer` relaxes the previous
+// statement's type rule).
+func fn5() {
+	a := Fn()
+
+	a.Close()
+	defer a.Close()
+}
+
+func fn6() {
+	a := Fn()
+
+	fmt.Println("unrelated")
+	defer a.Close() // want `missing whitespace above this line \(no shared variables above defer\)`
+}
