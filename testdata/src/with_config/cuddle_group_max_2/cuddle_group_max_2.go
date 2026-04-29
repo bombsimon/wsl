@@ -1,6 +1,37 @@
 package testpkg
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
+
+func errPairOverridesGroupMax2() {
+	err := errors.New("x")
+	if err != nil {
+		panic(err)
+	}
+}
+
+func errPairOverridesGroupMax2WithExtra() {
+	a := 1
+	err := errors.New("x") // want `missing whitespace above this line \(too many statements above if\)`
+	if err != nil {
+		panic(err)
+	}
+
+	_ = a
+}
+
+func errPairUncuddledWithExtraGroupMax2() {
+	a := 1
+	err := errors.New("x") // want +1 `unnecessary whitespace \(err\)`
+
+	if err != nil {
+		panic(err)
+	}
+
+	_ = a
+}
 
 // Two sharing cuddled stmts is allowed (within max=2).
 func ifTwoShareWithinLimit() {
