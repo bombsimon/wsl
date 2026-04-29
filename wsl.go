@@ -212,7 +212,12 @@ func (w *WSL) checkCuddlingMaxAllowed(
 	if _, ok := w.config.Checks[CheckCuddleGroup]; ok {
 		// Treat the cuddled chain as a unit: any non-sharing stmt or too
 		// many sharing stmts separates the whole group from the trigger.
-		sharedCount, stoppedAtNonIntersection := w.countValidCuddledStatements(targetIdents, cursor, math.MaxInt)
+		sharedCount, stoppedAtNonIntersection := w.countValidCuddledStatements(
+			targetIdents,
+			cursor,
+			currIsDefer,
+			math.MaxInt,
+		)
 		if stoppedAtNonIntersection || sharedCount > w.config.CuddleMaxStatements {
 			w.addErrorTooManyStatements(cursor.Stmt().Pos(), cursor.checkType)
 		}
@@ -220,7 +225,12 @@ func (w *WSL) checkCuddlingMaxAllowed(
 		return
 	}
 
-	allowedCount, stoppedAtNonIntersection := w.countValidCuddledStatements(targetIdents, cursor, w.config.CuddleMaxStatements)
+	allowedCount, stoppedAtNonIntersection := w.countValidCuddledStatements(
+		targetIdents,
+		cursor,
+		currIsDefer,
+		w.config.CuddleMaxStatements,
+	)
 	if numStmtsAbove <= allowedCount {
 		return
 	}
@@ -266,9 +276,14 @@ func (w *WSL) cuddleTargetIdents(
 // targetIdents. It stops at the first non-intersecting statement or when the
 // limit is reached. Returns the count and whether the walk stopped because a
 // non-intersecting statement was found (as opposed to the limit).
+//
+// When allowAnyStmtType is true, the trigger statement is a `defer` and any
+// statement type is accepted as a cuddled neighbor (mirroring the relaxed type
+// rule applied at the immediate-previous check).
 func (w *WSL) countValidCuddledStatements(
 	targetIdents []*ast.Ident,
 	cursor *Cursor,
+	allowAnyStmtType bool,
 	limit int,
 ) (int, bool) {
 	defer cursor.Save()()
@@ -287,7 +302,7 @@ func (w *WSL) countValidCuddledStatements(
 		}
 
 		prevNode := cursor.Stmt()
-		if !isAssignDeclOrIncDec(prevNode) {
+		if !isAssignDeclOrIncDec(prevNode) && !allowAnyStmtType {
 			break
 		}
 
