@@ -1,6 +1,37 @@
 package testpkg
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
+
+func errPairOverridesUnlimited() {
+	err := errors.New("x")
+	if err != nil {
+		panic(err)
+	}
+}
+
+func errPairOverridesUnlimitedWithExtra() {
+	a := 1
+	err := errors.New("x") // want `missing whitespace above this line \(too many statements above if\)`
+	if err != nil {
+		panic(err)
+	}
+
+	_ = a
+}
+
+func errPairUncuddledWithExtraUnlimited() {
+	a := 1
+	err := errors.New("x") // want +1 `unnecessary whitespace \(err\)`
+
+	if err != nil {
+		panic(err)
+	}
+
+	_ = a
+}
 
 func ifManyAllUsed() {
 	a := 1

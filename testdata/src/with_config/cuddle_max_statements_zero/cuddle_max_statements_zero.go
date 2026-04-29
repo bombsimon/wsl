@@ -1,6 +1,37 @@
 package testpkg
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
+
+func errPairOverridesMaxZero() {
+	err := errors.New("x")
+	if err != nil {
+		panic(err)
+	}
+}
+
+func errPairOverridesMaxZeroWithExtra() {
+	a := 1
+	err := errors.New("x") // want `missing whitespace above this line \(too many statements above if\)`
+	if err != nil {
+		panic(err)
+	}
+
+	_ = a
+}
+
+func errPairUncuddledWithExtraMaxZero() {
+	a := 1
+	err := errors.New("x") // want +1 `unnecessary whitespace \(err\)`
+
+	if err != nil {
+		panic(err)
+	}
+
+	_ = a
+}
 
 // With cuddle-max-statements: 0 nothing may be cuddled above the trigger,
 // even when the variable is used by it.

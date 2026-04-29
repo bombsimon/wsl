@@ -1,10 +1,39 @@
 package testpkg
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 )
+
+func errPairOverridesMax2() {
+	err := errors.New("x")
+	if err != nil {
+		panic(err)
+	}
+}
+
+func errPairOverridesMax2WithExtra() {
+	a := 1
+	err := errors.New("x") // want `missing whitespace above this line \(too many statements above if\)`
+	if err != nil {
+		panic(err)
+	}
+
+	_ = a
+}
+
+func errPairUncuddledWithExtraMax2() {
+	a := 1
+	err := errors.New("x") // want +1 `unnecessary whitespace \(err\)`
+
+	if err != nil {
+		panic(err)
+	}
+
+	_ = a
+}
 
 func ifBothUsed() {
 	a := 1

@@ -211,6 +211,23 @@ func (w *WSL) checkCuddlingMaxAllowed(
 		return
 	}
 
+	// CheckErr always have precedence, allowing any permutation of max allowed
+	// cuddled statements and CheckCuddleGroup to be configured but still
+	// respect the requirement to use the idiomatic err checking and never
+	// insert a newline between the err and if.
+	_, errEnabled := w.config.Checks[CheckErr]
+	errIdent := w.isErrNotNilCheck(stmt)
+
+	if errEnabled && errIdent != nil && identsIntersect([]*ast.Ident{errIdent}, previousIdents) {
+		if numStmtsAbove > 1 {
+			if errorNode := cursor.NthPrevious(1); errorNode != nil {
+				w.addErrorTooManyStatements(errorNode.Pos(), cursor.checkType)
+			}
+		}
+
+		return
+	}
+
 	if _, ok := w.config.Checks[CheckCuddleGroup]; ok {
 		// Treat the cuddled chain as a unit: any non-sharing stmt or too
 		// many sharing stmts separates the whole group from the trigger.

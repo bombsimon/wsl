@@ -1,6 +1,38 @@
 package testpkg
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
+
+func errPairKeepsPairCuddled() {
+	err := errors.New("x")
+	if err != nil {
+		panic(err)
+	}
+}
+
+func errPairWithExtraAboveFiresAboveErr() {
+	a := 1
+
+	err := errors.New("x") // want `missing whitespace above this line \(too many statements above if\)`
+	if err != nil {
+		panic(err)
+	}
+
+	_ = a
+}
+
+func errPairUncuddledWithExtraGroup() {
+	a := 1
+
+	err := errors.New("x") // want +1 `unnecessary whitespace \(err\)`
+	if err != nil {
+		panic(err)
+	}
+
+	_ = a
+}
 
 // One sharing cuddled stmt is allowed (within default max=1).
 func ifSingleSharing() {
