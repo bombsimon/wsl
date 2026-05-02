@@ -17,7 +17,9 @@ linters:
     - forbidigo
     - funlen
     - gocognit
+    - goconst
     - godot
+    - gomodguard
     - lll
     - mnd
     - nlreturn
