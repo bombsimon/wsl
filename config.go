@@ -88,6 +88,14 @@ const (
 	// if a > b {}
 	// .
 	CheckCuddleGroup
+	// CheckExprCuddle will check that expression statements are not cuddled
+	// with other statements. Disable this check to allow expression statements
+	// to be cuddled above any statement when they share variables, e.g.
+	//
+	// s.setKey(&item, key)
+	// if err := src.Update(ctx, item); err != nil {
+	// .
+	CheckExprCuddle
 	// CheckErr force error checking to follow immediately after an error
 	// variable is assigned, e.g.
 	//
@@ -134,6 +142,7 @@ func (c CheckType) String() string {
 		"assign-exclusive",
 		"assign-expr",
 		"cuddle-group",
+		"expr-cuddle",
 		"err",
 		"leading-whitespace",
 		"trailing-whitespace",
@@ -228,6 +237,7 @@ func DefaultChecks() CheckSet {
 		CheckDefer:              {},
 		CheckErr:                {},
 		CheckExpr:               {},
+		CheckExprCuddle:         {},
 		CheckFor:                {},
 		CheckGo:                 {},
 		CheckIf:                 {},
@@ -321,6 +331,8 @@ func CheckFromString(s string) (CheckType, error) {
 		return CheckAssignExclusive, nil
 	case "assign-expr":
 		return CheckAssignExpr, nil
+	case "expr-cuddle":
+		return CheckExprCuddle, nil
 	case "err":
 		return CheckErr, nil
 	case "cuddle-group":

@@ -181,6 +181,18 @@ func TestWithConfig(t *testing.T) {
 				config.CuddleMaxStatements = 2
 			},
 		},
+		{
+			subdir: "expr_cuddle",
+			configFn: func(config *Configuration) {
+				config.CuddleMaxStatements = 9999
+
+				config.Checks = NoChecks()
+				config.Checks.Add(CheckIf)
+				config.Checks.Add(CheckFor)
+				config.Checks.Add(CheckGo)
+				config.Checks.Add(CheckDefer)
+			},
+		},
 	} {
 		t.Run(tc.subdir, func(t *testing.T) {
 			t.Parallel()
