@@ -80,3 +80,18 @@ func noReportsForLabeledStatementWithAssign() {
 		break
 	}
 }
+
+func reportsForLabeledStatementWhenTwoStmtsAboveIf() {
+	for {
+		x := 1
+
+	LABEL: // want `missing whitespace above this line \(never cuddle label\)`
+		y := 2
+
+		if x > y { // want `missing whitespace above this line \(too many statements above if\)`
+			goto LABEL
+		}
+
+		break
+	}
+}
