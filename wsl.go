@@ -174,7 +174,7 @@ func (w *WSL) checkCuddlingMaxAllowed(
 		return
 	}
 
-	previousNode := cursor.PreviousNode()
+	previousNode := unlabeledStmt(cursor.PreviousNode())
 	numStmtsAbove := w.numberOfStatementsAbove(cursor)
 	previousIdents := w.identsFromNode(previousNode, true)
 
@@ -1605,6 +1605,17 @@ func identsIntersect(a, b []*ast.Ident) bool {
 	}
 
 	return false
+}
+
+func unlabeledStmt(node ast.Node) ast.Node {
+	for {
+		labeled, ok := node.(*ast.LabeledStmt)
+		if !ok {
+			return node
+		}
+
+		node = labeled.Stmt
+	}
 }
 
 func isTypeOrPredeclConst(obj types.Object) bool {

@@ -68,3 +68,15 @@ func allIfBranches() {
 		return // want `missing whitespace above this line \(too many lines above return\)`
 	}
 }
+
+func noReportsForLabeledStatementWithAssign() {
+	for {
+	LABEL:
+		err := errors.New("error")
+		if err != nil {
+			goto LABEL
+		}
+
+		break
+	}
+}
