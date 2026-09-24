@@ -159,7 +159,7 @@ func main() {
 }
 
 func getWslConfig(filename string) *WSL {
-	yamlFile, err := os.ReadFile(filepath.Clean(filename))
+	yamlFile, err := os.ReadFile(filepath.Clean(filename)) //nolint:gosec // Reading a user-supplied path is intended.
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
