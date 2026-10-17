@@ -53,6 +53,12 @@ func TestWithConfig(t *testing.T) {
 			},
 		},
 		{
+			subdir: "assign_decl",
+			configFn: func(config *Configuration) {
+				config.Checks.Remove(CheckAssignDecl)
+			},
+		},
+		{
 			subdir: "whole_block",
 			configFn: func(config *Configuration) {
 				config.AllowWholeBlock = true

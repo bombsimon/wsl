@@ -10,6 +10,7 @@
   - [`after-go`](#after-go)
   - [`append`](#append)
   - [`assign`](#assign)
+  - [`assign-decl`](#assign-decl)
   - [`assign-exclusive`](#assign-exclusive)
   - [`assign-expr`](#assign-expr)
   - [`branch`](#branch)
@@ -1470,6 +1471,43 @@ s = append(s, 2)
 <sup>1</sup> `a` is not used in append
 
 <sup>2</sup> `b` is not used in append
+
+</td><td valign="top">
+
+</td></tr>
+</tbody></table>
+
+[🔝](#table-of-content)
+
+### `assign-decl`
+
+Assignments are not allowed to be cuddled with declaration statements (`var`,
+`const`, `type`). By disabling this check `wsl` allows assignments to cuddle
+with declarations if the assignment assigns to or uses a declared variable.
+
+<table>
+<thead><tr><th>Bad</th><th>Good</th></tr></thead>
+<tbody>
+<tr><td valign="top">
+
+```go
+var ok bool
+foo, ok = bar() // 1
+```
+
+</td><td valign="top">
+
+```go
+var ok bool
+
+foo, ok = bar()
+```
+
+</td></tr>
+
+<tr><td valign="top">
+
+<sup>1</sup> Not an assign statement above
 
 </td><td valign="top">
 

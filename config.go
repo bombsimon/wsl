@@ -55,6 +55,9 @@ const (
 	// x = append(x, a)
 	// .
 	CheckAppend
+	// CheckAssignDecl ensures assignments are not cuddled with declaration
+	// statements (`var`, `const`, `type`).
+	CheckAssignDecl
 	// CheckAssignExclusive only allows assignments of either new variables or
 	// re-assignment of existing ones, e.g.
 	//
@@ -131,6 +134,7 @@ func (c CheckType) String() string {
 		"after-expr",
 		"after-go",
 		"append",
+		"assign-decl",
 		"assign-exclusive",
 		"assign-expr",
 		"cuddle-group",
@@ -223,6 +227,7 @@ func DefaultChecks() CheckSet {
 	return CheckSet{
 		CheckAppend:             {},
 		CheckAssign:             {},
+		CheckAssignDecl:         {},
 		CheckBranch:             {},
 		CheckDecl:               {},
 		CheckDefer:              {},
@@ -317,6 +322,8 @@ func CheckFromString(s string) (CheckType, error) {
 		return CheckAfterGo, nil
 	case "append":
 		return CheckAppend, nil
+	case "assign-decl":
+		return CheckAssignDecl, nil
 	case "assign-exclusive":
 		return CheckAssignExclusive, nil
 	case "assign-expr":

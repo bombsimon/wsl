@@ -386,6 +386,12 @@ func (w *WSL) checkCuddlingWithoutIntersection(stmt ast.Node, cursor *Cursor) {
 		}
 	}
 
+	if _, ok := w.config.Checks[CheckAssignDecl]; !ok {
+		if _, ok := previousNode.(*ast.DeclStmt); ok && w.hasIntersection(stmt, previousNode) {
+			prevIsValidType = prevIsValidType || ok
+		}
+	}
+
 	if prevIsValidType {
 		return
 	}
@@ -675,15 +681,20 @@ func (w *WSL) checkAfterDecl(stmt *ast.DeclStmt, cursor *Cursor) {
 		cursor,
 		CheckAfterDecl,
 		func(nextStmt ast.Stmt, _ ast.Node) bool {
-			nextDecl, ok := nextStmt.(*ast.DeclStmt)
-			if !ok {
-				return false
+			if nextDecl, ok := nextStmt.(*ast.DeclStmt); ok {
+				currGen, currOK := stmt.Decl.(*ast.GenDecl)
+				nextGen, nextOK := nextDecl.Decl.(*ast.GenDecl)
+
+				return currOK && nextOK && currGen.Tok == nextGen.Tok
 			}
 
-			currGen, currOK := stmt.Decl.(*ast.GenDecl)
-			nextGen, nextOK := nextDecl.Decl.(*ast.GenDecl)
+			if _, ok := w.config.Checks[CheckAssignDecl]; !ok {
+				if nextAssign, ok := nextStmt.(*ast.AssignStmt); ok && w.hasIntersection(stmt, nextAssign) {
+					return true
+				}
+			}
 
-			return currOK && nextOK && currGen.Tok == nextGen.Tok
+			return false
 		},
 	)
 }
